@@ -170,11 +170,11 @@ def extract_text_from_pdf(base64_data):
 def api_send_emergency_email():
     try:
         data = request.get_json()
-        
+
         to_email = data.get("to_email")
         donor_name = data.get("donor_name")
         blood_group = data.get("blood_group")
-        
+
         # Validation Check
         if not to_email or not donor_name or not blood_group:
             return jsonify({"status": "error", "message": "Missing required dispatch parameters"}), 400
@@ -192,15 +192,20 @@ def api_send_emergency_email():
             f"— MediPulse Emergency Hub Operations Team"
         )
 
-        # Trigger your pre-configured SMTP pipeline
-        send_email(to_email, subject, body)
-        
-        return jsonify({"status": "success", "message": f"Alert successfully transmitted to {donor_name}"}), 200
+        # OPTIMIZATION: Run SMTP task instantly in a background thread to prevent Render HTTP 30s timeouts
+        scheduler.add_job(
+            func=send_email,
+            trigger='date',
+            run_date=datetime.now(),
+            args=[to_email, subject, body]
+        )
+
+        print(f"--> [BLOOD ALERT QUEUED] Offloaded dispatch job to background threads for {donor_name}")
+        return jsonify({"status": "success", "message": f"Alert processing successfully initiated for {donor_name}"}), 200
 
     except Exception as e:
         print(f"--> [BLOOD MAIL SYSTEM ERROR]: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
-
 
 @app.route("/")
 def home():
