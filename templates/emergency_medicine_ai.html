@@ -1,0 +1,580 @@
+<!-- =========================================================
+FILE NAME: emergency_medicine_ai.html
+ONLY BLOCK SETUP PAGE
+========================================================= -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>MediPulse Medicine Block Setup</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap"
+rel="stylesheet">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+
+    font-family:'Poppins',sans-serif;
+
+    background:
+    linear-gradient(
+        rgba(0,0,0,0.82),
+        rgba(5,8,22,0.94)
+    ),
+    url('/static/images/background.png');
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    background-attachment:fixed;
+
+    color:white;
+
+    overflow-x:hidden;
+}
+
+/* CONTAINER */
+
+.container{
+
+    width:100%;
+
+    min-height:100vh;
+
+    padding:30px;
+}
+
+/* HEADER */
+
+.logo{
+
+    font-size:38px;
+
+    text-align:center;
+
+    font-family:'Orbitron',sans-serif;
+
+    color:#00d9ff;
+
+    margin-bottom:30px;
+
+    text-shadow:
+    0 0 15px #00d9ff,
+    0 0 30px #ff00ff;
+}
+
+/* BOX */
+
+.setup-box{
+
+    max-width:850px;
+
+    margin:auto;
+
+    background:rgba(255,255,255,0.05);
+
+    border-radius:25px;
+
+    padding:30px;
+
+    border:1px solid rgba(255,255,255,0.08);
+}
+
+/* TITLE */
+
+.title{
+
+    font-size:28px;
+
+    margin-bottom:25px;
+
+    color:#00d9ff;
+}
+
+/* INPUTS */
+
+.input-group{
+
+    margin-bottom:22px;
+}
+
+.input-group label{
+
+    display:block;
+
+    margin-bottom:10px;
+
+    font-size:15px;
+}
+
+.input-group input,
+.input-group textarea{
+
+    width:100%;
+
+    border:none;
+
+    outline:none;
+
+    padding:18px;
+
+    border-radius:18px;
+
+    background:rgba(255,255,255,0.08);
+
+    color:white;
+
+    font-size:15px;
+}
+
+textarea{
+
+    resize:none;
+
+    height:120px;
+}
+
+/* BUTTON */
+
+.main-btn{
+
+    width:100%;
+
+    border:none;
+
+    padding:18px;
+
+    border-radius:18px;
+
+    cursor:pointer;
+
+    font-size:16px;
+
+    font-weight:600;
+
+    color:white;
+
+    margin-top:10px;
+
+    background:
+    linear-gradient(
+        135deg,
+        #00d9ff,
+        #7b2cff,
+        #ff00ff
+    );
+
+    background-size:300% 300%;
+
+    animation:gradientMove 5s ease infinite;
+}
+
+@keyframes gradientMove{
+
+    0%{
+        background-position:0% 50%;
+    }
+
+    50%{
+        background-position:100% 50%;
+    }
+
+    100%{
+        background-position:0% 50%;
+    }
+
+}
+
+/* BLOCK CARDS */
+
+.block-container{
+
+    margin-top:30px;
+}
+
+.block-card{
+
+    background:rgba(255,255,255,0.06);
+
+    border-radius:22px;
+
+    padding:22px;
+
+    margin-bottom:20px;
+
+    border:1px solid rgba(255,255,255,0.08);
+}
+
+.block-card h2{
+
+    color:#00d9ff;
+
+    margin-bottom:20px;
+}
+
+/* SAVED */
+
+.saved-box{
+
+    margin-top:30px;
+}
+
+.saved-card{
+
+    background:rgba(255,255,255,0.05);
+
+    padding:20px;
+
+    border-radius:18px;
+
+    margin-bottom:18px;
+
+    border-left:5px solid #00d9ff;
+
+    line-height:2;
+}
+
+/* MOBILE */
+
+@media(max-width:768px){
+
+    .container{
+        padding:18px;
+    }
+
+    .setup-box{
+        padding:22px;
+    }
+
+    .logo{
+        font-size:30px;
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="logo">
+        MediPulse AI
+    </div>
+
+    <div class="setup-box">
+
+        <div class="title">
+            Worker Medicine Block Setup
+        </div>
+
+        <!-- TOTAL BLOCK -->
+
+        <div class="input-group">
+
+            <label>
+                How Many Blocks Are Available?
+            </label>
+
+            <input type="number"
+            id="totalBlocks"
+            placeholder="Example : 4">
+
+        </div>
+
+        <button class="main-btn"
+        onclick="generateBlocks()">
+
+            Generate Block Setup
+
+        </button>
+
+        <!-- GENERATED BLOCKS -->
+
+        <div class="block-container"
+        id="blockContainer"></div>
+
+        <!-- SAVE BUTTON -->
+
+        <button class="main-btn"
+        id="saveBtn"
+        style="display:none;"
+        onclick="saveAllBlocks()">
+
+            Save & Continue
+
+        </button>
+
+        <!-- SAVED DATA -->
+
+        <div class="saved-box"
+        id="savedBox"></div>
+
+    </div>
+
+</div>
+
+<script>
+
+/* SUPABASE */
+
+const supabaseUrl =
+"https://covmgrilycetqtpwolfl.supabase.co";
+
+const supabaseKey =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
+
+const supabaseClient =
+supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+);
+
+/* GENERATE BLOCKS */
+
+function generateBlocks(){
+
+    const total =
+    document.getElementById(
+        "totalBlocks"
+    ).value;
+
+    const container =
+    document.getElementById(
+        "blockContainer"
+    );
+
+    container.innerHTML = "";
+
+    if(total <= 0){
+
+        alert(
+            "Enter valid block count"
+        );
+
+        return;
+    }
+
+    for(let i=1;i<=total;i++){
+
+        container.innerHTML += `
+
+        <div class="block-card">
+
+            <h2>
+                Block ${i}
+            </h2>
+
+            <div class="input-group">
+
+                <label>
+                    Block Number
+                </label>
+
+                <input type="text"
+                id="blockNumber${i}"
+                placeholder="Example : Block ${i}">
+
+            </div>
+
+            <div class="input-group">
+
+                <label>
+                    Medicines Available
+                </label>
+
+                <textarea
+                id="medicineNames${i}"
+                placeholder="Example :
+Paracetamol
+Dolo 650
+Crocin"></textarea>
+
+            </div>
+
+        </div>
+
+        `;
+
+    }
+
+    document.getElementById(
+        "saveBtn"
+    ).style.display = "block";
+
+}
+
+/* SAVE */
+
+async function saveAllBlocks(){
+
+    const total =
+    document.getElementById(
+        "totalBlocks"
+    ).value;
+
+    if(total <= 0){
+
+        return;
+    }
+
+    for(let i=1;i<=total;i++){
+
+        const blockNumber =
+        document.getElementById(
+            `blockNumber${i}`
+        ).value;
+
+        const medicines =
+        document.getElementById(
+            `medicineNames${i}`
+        ).value;
+
+        if(
+            !blockNumber ||
+            !medicines
+        ){
+
+            alert(
+                `Fill Block ${i} completely`
+            );
+
+            return;
+        }
+
+        /* SPLIT MEDICINES */
+
+        const medicineList =
+        medicines
+        .split("\n")
+        .filter(
+            item => item.trim() !== ""
+        );
+
+        /* SAVE EACH MEDICINE */
+
+        for(let medicine of medicineList){
+
+            const {
+                error
+            } =
+            await supabaseClient
+            .from("medicines")
+            .insert([{
+
+                medicine_name:
+                medicine.trim(),
+
+                category:
+                "General",
+
+                block_number:
+                blockNumber,
+
+                dosage:"",
+                
+                stock:0
+
+            }]);
+
+            if(error){
+
+                console.log(error);
+
+            }
+
+        }
+
+    }
+
+    alert(
+        "All Blocks Saved Successfully"
+    );
+
+    loadSavedBlocks();
+
+    /* NEXT PAGE */
+
+    setTimeout(()=>{
+
+        window.location.href =
+        "/medicine-search";
+
+    },1500);
+
+}
+
+/* LOAD SAVED */
+
+async function loadSavedBlocks(){
+
+    const {
+        data,
+        error
+    } =
+    await supabaseClient
+    .from("medicines")
+    .select("*");
+
+    const savedBox =
+    document.getElementById(
+        "savedBox"
+    );
+
+    savedBox.innerHTML = "";
+
+    if(data){
+
+        data.forEach(item=>{
+
+            savedBox.innerHTML += `
+
+            <div class="saved-card">
+
+                <strong>
+                    ${item.block_number}
+                </strong>
+
+                <br>
+
+                💊 ${item.medicine_name}
+
+            </div>
+
+            `;
+
+        });
+
+    }
+
+}
+
+/* INIT */
+
+loadSavedBlocks();
+
+</script>
+
+</body>
+
+</html>

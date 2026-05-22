@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediPulse Medicine Setup</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        
+        body { 
+            min-height: 100vh; 
+            background: linear-gradient(rgba(10, 15, 30, 0.85), rgba(10, 15, 30, 0.9)), url("/static/images/background.png"); 
+            background-size: cover; 
+            background-position: center; 
+            background-attachment: fixed; 
+            padding: 50px 15px; 
+            color: #e2e8f0;
+        }
+
+        /* Cyberpunk Glassmorphic Form Container */
+        .container { 
+            width: 100%; 
+            max-width: 850px; 
+            margin: auto; 
+            background: rgba(255, 255, 255, 0.03); 
+            border: 1px solid rgba(0, 217, 255, 0.2); 
+            border-radius: 30px; 
+            padding: 50px 40px;  
+            box-shadow: 0 0 50px rgba(0, 217, 255, 0.1), inset 0 0 20px rgba(255, 255, 255, 0.02);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .title { 
+            text-align: center; 
+            font-size: 42px; 
+            font-weight: 700; 
+            color: #00D9FF; 
+            margin-bottom: 10px; 
+            letter-spacing: 1px;
+            text-shadow: 0 0 30px rgba(0, 217, 255, 0.5);
+        }
+
+        .subtitle { 
+            text-align: center; 
+            color: #94a3b8; 
+            margin-bottom: 45px; 
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
+        /* Glowing Section Titles */
+        .section-title { 
+            color: #00ffaa; 
+            margin-top: 40px; 
+            margin-bottom: 25px; 
+            font-size: 22px; 
+            font-weight: 600; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px;
+            text-shadow: 0 0 15px rgba(0, 255, 170, 0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 8px;
+        }
+
+        /* Elegant Row Input Groups */
+        .input-group { margin-bottom: 25px; }
+        .input-group label { display: block; color: #cbd5e1; margin-bottom: 10px; font-size: 14px; font-weight: 500; letter-spacing: 0.5px; }
+        
+        .input-group input, .input-group textarea { 
+            width: 100%; 
+            padding: 16px 20px; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            outline: none; 
+            border-radius: 16px; 
+            background: rgba(15, 23, 42, 0.5); 
+            color: white; 
+            font-size: 15px; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .input-group textarea { resize: none; height: 120px; }
+        
+        /* Modern Focus Highlights */
+        .input-group input:focus, .input-group textarea:focus { 
+            border-color: #00D9FF; 
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.25); 
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        /* Premium Dynamic Glow Submission Trigger Button */
+        .setup-btn { 
+            width: 100%; 
+            padding: 18px; 
+            margin-top: 40px; 
+            border: none; 
+            border-radius: 18px; 
+            background: linear-gradient(135deg, #007bff, #00c6ff); 
+            color: white; 
+            font-size: 18px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3), 0 0 30px rgba(0, 198, 255, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .setup-btn:hover:not(:disabled) { 
+            transform: translateY(-3px); 
+            box-shadow: 0 10px 25px rgba(0, 123, 255, 0.5), 0 0 40px rgba(0, 198, 255, 0.3);
+            filter: brightness(1.1);
+        }
+        
+        .setup-btn:active:not(:disabled) { transform: translateY(-1px); }
+        .setup-btn:disabled { background: #1e293b !important; color: #64748b !important; cursor: not-allowed; box-shadow: none !important; opacity: 0.6; }
+
+        /* Neon Feedback Boxes */
+        .success-box { 
+            display: none; 
+            margin-top: 30px; 
+            background: rgba(0, 255, 170, 0.1); 
+            border: 1px solid rgba(0, 255, 170, 0.3); 
+            padding: 20px; 
+            border-radius: 18px; 
+            color: #26ffb0; 
+            text-align: center; 
+            font-weight: 600;
+            box-shadow: 0 0 25px rgba(0, 255, 170, 0.15);
+            animation: slideDown 0.4s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* High Tech Premium Onboarding Gatekeeper Screen */
+        .loading-overlay { 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100vw; height: 100vh; 
+            background: #060b13; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 9999; 
+            color: white; 
+        }
+        
+        .spinner { 
+            width: 60px; 
+            height: 60px; 
+            border: 4px solid rgba(255,255,255,0.03); 
+            border-top-color: #00D9FF; 
+            border-bottom-color: #00ffaa;
+            border-radius: 50%; 
+            animation: spin 1.2s infinite linear; 
+            margin-bottom: 25px; 
+            box-shadow: 0 0 30px rgba(0, 217, 255, 0.2);
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay h3 { font-weight: 500; letter-spacing: 1px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <h3>Verifying Workspace Security State...</h3>
+</div>
+
+<div class="container">
+    <div class="title">MediPulse Engine Onboarding</div>
+    <div class="subtitle">Initialize your personal parameters. Registered assets attach directly to authenticated infrastructure layers.</div>
+
+    <div class="section-title"><i class="fa-solid fa-user-shield"></i> Medical Patient Identification</div>
+    <div class="input-group"><label>Full Legal Name</label><input type="text" id="username" placeholder="Enter full name identity token"></div>
+    <div class="input-group"><label>Primary Notification Gmail Address</label><input type="email" id="userEmail" placeholder="name@gmail.com"></div>
+    <div class="input-group"><label>Chronic Diagnostics & Health Background</label><textarea id="healthProblem" placeholder="Fever, Diabetes, High Blood Pressure trends..."></textarea></div>
+
+    <div class="section-title"><i class="fa-solid fa-satellite-dish"></i> Escalation Contact Routing</div>
+    <div class="input-group"><label>Emergency Guardian Name</label><input type="text" id="familyName" placeholder="Enter contact authority name"></div>
+    <div class="input-group"><label>Emergency Guardian Gmail</label><input type="email" id="familyEmail" placeholder="guardian@gmail.com"></div>
+
+    <div class="section-title"><i class="fa-solid fa-prescription-bottle-medical"></i> Real-time Dosing Formula</div>
+    <div class="input-group"><label>Chemical Compound / Medicine Name</label><input type="text" id="medicineName" placeholder="Example: Metformin"></div>
+    <div class="input-group"><label>Metric Volume / Dosage Criteria</label><input type="text" id="dosage" placeholder="Example: 500mg (Post-Meal)"></div>
+    <div class="input-group"><label>Target Chrono Alarm Clock Schedule</label><input type="time" id="medicineTime"></div>
+
+    <button class="setup-btn" onclick="saveSetup()">
+        <i class="fa-solid fa-heart-pulse"></i> Deploy Workspace Settings
+    </button>
+    <div class="success-box" id="successBox">
+        <i class="fa-solid fa-circle-check fa-lg"></i> System profile synchronization successful. Directing to live stream...
+    </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://covmgrilycetqtpwolfl.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Verification routine running immediately at launch
+async function checkExistingProfile() {
+    try {
+        const { data: { session }, error: authError } = await supabaseClient.auth.getSession();
+        
+        if (!session || authError) {
+            document.getElementById("loadingOverlay").style.display = "none";
+            return;
+        }
+
+        const currentUUID = session.user.id;
+
+        // Verify row identity mapping state
+        const { data: userProfile, error: queryError } = await supabaseClient
+            .from("users")
+            .select("id")
+            .eq("id", currentUUID)
+            .maybeSingle();
+
+        if (userProfile) {
+            // Found registration path, forward to checker
+            window.location.href = "/checker";
+        } else {
+            // Unregistered user workspace, strip veil
+            document.getElementById("loadingOverlay").style.display = "none";
+        }
+    } catch (e) {
+        console.error("Critical failure during dashboard gating: ", e);
+        document.getElementById("loadingOverlay").style.display = "none";
+    }
+}
+
+async function saveSetup(){
+    try {
+        const btn = document.querySelector(".setup-btn");
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Synchronizing cloud storage...`;
+        btn.disabled = true;
+
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if(!session) {
+            alert("Security exception: Session reference broken. Re-authenticate.");
+            resetBtn();
+            return;
+        }
+        
+        const currentUUID = session.user.id;
+
+        const username = document.getElementById("username").value.trim();
+        const userEmail = document.getElementById("userEmail").value.trim();
+        const familyName = document.getElementById("familyName").value.trim();
+        const familyEmail = document.getElementById("familyEmail").value.trim();
+        const healthProblem = document.getElementById("healthProblem").value.trim();
+        const medicineName = document.getElementById("medicineName").value.trim();
+        const dosage = document.getElementById("dosage").value.trim();
+        const medicineTime = document.getElementById("medicineTime").value;
+
+        if(!username || !userEmail || !familyName || !familyEmail || !medicineName || !dosage || !medicineTime){
+            alert("Validation failure: All fields require structural values.");
+            resetBtn();
+            return;
+        }
+
+        // 1. Transaction Mapping: User Profile Instance
+        const { error: err1 } = await supabaseClient.from("users").upsert([{
+            id: currentUUID,
+            username, user_email: userEmail, family_name: familyName, family_email: familyEmail, health_problem: healthProblem
+        }]);
+        if(err1) { alert("Database profiles write failure: " + err1.message); resetBtn(); return; }
+
+        // 2. Transaction Mapping: Core Medicine Element
+        const { data: medData, error: err2 } = await supabaseClient.from("medi").insert([{
+            user_id: currentUUID, medicine_name: medicineName, dosage, medicine_time: medicineTime
+        }]).select();
+        if(err2) { alert("Database medicines write failure: " + err2.message); resetBtn(); return; }
+
+        // 3. Transaction Mapping: Initialization Sequence Log Row
+        const { error: err3 } = await supabaseClient.from("medicine_logs").insert([{
+            user_id: currentUUID, medicine_id: medData[0].id, status: "pending"
+        }]);
+        if(err3) { alert("Database operational trace failure: " + err3.message); resetBtn(); return; }
+
+        document.getElementById("successBox").style.display = "block";
+        setTimeout(() => { window.location.href = "/checker"; }, 1500);
+
+    } catch (e) {
+        alert("Fatal application thread termination: " + e.message);
+        resetBtn();
+    }
+}
+
+function resetBtn(){
+    const btn = document.querySelector(".setup-btn");
+    btn.innerHTML = `<i class="fa-solid fa-heart-pulse"></i> Deploy Workspace Settings`;
+    btn.disabled = false;
+}
+
+// Initializing gate checker routine execution
+checkExistingProfile();
+</script>
+</body>
+</html>

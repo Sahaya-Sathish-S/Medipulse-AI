@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>MediPulse Analytics</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap"
+rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+
+    font-family:'Poppins',sans-serif;
+
+    background:
+    linear-gradient(
+        rgba(0,0,0,0.82),
+        rgba(5,8,22,0.95)
+    ),
+    url('/static/images/background.png');
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    background-attachment:fixed;
+
+    color:white;
+
+    min-height:100vh;
+
+    padding:40px 20px;
+
+    overflow-y:auto;
+}
+
+.title{
+
+    text-align:center;
+
+    font-size:42px;
+
+    font-family:'Orbitron',sans-serif;
+
+    color:#00d9ff;
+
+    margin-bottom:35px;
+
+    text-shadow:
+    0 0 20px #00d9ff;
+}
+
+.dashboard{
+
+    display:grid;
+
+    grid-template-columns:
+    repeat(auto-fit,minmax(250px,1fr));
+
+    gap:20px;
+
+    margin-bottom:30px;
+}
+
+.card{
+
+    background:rgba(255,255,255,0.05);
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    border-radius:25px;
+
+    padding:25px;
+
+    backdrop-filter:blur(20px);
+
+    box-shadow:
+    0 0 25px rgba(0,217,255,0.08);
+}
+
+.card h3{
+
+    color:#00d9ff;
+
+    margin-bottom:15px;
+}
+
+.card-value{
+
+    font-size:34px;
+
+    font-weight:700;
+}
+
+.chart-box{
+
+    background:rgba(255,255,255,0.05);
+
+    border-radius:25px;
+
+    padding:25px;
+
+    margin-bottom:30px;
+
+    border:1px solid rgba(255,255,255,0.08);
+}
+
+.chart-title{
+
+    color:#00d9ff;
+
+    margin-bottom:20px;
+
+    font-size:24px;
+}
+
+.table-box{
+
+    background:rgba(255,255,255,0.05);
+
+    border-radius:25px;
+
+    padding:25px;
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    overflow-x:auto;
+
+    margin-bottom:30px;
+}
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+}
+
+th,td{
+
+    padding:15px;
+
+    text-align:left;
+
+    border-bottom:
+    1px solid rgba(255,255,255,0.08);
+}
+
+th{
+    color:#00d9ff;
+}
+
+.ai-box{
+
+    background:rgba(255,255,255,0.05);
+
+    border-radius:25px;
+
+    padding:25px;
+
+    border:1px solid rgba(255,255,255,0.08);
+}
+
+.ai-btn{
+
+    width:100%;
+
+    border:none;
+
+    padding:18px;
+
+    border-radius:18px;
+
+    cursor:pointer;
+
+    color:white;
+
+    font-size:16px;
+
+    font-weight:600;
+
+    margin-top:20px;
+
+    background:
+    linear-gradient(
+        135deg,
+        #ff00ff,
+        #7b2cff
+    );
+}
+
+.ai-result{
+
+    margin-top:20px;
+
+    line-height:2;
+
+    white-space:pre-line;
+}
+
+.loading{
+
+    text-align:center;
+
+    margin-top:30px;
+
+    color:#00d9ff;
+
+    font-size:20px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="title">
+MediPulse Analytics
+</div>
+
+<div class="dashboard">
+
+<div class="card">
+
+<h3>
+Today's Profit
+</h3>
+
+<div class="card-value"
+id="todayProfit">
+
+₹0
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>
+Total Customers
+</h3>
+
+<div class="card-value"
+id="totalCustomers">
+
+0
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>
+Trending Medicine
+</h3>
+
+<div class="card-value"
+id="trendingMedicine">
+
+--
+
+</div>
+
+</div>
+
+</div>
+
+<div class="chart-box">
+
+<div class="chart-title">
+Sales Analytics Graph
+</div>
+
+<canvas id="salesChart"></canvas>
+
+</div>
+
+<div class="chart-box">
+
+<div class="chart-title">
+Medicine Sales Pie Chart
+</div>
+
+<canvas id="pieChart"></canvas>
+
+</div>
+
+<div class="table-box">
+
+<h2 style="margin-bottom:20px;color:#00d9ff;">
+Customer Purchases
+</h2>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Customer</th>
+<th>Medicine</th>
+<th>Quantity</th>
+<th>Price</th>
+<th>Time</th>
+
+</tr>
+
+</thead>
+
+<tbody id="purchaseTable">
+
+</tbody>
+
+</table>
+
+</div>
+
+<div class="ai-box">
+
+<h2 style="color:#00d9ff;">
+AI Business Suggestions
+</h2>
+
+<button
+class="ai-btn"
+onclick="analyzeBusiness()">
+
+Analyze Pharmacy Business
+
+</button>
+
+<div
+class="ai-result"
+id="aiResult">
+
+</div>
+
+</div>
+
+<div
+class="loading"
+id="loadingText">
+
+Loading Analytics...
+
+</div>
+
+<script>
+
+/* =========================================
+SUPABASE CONFIG
+========================================= */
+
+const supabaseUrl =
+"https://covmgrilycetqtpwolfl.supabase.co";
+
+const supabaseKey =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
+
+const supabaseClient =
+supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+);
+
+/* =========================================
+GLOBAL VARIABLES
+========================================= */
+
+let purchaseData = [];
+
+let salesChart;
+
+let pieChart;
+
+/* =========================================
+LOAD ANALYTICS
+========================================= */
+
+async function loadAnalytics(){
+
+    try{
+
+        const {
+            data,
+            error
+        } =
+        await supabaseClient
+        .from("customer_purchases")
+        .select("*")
+        .order(
+            "purchase_time",
+            { ascending:false }
+        );
+
+        if(error){
+
+            console.log(error);
+
+            alert(error.message);
+
+            return;
+        }
+
+        purchaseData = data;
+
+        document.getElementById(
+            "loadingText"
+        ).style.display = "none";
+
+        loadDashboard();
+
+        loadTable();
+
+        loadCharts();
+
+    }catch(err){
+
+        console.log(err);
+
+        alert("Analytics Loading Failed");
+
+    }
+
+}
+
+/* =========================================
+DASHBOARD
+========================================= */
+
+function loadDashboard(){
+
+    let totalProfit = 0;
+
+    let medicineCount = {};
+
+    let customers = new Set();
+
+    purchaseData.forEach(item=>{
+
+        totalProfit +=
+        Number(item.total_price);
+
+        customers.add(
+            item.customer_name
+        );
+
+        if(
+            medicineCount[
+                item.medicine_name
+            ]
+        ){
+
+            medicineCount[
+                item.medicine_name
+            ]++;
+
+        }else{
+
+            medicineCount[
+                item.medicine_name
+            ] = 1;
+        }
+
+    });
+
+    let trendingMedicine = "--";
+
+    let maxCount = 0;
+
+    for(let medicine in medicineCount){
+
+        if(
+            medicineCount[medicine]
+            > maxCount
+        ){
+
+            maxCount =
+            medicineCount[medicine];
+
+            trendingMedicine =
+            medicine;
+        }
+
+    }
+
+    document.getElementById(
+        "todayProfit"
+    ).innerText =
+    `₹${totalProfit}`;
+
+    document.getElementById(
+        "totalCustomers"
+    ).innerText =
+    customers.size;
+
+    document.getElementById(
+        "trendingMedicine"
+    ).innerText =
+    trendingMedicine;
+
+}
+
+/* =========================================
+TABLE
+========================================= */
+
+function loadTable(){
+
+    const table =
+    document.getElementById(
+        "purchaseTable"
+    );
+
+    table.innerHTML = "";
+
+    purchaseData.forEach(item=>{
+
+        const row =
+        `
+        <tr>
+
+        <td>
+        ${item.customer_name}
+        </td>
+
+        <td>
+        ${item.medicine_name}
+        </td>
+
+        <td>
+        ${item.quantity}
+        </td>
+
+        <td>
+        ₹${item.total_price}
+        </td>
+
+        <td>
+        ${new Date(
+            item.purchase_time
+        ).toLocaleString()}
+        </td>
+
+        </tr>
+        `;
+
+        table.innerHTML += row;
+
+    });
+
+}
+
+/* =========================================
+CHARTS
+========================================= */
+
+function loadCharts(){
+
+    /* SALES GRAPH */
+
+    let labels = [];
+
+    let salesData = [];
+
+    purchaseData
+    .slice()
+    .reverse()
+    .forEach(item=>{
+
+        labels.push(
+            item.medicine_name
+        );
+
+        salesData.push(
+            item.total_price
+        );
+
+    });
+
+    if(salesChart){
+
+        salesChart.destroy();
+    }
+
+    salesChart =
+    new Chart(
+
+        document.getElementById(
+            "salesChart"
+        ),
+
+        {
+
+            type:"line",
+
+            data:{
+
+                labels:labels,
+
+                datasets:[{
+
+                    label:"Sales",
+
+                    data:salesData,
+
+                    borderColor:"#00d9ff",
+
+                    backgroundColor:
+                    "rgba(0,217,255,0.2)",
+
+                    tension:0.4
+
+                }]
+            }
+
+        }
+    );
+
+    /* PIE CHART */
+
+    let medicineStats = {};
+
+    purchaseData.forEach(item=>{
+
+        if(
+            medicineStats[
+                item.medicine_name
+            ]
+        ){
+
+            medicineStats[
+                item.medicine_name
+            ] += item.quantity;
+
+        }else{
+
+            medicineStats[
+                item.medicine_name
+            ] = item.quantity;
+        }
+
+    });
+
+    const pieLabels =
+    Object.keys(medicineStats);
+
+    const pieValues =
+    Object.values(medicineStats);
+
+    if(pieChart){
+
+        pieChart.destroy();
+    }
+
+    pieChart =
+    new Chart(
+
+        document.getElementById(
+            "pieChart"
+        ),
+
+        {
+
+            type:"pie",
+
+            data:{
+
+                labels:pieLabels,
+
+                datasets:[{
+
+                    data:pieValues,
+
+                    backgroundColor:[
+
+                        "#00d9ff",
+                        "#ff00ff",
+                        "#7b2cff",
+                        "#00ff99",
+                        "#ffaa00",
+                        "#ff4444",
+                        "#00ffaa"
+
+                    ]
+
+                }]
+            }
+
+        }
+    );
+
+}
+
+/* =========================================
+AI ANALYSIS
+========================================= */
+
+async function analyzeBusiness(){
+
+    try{
+
+        document.getElementById(
+            "aiResult"
+        ).innerText =
+        "Analyzing pharmacy business...";
+
+        const response =
+        await fetch(
+            "/analyze_ai",
+            {
+
+                method:"POST",
+
+                headers:{
+                    "Content-Type":
+                    "application/json"
+                },
+
+                body:JSON.stringify({
+
+                    purchases:
+                    purchaseData
+
+                })
+
+            }
+        );
+
+        const data =
+        await response.json();
+
+        document.getElementById(
+            "aiResult"
+        ).innerText =
+        data.reply;
+
+    }catch(err){
+
+        console.log(err);
+
+        document.getElementById(
+            "aiResult"
+        ).innerText =
+        "AI analysis failed";
+
+    }
+
+}
+
+/* =========================================
+START
+========================================= */
+
+loadAnalytics();
+
+</script>
+
+</body>
+
+</html>

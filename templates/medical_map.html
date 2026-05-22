@@ -1,0 +1,1426 @@
+<!-- =========================================================
+FILE NAME: medipulse_ai_navigation.html
+========================================================= -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>MediPulse AI Smart Medical Navigation</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+
+    font-family:'Poppins',sans-serif;
+
+    background:
+    linear-gradient(
+        rgba(0,0,0,0.75),
+        rgba(5,8,22,0.92)
+    ),
+    url('/static/images/background.png');
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    background-attachment:fixed;
+
+    overflow:hidden;
+
+    color:white;
+}
+
+/* BACKGROUND */
+
+body::before{
+
+    content:'';
+
+    position:fixed;
+
+    inset:0;
+
+    background:
+    radial-gradient(circle,#00d9ff33 1px,transparent 1px),
+    radial-gradient(circle,#ff00ff22 1px,transparent 1px);
+
+    background-size:120px 120px;
+
+    animation:bgMove 18s linear infinite;
+
+    z-index:-1;
+}
+
+@keyframes bgMove{
+
+    from{
+        transform:translateY(0);
+    }
+
+    to{
+        transform:translateY(-120px);
+    }
+
+}
+
+/* MAIN */
+
+.main-container{
+
+    display:flex;
+
+    height:100vh;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+
+    width:410px;
+
+    background:
+    linear-gradient(
+        rgba(0,0,0,0.82),
+        rgba(5,8,22,0.92)
+    ),
+    url('/static/images/background.png');
+
+    background-size:cover;
+    background-position:center;
+
+    backdrop-filter:blur(30px);
+
+    border-right:1px solid rgba(255,255,255,0.08);
+
+    padding:22px;
+
+    overflow-y:auto;
+}
+
+/* LOGO */
+
+.logo{
+
+    font-size:34px;
+
+    font-family:'Orbitron',sans-serif;
+
+    text-align:center;
+
+    color:#00d9ff;
+
+    margin-bottom:20px;
+
+    text-shadow:
+    0 0 15px #00d9ff,
+    0 0 30px #ff00ff;
+}
+
+/* LIVE INFO */
+
+.live-info{
+
+    background:rgba(255,255,255,0.05);
+
+    border-radius:22px;
+
+    padding:18px;
+
+    margin-bottom:18px;
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    line-height:1.9;
+}
+
+/* BUTTONS */
+
+.action-btn{
+
+    width:100%;
+
+    border:none;
+
+    padding:18px;
+
+    border-radius:18px;
+
+    color:white;
+
+    cursor:pointer;
+
+    font-size:15px;
+
+    font-weight:600;
+
+    margin-top:14px;
+
+    transition:0.3s;
+
+    background:
+    linear-gradient(
+        135deg,
+        #00d9ff,
+        #7b2cff,
+        #ff00ff
+    );
+
+    background-size:300% 300%;
+
+    animation:gradientMove 5s ease infinite;
+}
+
+.action-btn:hover{
+
+    transform:translateY(-3px);
+}
+
+@keyframes gradientMove{
+
+    0%{
+        background-position:0% 50%;
+    }
+
+    50%{
+        background-position:100% 50%;
+    }
+
+    100%{
+        background-position:0% 50%;
+    }
+
+}
+
+/* RESULTS */
+
+.results{
+    margin-top:20px;
+}
+
+.place-card{
+
+    background:rgba(255,255,255,0.06);
+
+    border-radius:22px;
+
+    padding:18px;
+
+    margin-bottom:16px;
+
+    border:1px solid rgba(255,255,255,0.08);
+}
+
+.place-name{
+
+    color:#00d9ff;
+
+    font-size:18px;
+
+    font-weight:600;
+
+    margin-bottom:10px;
+}
+
+.route-btn{
+
+    width:100%;
+
+    border:none;
+
+    padding:14px;
+
+    border-radius:14px;
+
+    cursor:pointer;
+
+    margin-top:12px;
+
+    color:white;
+
+    font-weight:600;
+
+    background:
+    linear-gradient(
+        135deg,
+        #00d9ff,
+        #0066ff
+    );
+}
+
+/* AI CHAT */
+
+.ai-chat{
+
+    margin-top:20px;
+
+    background:rgba(255,255,255,0.05);
+
+    border-radius:22px;
+
+    padding:18px;
+
+    border:1px solid rgba(255,255,255,0.08);
+}
+
+.chat-messages{
+
+    height:180px;
+
+    overflow-y:auto;
+
+    margin-bottom:12px;
+
+    padding-right:5px;
+}
+
+.chat-bubble{
+
+    padding:12px;
+
+    border-radius:14px;
+
+    margin-bottom:10px;
+
+    font-size:14px;
+}
+
+.user{
+
+    background:#0066ff;
+}
+
+.ai{
+
+    background:rgba(255,255,255,0.08);
+}
+
+.chat-input{
+
+    display:flex;
+
+    gap:10px;
+}
+
+.chat-input input{
+
+    flex:1;
+
+    border:none;
+
+    border-radius:14px;
+
+    padding:14px;
+
+    outline:none;
+
+    background:rgba(255,255,255,0.08);
+
+    color:white;
+}
+
+.send-btn{
+
+    width:55px;
+
+    border:none;
+
+    border-radius:14px;
+
+    cursor:pointer;
+
+    color:white;
+
+    background:
+    linear-gradient(
+        135deg,
+        #ff00ff,
+        #7b2cff
+    );
+}
+
+/* MAP */
+
+.map-container{
+
+    flex:1;
+
+    position:relative;
+}
+
+#map{
+
+    width:100%;
+
+    height:100%;
+}
+
+/* VOICE */
+
+.voice-route-btn{
+
+    position:absolute;
+
+    top:20px;
+
+    right:20px;
+
+    width:75px;
+
+    height:75px;
+
+    border:none;
+
+    border-radius:50%;
+
+    cursor:pointer;
+
+    color:white;
+
+    font-size:24px;
+
+    z-index:9999;
+
+    background:
+    linear-gradient(
+        135deg,
+        #ff00ff,
+        #7b2cff
+    );
+}
+
+/* TIME */
+
+.time-box{
+
+    position:absolute;
+
+    bottom:20px;
+
+    right:20px;
+
+    z-index:9999;
+
+    background:rgba(0,0,0,0.5);
+
+    padding:14px 18px;
+
+    border-radius:16px;
+
+    backdrop-filter:blur(15px);
+
+    border:1px solid rgba(255,255,255,0.1);
+
+    line-height:1.8;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="main-container">
+
+<div class="sidebar">
+
+<div class="logo">
+MediPulse AI
+</div>
+
+<div class="live-info">
+
+<div>
+📍 Current Location:
+<span id="locationText">
+Waiting...
+</span>
+</div>
+
+<div>
+🚗 Current Speed:
+<span id="speedText">
+0 KM/H
+</span>
+</div>
+
+<div>
+🕒 Current Time:
+<span id="currentTime">
+--
+</span>
+</div>
+
+<div>
+📏 Live Distance:
+<span id="distanceLeft">
+--
+</span>
+</div>
+
+<div>
+⏳ Estimated Arrival:
+<span id="arrivalTime">
+--
+</span>
+</div>
+
+</div>
+
+<button class="action-btn"
+onclick="enableLocation()">
+
+<i class="fa-solid fa-location-crosshairs"></i>
+Turn On Location
+
+</button>
+
+<button class="action-btn"
+onclick="searchNearby('hospital')">
+
+<i class="fa-solid fa-hospital"></i>
+Find Hospitals
+
+</button>
+
+<button class="action-btn"
+onclick="searchNearby('pharmacy')">
+
+<i class="fa-solid fa-prescription-bottle-medical"></i>
+Find Pharmacies
+
+</button>
+
+<div class="results"
+id="results"></div>
+
+<!-- AI CHAT -->
+
+<div class="ai-chat">
+
+<h3 style="margin-bottom:12px;color:#00d9ff;">
+AI Medical Assistant
+</h3>
+
+<div class="chat-messages"
+id="chatMessages"></div>
+
+<div class="chat-input">
+
+<input
+type="text"
+id="chatInput"
+placeholder="Ask route or medical help..."
+>
+
+<button class="send-btn"
+onclick="sendAIMessage()">
+
+<i class="fa-solid fa-paper-plane"></i>
+
+</button>
+
+<button class="send-btn"
+onclick="startVoiceInput()">
+
+<i class="fa-solid fa-microphone"></i>
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- MAP -->
+
+<div class="map-container">
+
+<div id="map"></div>
+
+<button class="voice-route-btn"
+onclick="repeatDirections()">
+
+<i class="fa-solid fa-volume-high"></i>
+
+</button>
+
+<div class="time-box">
+
+<div>
+🕒 <span id="liveClock"></span>
+</div>
+
+<div>
+📡 Live GPS Active
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+let map;
+let userLat = null;
+let userLng = null;
+let currentSpeed = 0;
+
+let userMarker;
+let routeLayer;
+
+let destinationLat = null;
+let destinationLng = null;
+let destinationName = "";
+
+let currentSteps = [];
+let currentStepIndex = 0;
+let navigationInterval = null;
+
+let markers = [];
+
+/* MAP */
+
+map = L.map("map").setView([20.5937,78.9629],5);
+
+L.tileLayer(
+"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+{
+    attribution:"© OpenStreetMap"
+}
+).addTo(map);
+
+/* CLOCK */
+
+setInterval(()=>{
+
+    const now = new Date();
+
+    document.getElementById("liveClock").innerText =
+    now.toLocaleTimeString();
+
+    document.getElementById("currentTime").innerText =
+    now.toLocaleTimeString();
+
+},1000);
+
+/* LOCATION */
+
+function enableLocation(){
+
+    if(!navigator.geolocation){
+
+        alert("Geolocation not supported");
+        return;
+    }
+
+    navigator.geolocation.watchPosition(
+
+        position=>{
+
+            userLat = position.coords.latitude;
+            userLng = position.coords.longitude;
+
+            currentSpeed =
+            position.coords.speed
+            ? (position.coords.speed * 3.6).toFixed(1)
+            : 0;
+
+            document.getElementById("locationText").innerText =
+            `${userLat.toFixed(5)}, ${userLng.toFixed(5)}`;
+
+            document.getElementById("speedText").innerText =
+            `${currentSpeed} KM/H`;
+
+            if(userMarker){
+
+                map.removeLayer(userMarker);
+            }
+
+            userMarker =
+            L.marker([userLat,userLng])
+            .addTo(map)
+            .bindPopup("You are here");
+
+            map.setView([userLat,userLng],15);
+
+            updateLiveDistance();
+
+        },
+
+        error=>{
+
+            console.error(error);
+
+            alert(
+                "Please allow GPS permission"
+            );
+
+        },
+
+        {
+            enableHighAccuracy:true
+        }
+
+    );
+
+    speakText("GPS enabled");
+
+}
+
+/* SEARCH */
+
+async function searchNearby(type){
+
+    if(!userLat || !userLng){
+
+        alert("Enable location first");
+        return;
+    }
+
+    document.getElementById("results").innerHTML =
+    "Searching nearby places...";
+
+    markers.forEach(marker=>{
+
+        map.removeLayer(marker);
+
+    });
+
+    markers = [];
+
+    let radius = 10000;
+
+    let query = "";
+
+    if(type === "pharmacy"){
+
+        query = `
+        [out:json][timeout:25];
+        (
+          node(around:${radius},${userLat},${userLng})["amenity"="pharmacy"];
+          node(around:${radius},${userLat},${userLng})["shop"="chemist"];
+          node(around:${radius},${userLat},${userLng})["healthcare"="pharmacy"];
+          node(around:${radius},${userLat},${userLng})["dispensing"="yes"];
+        );
+        out body;
+        `;
+
+    }else{
+
+        query = `
+        [out:json][timeout:25];
+        (
+          node(around:${radius},${userLat},${userLng})["amenity"="hospital"];
+          node(around:${radius},${userLat},${userLng})["healthcare"="hospital"];
+        );
+        out body;
+        `;
+    }
+
+    try{
+
+        const response =
+        await fetch(
+            "https://overpass-api.de/api/interpreter",
+            {
+                method:"POST",
+                body:query
+            }
+        );
+
+        const data =
+        await response.json();
+
+        displayPlaces(data.elements);
+
+    }catch(err){
+
+        console.error(err);
+
+        document.getElementById("results").innerHTML =
+        "Unable to fetch places";
+
+    }
+
+}
+
+/* DISPLAY */
+
+function displayPlaces(places){
+
+    const results =
+    document.getElementById("results");
+
+    results.innerHTML = "";
+
+    if(!places || places.length === 0){
+
+        results.innerHTML =
+        "No places found nearby";
+
+        return;
+    }
+
+    places.forEach(place=>{
+
+        const lat = place.lat;
+        const lon = place.lon;
+
+        if(!lat || !lon) return;
+
+        const name =
+        place.tags?.name ||
+        "Medical Center";
+
+        const distance =
+        calculateDistance(
+            userLat,
+            userLng,
+            lat,
+            lon
+        );
+
+        const marker =
+        L.marker([lat,lon])
+        .addTo(map)
+        .bindPopup(name);
+
+        markers.push(marker);
+
+        const card =
+        document.createElement("div");
+
+        card.className = "place-card";
+
+        card.innerHTML = `
+
+        <div class="place-name">
+        ${name}
+        </div>
+
+        <div>
+        📏 ${distance} KM Away
+        </div>
+
+        <button
+        class="route-btn"
+        onclick="startRoute(${lat},${lon},'${name.replace(/'/g,"")}')">
+
+        🚗 Start Navigation
+
+        </button>
+
+        `;
+
+        results.appendChild(card);
+
+    });
+
+}
+
+/* ROUTING */
+
+async function startRoute(lat,lng,name){
+
+    try{
+
+        if(!userLat || !userLng){
+
+            alert("Enable location first");
+            return;
+        }
+
+        destinationLat = lat;
+        destinationLng = lng;
+        destinationName = name;
+
+        currentStepIndex = 0;
+
+        if(routeLayer){
+
+            map.removeLayer(routeLayer);
+        }
+
+        if(navigationInterval){
+
+            clearInterval(navigationInterval);
+        }
+
+        const url =
+        `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${lng},${lat}?overview=full&steps=true&geometries=geojson`;
+
+        const response =
+        await fetch(url);
+
+        const data =
+        await response.json();
+
+        if(
+            !data.routes ||
+            data.routes.length === 0
+        ){
+
+            alert("Route not found");
+            return;
+        }
+
+        const route =
+        data.routes[0];
+
+        const coordinates =
+        route.geometry.coordinates.map(
+            coord => [coord[1],coord[0]]
+        );
+
+        routeLayer =
+        L.polyline(
+            coordinates,
+            {
+                color:"#00d9ff",
+                weight:6
+            }
+        ).addTo(map);
+
+        map.fitBounds(
+            routeLayer.getBounds()
+        );
+
+        currentSteps =
+        route.legs[0].steps;
+
+        speakText(
+            `Navigation started to ${name}`
+        );
+
+        speakNextDirection();
+
+        navigationInterval =
+        setInterval(()=>{
+
+            speakNextDirection();
+
+        },20000);
+
+        updateLiveDistance();
+
+    }catch(err){
+
+        console.error(err);
+
+        alert("Navigation failed");
+
+    }
+
+}
+
+/* NEXT DIRECTION */
+
+function speakNextDirection(){
+
+    if(
+        currentStepIndex >=
+        currentSteps.length
+    ){
+
+        speakText(
+            "Destination reached"
+        );
+
+        clearInterval(
+            navigationInterval
+        );
+
+        return;
+    }
+
+    const step =
+    currentSteps[currentStepIndex];
+
+    if(step.maneuver.instruction){
+
+        speakText(
+            step.maneuver.instruction
+        );
+    }
+
+    currentStepIndex++;
+
+}
+
+/* DISTANCE */
+
+function updateLiveDistance(){
+
+    if(!destinationLat) return;
+
+    const distance =
+    calculateDistance(
+        userLat,
+        userLng,
+        destinationLat,
+        destinationLng
+    );
+
+    document.getElementById("distanceLeft").innerText =
+    `${distance} KM`;
+
+    if(currentSpeed > 0){
+
+        const hours =
+        distance / currentSpeed;
+
+        const mins =
+        Math.round(hours * 60);
+
+        document.getElementById("arrivalTime").innerText =
+        `${mins} Minutes`;
+    }
+
+}
+
+/* CALCULATE */
+
+function calculateDistance(
+lat1,lon1,lat2,lon2){
+
+    const R = 6371;
+
+    const dLat =
+    (lat2-lat1) * Math.PI/180;
+
+    const dLon =
+    (lon2-lon1) * Math.PI/180;
+
+    const a =
+    Math.sin(dLat/2) *
+    Math.sin(dLat/2) +
+
+    Math.cos(lat1*Math.PI/180) *
+    Math.cos(lat2*Math.PI/180) *
+
+    Math.sin(dLon/2) *
+    Math.sin(dLon/2);
+
+    const c =
+    2 * Math.atan2(
+        Math.sqrt(a),
+        Math.sqrt(1-a)
+    );
+
+    return (R*c).toFixed(2);
+
+}
+
+/* SPEAK */
+
+function speakText(text){
+
+    speechSynthesis.cancel();
+
+    const speech =
+    new SpeechSynthesisUtterance(text);
+
+    speech.lang = "en-US";
+
+    speech.rate = 0.95;
+
+    speechSynthesis.speak(speech);
+
+}
+
+/* CHAT */
+
+async function sendAIMessage(){
+
+    const input = document.getElementById("chatInput");
+    const msg = input.value.trim();
+
+    if(msg === "") return;
+
+    addChat(msg, "user");
+    input.value = "";
+
+    // Create a structured, identifiable thinking bubble
+    const chatBox = document.getElementById("chatMessages");
+    const thinkingDiv = document.createElement("div");
+    thinkingDiv.id = "thinkingBubble";
+    thinkingDiv.classList.add("chat-bubble", "ai");
+    thinkingDiv.innerText = "Thinking...";
+    chatBox.appendChild(thinkingDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+        const response = await fetch("/map_ai", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                message: msg,
+                latitude: userLat,
+                longitude: userLng,
+                destination: destinationName,
+                distance: document.getElementById("distanceLeft").innerText,
+                duration: document.getElementById("arrivalTime").innerText,
+                speed: currentSpeed,
+                current_time: new Date().toLocaleTimeString()
+            })
+        });
+
+        const data = await response.json();
+
+        // Safe removal of the thinking element by its ID
+        const targetBubble = document.getElementById("thinkingBubble");
+        if(targetBubble) {
+            targetBubble.remove();
+        }
+
+        addChat(data.reply, "ai");
+        speakText(data.reply);
+
+    } catch(err) {
+        console.error(err);
+        
+        const targetBubble = document.getElementById("thinkingBubble");
+        if(targetBubble) {
+            targetBubble.remove();
+        }
+
+        addChat("AI connection failed", "ai");
+    }
+}
+
+/* CHAT UI */
+
+function addChat(text,type){
+
+    const box =
+    document.getElementById("chatMessages");
+
+    const div =
+    document.createElement("div");
+
+    div.classList.add(
+        "chat-bubble",
+        type
+    );
+
+    div.innerText = text;
+
+    box.appendChild(div);
+
+    box.scrollTop =
+    box.scrollHeight;
+
+}
+
+/* VOICE INPUT */
+
+function startVoiceInput(){
+
+    if(
+        !window.webkitSpeechRecognition &&
+        !window.SpeechRecognition
+    ){
+
+        alert(
+            "Voice recognition not supported"
+        );
+
+        return;
+    }
+
+    const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+    const recognition =
+    new SpeechRecognition();
+
+    recognition.lang = "en-US";
+
+    recognition.start();
+
+    recognition.onresult =
+    function(event){
+
+        const text =
+        event.results[0][0].transcript;
+
+        document.getElementById(
+            "chatInput"
+        ).value = text;
+
+        sendAIMessage();
+
+    };
+
+}
+
+/* REPEAT */
+
+function repeatDirections(){
+
+    if(currentSteps.length > 0){
+
+        speakNextDirection();
+
+    }else{
+
+        speakText(
+            "No active navigation"
+        );
+
+    }
+
+}
+
+</script>
+<!-- ROTATE SCREEN OVERLAY -->
+
+<div id="rotateOverlay">
+
+    <div class="rotate-box">
+
+        <div class="phone">
+
+            <div class="screen"></div>
+
+        </div>
+
+        <h1>
+            Rotate Your Phone
+        </h1>
+
+        <p>
+            MediPulse AI Navigation works best in landscape mode
+        </p>
+
+    </div>
+
+</div>
+
+<style>
+
+/* ROTATE OVERLAY */
+
+#rotateOverlay{
+
+    position:fixed;
+
+    inset:0;
+
+    background:
+    linear-gradient(
+        135deg,
+        #050816,
+        #0d1228,
+        #000000
+    );
+
+    display:none;
+
+    justify-content:center;
+
+    align-items:center;
+
+    flex-direction:column;
+
+    z-index:999999;
+
+    color:white;
+
+    text-align:center;
+
+    overflow:hidden;
+}
+
+.rotate-box{
+
+    display:flex;
+
+    flex-direction:column;
+
+    align-items:center;
+
+    gap:25px;
+}
+
+/* PHONE ICON */
+
+.phone{
+
+    width:110px;
+
+    height:190px;
+
+    border:6px solid #00d9ff;
+
+    border-radius:28px;
+
+    position:relative;
+
+    animation:rotatePhone 2s infinite ease-in-out;
+
+    box-shadow:
+    0 0 20px #00d9ff,
+    0 0 40px #7b2cff;
+}
+
+.screen{
+
+    position:absolute;
+
+    top:12px;
+    left:12px;
+    right:12px;
+    bottom:12px;
+
+    border-radius:18px;
+
+    background:
+    linear-gradient(
+        135deg,
+        #00d9ff,
+        #7b2cff,
+        #ff00ff
+    );
+}
+
+@keyframes rotatePhone{
+
+    0%{
+        transform:rotate(0deg);
+    }
+
+    25%{
+        transform:rotate(0deg);
+    }
+
+    50%{
+        transform:rotate(90deg);
+    }
+
+    75%{
+        transform:rotate(90deg);
+    }
+
+    100%{
+        transform:rotate(0deg);
+    }
+
+}
+
+#rotateOverlay h1{
+
+    font-size:34px;
+
+    color:#00d9ff;
+
+    font-family:'Orbitron',sans-serif;
+
+    text-shadow:
+    0 0 10px #00d9ff,
+    0 0 25px #7b2cff;
+}
+
+#rotateOverlay p{
+
+    font-size:17px;
+
+    opacity:0.85;
+
+    width:80%;
+
+    max-width:350px;
+
+    line-height:1.8;
+}
+
+</style>
+
+<script>
+
+/* ROTATION CHECK */
+
+function checkOrientation(){
+
+    const overlay =
+    document.getElementById(
+        "rotateOverlay"
+    );
+
+    /* PORTRAIT */
+
+    if(
+        window.innerHeight >
+        window.innerWidth
+    ){
+
+        overlay.style.display =
+        "flex";
+
+        document.body.style.overflow =
+        "hidden";
+
+    }
+
+    /* LANDSCAPE */
+
+    else{
+
+        overlay.style.display =
+        "none";
+
+        document.body.style.overflow =
+        "hidden";
+
+    }
+
+}
+
+/* INITIAL */
+
+checkOrientation();
+
+/* ON ROTATE */
+
+window.addEventListener(
+    "resize",
+    checkOrientation
+);
+
+window.addEventListener(
+    "orientationchange",
+    checkOrientation
+);
+
+</script>
+    
+</body>
+
+</html>

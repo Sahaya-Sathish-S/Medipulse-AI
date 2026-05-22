@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Smart Eye Scanner</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: url("{{ url_for('static', filename='images/background.png') }}") no-repeat center center/cover;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            padding: 40px 20px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 1;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: 850px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 217, 255, 0.1);
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00d9ff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(0, 217, 255, 0.3);
+        }
+
+        p.subtitle {
+            font-size: 14px;
+            color: #b3b3b3;
+            margin-bottom: 30px;
+        }
+
+        /* Camera Scanner Viewport wrapper */
+        .scanner-view-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            height: 360px;
+            margin: 0 auto 30px;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid #00d9ff;
+            box-shadow: 0 0 25px rgba(0, 217, 255, 0.25);
+            background: #000;
+        }
+
+        video, canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        /* Animated Laser Scanning Target Reticle Overlay */
+        .laser-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #00d9ff, #ff00ff, transparent);
+            box-shadow: 0 0 15px #00d9ff, 0 0 25px #ff00ff;
+            animation: scanMotion 3s linear infinite;
+            z-index: 3;
+            display: none;
+        }
+
+        @keyframes scanMotion {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+
+        .action-btns-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 35px;
+        }
+
+        button {
+            padding: 12px 28px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d9ff, #7b2cff, #ff00ff);
+            box-shadow: 0 4px 15px rgba(0, 217, 255, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 25px #00d9ff;
+        }
+
+        .btn-primary:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Diagnostic Outputs Card */
+        .results-wrapper {
+            display: none;
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            text-align: left;
+            animation: slideUp 0.5s ease-out;
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .results-wrapper h2 {
+            font-size: 22px;
+            color: #00d9ff;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 217, 255, 0.2);
+            padding-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .report-content-body {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #e0e0e0;
+            white-space: pre-wrap; /* Keeps markdown list indentation structured */
+            margin-bottom: 25px;
+        }
+
+        .utility-btns-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .loader-text {
+            display: none;
+            font-size: 16px;
+            color: #00d9ff;
+            margin-top: 15px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="overlay"></div>
+
+    <div class="container">
+        <h1>👁️ AI Smart Eye Scanner</h1>
+        <p class="subtitle">Position your eye within the tracking region for digital screening and diagnostic analysis</p>
+
+        <div class="scanner-view-wrapper">
+            <div class="laser-line" id="laserLine"></div>
+            <video id="cameraStream" autoplay playsinline muted></video>
+            <canvas id="captureCanvas"></canvas>
+        </div>
+
+        <div class="action-btns-container">
+            <button class="btn-primary" id="scanBtn" onclick="runBiometricScan()">
+                🚀 Capture & Analyze Scan
+            </button>
+        </div>
+
+        <div class="loader-text" id="loaderIndicator">
+            ⏳ Extracting structural nodes... Analyzing anomalies...
+        </div>
+
+        <div class="results-wrapper" id="resultsBox">
+            <h2>📊 Biometric Diagnostic Screening Report</h2>
+            <div class="report-content-body" id="reportContentText"></div>
+
+            <div class="utility-btns-row">
+                <button class="btn-secondary" onclick="exportPDFReport()">
+                    📥 Download Report PDF
+                </button>
+                <button class="btn-secondary" style="border-color: #ff00ff;" onclick="shareDiagnosticReport()">
+                    🔗 Share Report
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('cameraStream');
+        const canvasElement = document.getElementById('captureCanvas');
+        const scanButton = document.getElementById('scanBtn');
+        const laserElement = document.getElementById('laserLine');
+        const loaderText = document.getElementById('loaderIndicator');
+        const resultsBlock = document.getElementById('resultsBox');
+        const analysisTextField = document.getElementById('reportContentText');
+
+        let rawImageBase64Payload = "";
+
+        // Establish hardware attachment stream context hookups automatically upon page loading cycles
+        async function initializeHardwareWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: "user",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+                videoElement.srcObject = stream;
+            } catch (err) {
+                console.error("Camera Access Denied:", err);
+                alert("❌ Hardware connection failure: Please allow camera system runtime privileges to operate screening features.");
+            }
+        }
+
+        async function runBiometricScan() {
+            const maxDimensionWidth = 640;
+            const maxDimensionHeight = 480;
+    
+            let targetWidth = videoElement.videoWidth || 640;
+            let targetHeight = videoElement.videoHeight || 480;
+
+            if (targetWidth > maxDimensionWidth) {
+                targetHeight = Math.round((maxDimensionWidth / targetWidth) * targetHeight);
+                targetWidth = maxDimensionWidth;
+            }
+
+            canvasElement.width = targetWidth;
+            canvasElement.height = targetHeight;
+    
+            const ctx = canvasElement.getContext('2d');
+            ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+    
+            // Compress to optimized JPEG to keep payloads small
+            rawImageBase64Payload = canvasElement.toDataURL('image/jpeg', 0.7);
+
+            // Toggle scanning UI elements
+            laserElement.style.display = "block";
+            loaderText.style.display = "block";
+            resultsBlock.style.display = "none";
+            scanButton.disabled = true;
+
+            try {
+                const response = await fetch('/analyze_eye_scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_content: rawImageBase64Payload,
+                        file_type: 'image/jpeg'
+                    })
+                });
+
+                // Parse JSON safely
+                let data;
+                try {
+                    data = await response.json();
+                } catch(e) {
+                    data = { reply: "Server returned an invalid or empty data signature." };
+                }
+
+                if (response.ok && data && data.reply) {
+                    analysisTextField.innerText = data.reply;
+                    resultsBlock.style.display = "block";
+                    resultsBlock.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    // Safe fallback if response failed but returned data object
+                    const errorMessage = (data && data.reply) ? data.reply : "Unknown internal server anomaly.";
+                    analysisTextField.innerText = "❌ Diagnostic processing error:\n" + errorMessage;
+                    resultsBlock.style.display = "block";
+                    resultsBlock.scrollIntoView({ behavior: 'smooth' });
+                }
+
+           } catch (networkError) {
+                console.error("Detailed Routing Error:", networkError);
+                alert("❌ Failed to reach your Python server. Make sure your Python terminal is running and check for print errors there!");
+           } finally {
+                laserElement.style.display = "none";
+                loaderText.style.display = "none";
+                scanButton.disabled = false;
+            }
+        }
+
+        // GENERATE PDF VIA CLIENT LOGIC PROFILES
+        function exportPDFReport() {
+            const documentContentElement = document.createElement('div');
+            documentContentElement.style.padding = '35px';
+            documentContentElement.style.color = '#111111';
+            documentContentElement.style.fontFamily = 'Arial, sans-serif';
+
+            const reportTimestamp = new Date().toLocaleString();
+
+            documentContentElement.innerHTML = `
+                <h1 style="color: #7b2cff; border-bottom: 2px solid #7b2cff; padding-bottom: 10px;">MediPulse Diagnostic Evaluation</h1>
+                <p style="font-size: 12px; color: #666;">Generated On: ${reportTimestamp}</p>
+                <div style="margin: 25px 0;">
+                    <h3 style="color: #333;">Ophthalmic Screening Summary:</h3>
+                    <p style="font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${analysisTextField.innerText}</p>
+                </div>
+                <hr style="border: 0; border-top: 1px solid #ccc; margin-top: 40px;"/>
+                <p style="font-size: 11px; color: #999; text-align: center;">This document is an automated AI system screening output report file. Not clinical prescription documentation.</p>
+            `;
+
+            const optimizationSettings = {
+                margin: 15,
+                filename: 'MediPulse_Eye_Screening_Report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, letterRendering: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(optimizationSettings).from(documentContentElement).save();
+        }
+
+        // WEB-NATIVE SHARE API LOGIC INTEGRATIONS
+        async function shareDiagnosticReport() {
+            const shareStringText = `MediPulse AI Eye Scan Report:\n\n${analysisTextField.innerText}`;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'MediPulse Eye Scan Report',
+                        text: shareStringText,
+                        url: window.location.origin
+                    });
+                } catch (err) {
+                    console.log('Share dismissed or cancelled.');
+                }
+            } else {
+                // Clipboard fallback logic profile routines if structural API environment lacks direct visibility patterns
+                navigator.clipboard.writeText(shareStringText);
+                alert("📋 Share text summary compiled and copied to system clipboard successfully!");
+            }
+        }
+
+        // Run hardware connection requests upon launch executions automatically
+        window.onload = initializeHardwareWebcam;
+    </script>
+</body>
+
+</html>

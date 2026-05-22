@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>MediPulse AI Medicine</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+
+    font-family:'Poppins',sans-serif;
+
+    background:
+    linear-gradient(
+        rgba(0,0,0,0.82),
+        rgba(5,8,22,0.94)
+    ),
+    url('/static/images/background.png');
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    background-attachment:fixed;
+
+    color:white;
+
+    min-height:100vh;
+
+    overflow-y:auto;
+
+    padding:40px 0;
+}
+
+.container{
+
+    width:95%;
+    max-width:850px;
+
+    margin:auto;
+
+    background:rgba(255,255,255,0.05);
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    border-radius:30px;
+
+    padding:35px;
+
+    box-shadow:
+    0 0 30px rgba(0,217,255,0.15);
+}
+
+.title{
+
+    text-align:center;
+
+    font-size:38px;
+
+    font-family:'Orbitron',sans-serif;
+
+    color:#00d9ff;
+
+    margin-bottom:10px;
+}
+
+.subtitle{
+
+    text-align:center;
+
+    color:#ccc;
+
+    margin-bottom:30px;
+
+    line-height:1.7;
+}
+
+/* LANGUAGE */
+
+.language-box{
+
+    margin-bottom:20px;
+}
+
+.language-select{
+
+    width:100%;
+
+    padding:15px;
+
+    border:none;
+
+    border-radius:16px;
+
+    outline:none;
+
+    background:rgba(255,255,255,0.08);
+
+    color:white;
+
+    font-size:15px;
+}
+
+.language-select option{
+    background:#0b1020;
+}
+
+/* INPUT */
+
+.input-wrapper{
+
+    position:relative;
+}
+
+.problem-input{
+
+    width:100%;
+
+    min-height:180px;
+
+    resize:none;
+
+    border:none;
+
+    outline:none;
+
+    border-radius:24px;
+
+    padding:22px;
+
+    padding-bottom:85px;
+
+    font-size:17px;
+
+    color:white;
+
+    background:rgba(255,255,255,0.07);
+}
+
+.voice-btn{
+
+    position:absolute;
+
+    left:18px;
+
+    bottom:18px;
+
+    width:55px;
+
+    height:55px;
+
+    border:none;
+
+    border-radius:50%;
+
+    cursor:pointer;
+
+    color:white;
+
+    font-size:20px;
+
+    background:
+    linear-gradient(
+        135deg,
+        #ff00ff,
+        #7b2cff
+    );
+}
+
+.find-btn{
+
+    position:absolute;
+
+    right:18px;
+
+    bottom:18px;
+
+    border:none;
+
+    padding:15px 24px;
+
+    border-radius:18px;
+
+    cursor:pointer;
+
+    color:white;
+
+    font-weight:600;
+
+    background:
+    linear-gradient(
+        135deg,
+        #00d9ff,
+        #0066ff
+    );
+}
+
+/* RESULT */
+
+.result-box{
+
+    margin-top:30px;
+
+    background:rgba(255,255,255,0.05);
+
+    border-radius:24px;
+
+    padding:25px;
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    display:none;
+}
+
+.result-title{
+
+    color:#00d9ff;
+
+    font-size:26px;
+
+    margin-bottom:20px;
+}
+
+.result-text{
+
+    line-height:2;
+
+    font-size:18px;
+}
+
+/* CUSTOMER SECTION */
+
+.purchase-box{
+
+    margin-top:35px;
+
+    background:rgba(255,255,255,0.05);
+
+    padding:25px;
+
+    border-radius:24px;
+
+    border:1px solid rgba(255,255,255,0.08);
+}
+
+.purchase-title{
+
+    color:#00d9ff;
+
+    font-size:24px;
+
+    margin-bottom:20px;
+}
+
+.input-field{
+
+    width:100%;
+
+    padding:15px;
+
+    margin-bottom:15px;
+
+    border:none;
+
+    border-radius:16px;
+
+    outline:none;
+
+    background:rgba(255,255,255,0.08);
+
+    color:white;
+}
+
+.save-btn{
+
+    width:100%;
+
+    border:none;
+
+    padding:16px;
+
+    border-radius:18px;
+
+    cursor:pointer;
+
+    color:white;
+
+    font-weight:600;
+
+    background:
+    linear-gradient(
+        135deg,
+        #00d9ff,
+        #0066ff
+    );
+}
+
+/* ANALYTICS */
+
+.analytics-btn{
+
+    margin-top:25px;
+
+    width:100%;
+
+    border:none;
+
+    padding:18px;
+
+    border-radius:18px;
+
+    cursor:pointer;
+
+    color:white;
+
+    font-size:16px;
+
+    font-weight:600;
+
+    background:
+    linear-gradient(
+        135deg,
+        #ff00ff,
+        #7b2cff
+    );
+}
+
+/* LOADING */
+
+.loading{
+
+    display:none;
+
+    margin-top:20px;
+
+    text-align:center;
+
+    color:#00d9ff;
+
+    font-weight:600;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="title">
+MediPulse AI
+</div>
+
+<div class="subtitle">
+AI Powered Emergency Medicine Recommendation System
+</div>
+
+<!-- LANGUAGE -->
+
+<div class="language-box">
+
+<select
+id="languageSelect"
+class="language-select">
+
+<option value="english">
+English
+</option>
+
+<option value="tamil">
+Tamil
+</option>
+
+<option value="hindi">
+Hindi
+</option>
+
+</select>
+
+</div>
+
+<!-- INPUT -->
+
+<div class="input-wrapper">
+
+<textarea
+id="problemInput"
+class="problem-input"
+placeholder="Describe symptoms here..."></textarea>
+
+<button
+class="voice-btn"
+onclick="startVoiceInput()">
+
+<i class="fa-solid fa-microphone"></i>
+
+</button>
+
+<button
+class="find-btn"
+onclick="findMedicine()">
+
+💊 Find Medicine
+
+</button>
+
+</div>
+
+<div
+class="loading"
+id="loadingText">
+
+Analyzing symptoms...
+
+</div>
+
+<!-- RESULT -->
+
+<div
+class="result-box"
+id="resultBox">
+
+<div class="result-title">
+Medicine Recommendation
+</div>
+
+<div
+class="result-text"
+id="resultText"></div>
+
+</div>
+
+<!-- CUSTOMER PURCHASE -->
+
+<div class="purchase-box">
+
+<div class="purchase-title">
+Customer Purchase Entry
+</div>
+
+<input
+type="text"
+id="customerName"
+class="input-field"
+placeholder="Customer Name">
+
+<input
+type="text"
+id="medicineName"
+class="input-field"
+placeholder="Medicine Name">
+
+<input
+type="number"
+id="quantity"
+class="input-field"
+placeholder="Quantity">
+
+<input
+type="number"
+id="totalPrice"
+class="input-field"
+placeholder="Total Price">
+
+<button
+class="save-btn"
+onclick="savePurchase()">
+
+Save Purchase
+
+</button>
+
+<button
+class="analytics-btn"
+onclick="openAnalytics()">
+
+📊 Open Analytics
+
+</button>
+
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+/* =========================================
+SUPABASE CONFIG
+========================================= */
+
+const supabaseUrl =
+"https://covmgrilycetqtpwolfl.supabase.co";
+
+const supabaseKey =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
+
+const supabaseClient =
+supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+);
+
+/* =========================================
+FIND MEDICINE
+========================================= */
+
+async function findMedicine(){
+
+    const text =
+    document.getElementById(
+        "problemInput"
+    ).value.trim();
+
+    const language =
+    document.getElementById(
+        "languageSelect"
+    ).value;
+
+    if(text === ""){
+
+        alert("Enter symptoms");
+        return;
+    }
+
+    document.getElementById(
+        "loadingText"
+    ).style.display = "block";
+
+    document.getElementById(
+        "resultBox"
+    ).style.display = "none";
+
+    try{
+
+        /* LOAD MEDICINES FROM DATABASE */
+
+        const {
+            data: medicines,
+            error: medicineError
+        } =
+        await supabaseClient
+        .from("medicines")
+        .select("*");
+
+        if(medicineError){
+
+            console.log(medicineError);
+
+            alert(
+                "Medicine database error"
+            );
+
+            return;
+        }
+
+        /* CONVERT DATABASE TO TEXT */
+
+        let medicineDatabaseText = "";
+
+        medicines.forEach(item=>{
+
+            medicineDatabaseText += `
+            Medicine:
+            ${item.medicine_name}
+
+            Block:
+            ${item.block_number}
+
+            Category:
+            ${item.category}
+            `;
+        });
+
+        /* SEND TO AI */
+
+        const response =
+        await fetch(
+            "/medicine_ai",
+            {
+
+                method:"POST",
+
+                headers:{
+                    "Content-Type":"application/json"
+                },
+
+                body:JSON.stringify({
+
+                    message:text,
+
+                    language:language,
+
+                    medicine_database_text:
+                    medicineDatabaseText
+
+                })
+
+            }
+        );
+
+        const data =
+        await response.json();
+
+        document.getElementById(
+            "loadingText"
+        ).style.display = "none";
+
+        document.getElementById(
+            "resultBox"
+        ).style.display = "block";
+
+        document.getElementById(
+            "resultText"
+        ).innerText =
+        data.reply;
+
+        /* SAVE AI SEARCH LOG */
+
+        await supabaseClient
+        .from("ai_search_logs")
+        .insert([{
+
+            symptom:text,
+
+            recommended_medicine:
+            data.reply
+
+        }]);
+
+                /* AUTO FILL MEDICINE (FIXED STRUCTURAL PARSING) */
+        const lines = data.reply.split("\n");
+        for (let line of lines) {
+            if (line.toLowerCase().includes("medicine recommended:")) {
+                // Safely extract whatever medicine text appears after the colon separator
+                const parts = line.split(":");
+                if (parts.length > 1) {
+                    const medicine = parts[1].replace(/[\[\]]/g, "").trim(); 
+                    document.getElementById("medicineName").value = medicine;
+                }
+            }
+        }
+
+        speakText(data.reply);
+
+
+    }catch(err){
+
+        console.log(err);
+
+        document.getElementById(
+            "loadingText"
+        ).style.display = "none";
+
+        alert(
+            "AI Server Error"
+        );
+
+    }
+
+}
+
+/* =========================================
+SAVE CUSTOMER PURCHASE
+========================================= */
+
+async function savePurchase(){
+
+    const customer_name =
+    document.getElementById(
+        "customerName"
+    ).value.trim();
+
+    const medicine_name =
+    document.getElementById(
+        "medicineName"
+    ).value.trim();
+
+    const quantity =
+    document.getElementById(
+        "quantity"
+    ).value;
+
+    const total_price =
+    document.getElementById(
+        "totalPrice"
+    ).value;
+
+    if(
+        customer_name === "" ||
+        medicine_name === "" ||
+        quantity === "" ||
+        total_price === ""
+    ){
+
+        alert(
+            "Fill all purchase details"
+        );
+
+        return;
+    }
+
+    try{
+
+        const {
+            error
+        } =
+        await supabaseClient
+        .from("customer_purchases")
+        .insert([{
+
+            customer_name:
+            customer_name,
+
+            medicine_name:
+            medicine_name,
+
+            quantity:
+            parseInt(quantity),
+
+            total_price:
+            parseFloat(total_price)
+
+        }]);
+
+        if(error){
+
+            console.log(error);
+
+            alert(
+                "Database save failed"
+            );
+
+            return;
+        }
+
+        alert(
+            "Purchase Saved Successfully"
+        );
+
+        /* CLEAR INPUTS */
+
+        document.getElementById(
+            "customerName"
+        ).value = "";
+
+        document.getElementById(
+            "medicineName"
+        ).value = "";
+
+        document.getElementById(
+            "quantity"
+        ).value = "";
+
+        document.getElementById(
+            "totalPrice"
+        ).value = "";
+
+    }catch(err){
+
+        console.log(err);
+
+        alert(
+            "Saving Error"
+        );
+
+    }
+
+}
+
+/* =========================================
+OPEN ANALYTICS
+========================================= */
+
+function openAnalytics(){
+
+    window.location.href =
+    "/medical_analytics";
+
+}
+
+/* =========================================
+VOICE INPUT
+========================================= */
+
+function startVoiceInput(){
+
+    if(
+        !window.SpeechRecognition &&
+        !window.webkitSpeechRecognition
+    ){
+
+        alert(
+            "Voice Recognition Not Supported"
+        );
+
+        return;
+    }
+
+    const language =
+    document.getElementById(
+        "languageSelect"
+    ).value;
+
+    let langCode = "en-US";
+
+    if(language === "tamil"){
+
+        langCode = "ta-IN";
+    }
+
+    if(language === "hindi"){
+
+        langCode = "hi-IN";
+    }
+
+    const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+    const recognition =
+    new SpeechRecognition();
+
+    recognition.lang = langCode;
+
+    recognition.start();
+
+    recognition.onresult =
+    function(event){
+
+        const voiceText =
+        event.results[0][0].transcript;
+
+        document.getElementById(
+            "problemInput"
+        ).value = voiceText;
+
+    };
+
+}
+
+/* =========================================
+TEXT TO SPEECH
+========================================= */
+
+function speakText(text){
+
+    speechSynthesis.cancel();
+
+    const speech =
+    new SpeechSynthesisUtterance(text);
+
+    speech.lang = "en-US";
+
+    speech.rate = 0.95;
+
+    speech.pitch = 1;
+
+    speechSynthesis.speak(speech);
+
+}
+
+</script>
+
+</body>
+
+</html>

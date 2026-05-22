@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>MediPulse AI</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    font-family:'Poppins',sans-serif;
+
+    background:
+    linear-gradient(
+        rgba(0,0,0,0.72),
+        rgba(5,8,22,0.88)
+    ),
+    url('/static/images/background.png');
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    background-attachment:fixed;
+
+    overflow:hidden;
+    color:white;
+    height:100vh;
+}
+
+/* Animated Background */
+
+body::before{
+    content:'';
+    position:fixed;
+    inset:0;
+    background:
+    radial-gradient(circle,#00d9ff55 1px,transparent 1px),
+    radial-gradient(circle,#ff00ff55 1px,transparent 1px),
+    radial-gradient(circle,#ffffff22 1px,transparent 1px);
+    background-size:120px 120px;
+    animation:bgMove 18s linear infinite;
+    z-index:-2;
+}
+
+@keyframes bgMove{
+    from{
+        transform:translateY(0);
+    }
+    to{
+        transform:translateY(-120px);
+    }
+}
+
+/* Layout */
+
+.main-container{
+    display:flex;
+    height:100vh;
+    position:relative;
+}
+
+/* Sidebar */
+
+.sidebar{
+    width:320px;
+    background:rgba(255,255,255,0.06);
+    backdrop-filter:blur(30px);
+    -webkit-backdrop-filter:blur(30px);
+    border-right:1px solid rgba(255,255,255,0.08);
+    padding:25px;
+    display:flex;
+    flex-direction:column;
+    transition:0.4s cubic-bezier(.77,0,.18,1);
+    z-index:1000;
+    box-shadow:
+    0 0 40px rgba(0,217,255,0.08),
+    inset 0 0 20px rgba(255,255,255,0.03);
+}
+
+/* Logo */
+
+.logo{
+    font-size:34px;
+    text-align:center;
+    font-family:'Orbitron',sans-serif;
+    margin-bottom:35px;
+    color:#00d9ff;
+    text-shadow:
+    0 0 15px #00d9ff,
+    0 0 30px #ff00ff;
+    animation:logoGlow 3s infinite alternate;
+}
+
+@keyframes logoGlow{
+    from{
+        text-shadow:
+        0 0 10px #00d9ff,
+        0 0 20px #00d9ff;
+    }
+
+    to{
+        text-shadow:
+        0 0 20px #00d9ff,
+        0 0 35px #ff00ff,
+        0 0 55px #ff00ff;
+    }
+}
+
+/* New Chat Button */
+
+.new-chat-btn{
+    width:100%;
+    padding:18px;
+    border:none;
+    border-radius:20px;
+    background:linear-gradient(135deg,#00d9ff,#7b2cff,#ff00ff);
+    background-size:300% 300%;
+    animation:gradientMove 5s ease infinite;
+    color:white;
+    font-weight:600;
+    cursor:pointer;
+    margin-bottom:30px;
+    transition:0.35s;
+    font-size:15px;
+    box-shadow:
+    0 0 20px rgba(0,217,255,0.35),
+    0 0 40px rgba(255,0,255,0.2);
+}
+
+.new-chat-btn:hover{
+    transform:translateY(-4px) scale(1.02);
+    box-shadow:
+    0 0 35px rgba(0,217,255,0.6),
+    0 0 70px rgba(255,0,255,0.45);
+}
+
+@keyframes gradientMove{
+    0%{
+        background-position:0% 50%;
+    }
+
+    50%{
+        background-position:100% 50%;
+    }
+
+    100%{
+        background-position:0% 50%;
+    }
+}
+
+/* Chat History */
+
+.chat-history{
+    flex:1;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+    padding-right:5px;
+}
+
+.history-item{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.08);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    cursor:pointer;
+    transition:0.35s;
+    position:relative;
+    overflow:hidden;
+}
+
+.history-item::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(90deg,transparent,#ffffff11,transparent);
+    transform:translateX(-100%);
+}
+
+.history-item:hover::before{
+    transform:translateX(100%);
+    transition:0.9s;
+}
+
+.history-item:hover{
+    transform:translateX(6px);
+    border-color:#00d9ff55;
+    background:rgba(255,255,255,0.08);
+    box-shadow:0 0 20px rgba(0,217,255,0.15);
+}
+
+.thread-clickable{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex:1;
+    overflow:hidden;
+}
+
+.thread-clickable span{
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+}
+
+.delete-thread-btn{
+    color:#ffffff55;
+    transition:0.3s;
+}
+
+.delete-thread-btn:hover{
+    color:#ff0055;
+    transform:scale(1.2);
+}
+
+/* Chat Area */
+
+.chat-area{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+}
+
+/* Top Bar */
+
+.top-bar{
+    padding:18px 25px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:rgba(255,255,255,0.05);
+    backdrop-filter:blur(25px);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+}
+
+.top-bar-left{
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
+
+.top-bar h2{
+    font-family:'Orbitron',sans-serif;
+    color:#00d9ff;
+    text-shadow:0 0 12px #00d9ff;
+}
+
+/* Sidebar Toggle */
+
+.menu-toggle-btn{
+    display:none;
+    width:45px;
+    height:45px;
+    border:none;
+    border-radius:12px;
+    background:rgba(255,255,255,0.08);
+    color:white;
+    font-size:20px;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+.menu-toggle-btn:hover{
+    transform:scale(1.05);
+    background:rgba(255,255,255,0.15);
+}
+
+/* Language */
+
+.language-select{
+    background:rgba(255,255,255,0.08);
+    color:white;
+    border:none;
+    padding:10px 15px;
+    border-radius:12px;
+    outline:none;
+    font-weight:500;
+}
+
+.language-select option{
+    background:#15151f;
+}
+
+/* Chat Box */
+
+.chat-box{
+    flex:1;
+    overflow-y:auto;
+    padding:35px;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+}
+
+/* Messages */
+
+.message{
+    max-width:75%;
+    padding:18px 22px;
+    border-radius:24px;
+    line-height:1.8;
+    word-wrap:break-word;
+    animation:msgPop 0.4s ease;
+    position:relative;
+}
+
+@keyframes msgPop{
+    from{
+        opacity:0;
+        transform:translateY(20px) scale(.95);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0) scale(1);
+    }
+}
+
+.user-message{
+    align-self:flex-end;
+    background:linear-gradient(135deg,#00d9ff,#0066ff);
+    border-bottom-right-radius:5px;
+    box-shadow:
+    0 0 20px rgba(0,217,255,0.4),
+    0 0 40px rgba(0,217,255,0.12);
+    margin-right:10px;
+}
+
+.ai-message{
+    align-self:flex-start;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.08);
+    backdrop-filter:blur(25px);
+    border-bottom-left-radius:5px;
+    box-shadow:
+    0 0 20px rgba(255,0,255,0.08),
+    inset 0 0 10px rgba(255,255,255,0.02);
+}
+
+/* Typing Animation */
+
+.typing{
+    display:flex;
+    gap:6px;
+}
+
+.typing span{
+    width:10px;
+    height:10px;
+    background:#00d9ff;
+    border-radius:50%;
+    animation:bounce 1s infinite;
+}
+
+.typing span:nth-child(2){
+    animation-delay:.2s;
+}
+
+.typing span:nth-child(3){
+    animation-delay:.4s;
+}
+
+@keyframes bounce{
+    0%,100%{
+        transform:translateY(0);
+    }
+
+    50%{
+        transform:translateY(-8px);
+    }
+}
+
+/* Input Area */
+
+.input-area{
+    padding:18px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    background:rgba(255,255,255,0.04);
+    backdrop-filter:blur(25px);
+    border-top:1px solid rgba(255,255,255,0.08);
+}
+
+.input-area input{
+    flex:1;
+    padding:18px 24px;
+    border:none;
+    border-radius:50px;
+    background:rgba(255,255,255,0.08);
+    color:white;
+    outline:none;
+    font-size:15px;
+    transition:0.3s;
+}
+
+.input-area input:focus{
+    background:rgba(255,255,255,0.12);
+    box-shadow:0 0 20px rgba(0,217,255,0.25);
+}
+
+/* Buttons */
+
+.icon-btn{
+    width:58px;
+    height:58px;
+    border:none;
+    border-radius:50%;
+    cursor:pointer;
+    color:white;
+    font-size:20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:0.3s;
+}
+
+.icon-btn:hover{
+    transform:translateY(-4px) scale(1.08);
+}
+
+.attach-btn{
+    background:linear-gradient(135deg,#ff00ff,#7b2cff);
+    box-shadow:0 0 20px rgba(255,0,255,0.4);
+}
+
+.voice-btn{
+    background:linear-gradient(135deg,#ffcc00,#ff6600);
+    box-shadow:0 0 20px rgba(255,165,0,0.4);
+}
+
+.send-btn{
+    background:linear-gradient(135deg,#00d9ff,#0066ff);
+    box-shadow:0 0 20px rgba(0,217,255,0.4);
+}
+
+/* Scrollbar */
+
+::-webkit-scrollbar{
+    width:6px;
+}
+
+::-webkit-scrollbar-thumb{
+    background:linear-gradient(#00d9ff,#ff00ff);
+    border-radius:10px;
+}
+
+/* Overlay */
+
+.sidebar-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    backdrop-filter:blur(5px);
+    opacity:0;
+    visibility:hidden;
+    transition:0.3s;
+    z-index:999;
+}
+
+.sidebar-overlay.active{
+    opacity:1;
+    visibility:visible;
+}
+
+/* Responsive */
+
+@media(max-width:900px){
+
+    .menu-toggle-btn{
+        display:flex;
+        align-items:center;
+        justify-content:center;
+    }
+
+    .sidebar{
+        position:fixed;
+        left:0;
+        top:0;
+        height:100%;
+        transform:translateX(-100%);
+    }
+
+    .sidebar.active{
+        transform:translateX(0);
+    }
+
+    .message{
+        max-width:92%;
+    }
+
+    .chat-box{
+        padding:18px;
+    }
+
+    .sidebar{
+        width:280px;
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
+
+<div class="main-container">
+
+<div class="sidebar" id="sidebar">
+
+<div class="logo">MediPulse AI</div>
+
+<button class="new-chat-btn" onclick="startNewChat()">
+<i class="fa-solid fa-plus"></i> New Chat
+</button>
+
+<div class="chat-history" id="chatHistoryList"></div>
+
+</div>
+
+<div class="chat-area">
+
+<div class="top-bar">
+
+<div class="top-bar-left">
+
+<button class="menu-toggle-btn" onclick="toggleSidebar()">
+<i class="fa-solid fa-bars"></i>
+</button>
+
+<h2>MediPulse AI</h2>
+
+</div>
+
+<select class="language-select" id="languageSelect">
+<option value="en-US">English</option>
+<option value="ta-IN">Tamil</option>
+<option value="hi-IN">Hindi</option>
+</select>
+
+</div>
+
+<div class="chat-box" id="chatBox">
+
+<div class="message ai-message">
+Hello 👋 I am MediPulse AI. How may I assist you today?
+</div>
+
+</div>
+
+<div class="input-area">
+
+<button class="icon-btn attach-btn" onclick="document.getElementById('fileInput').click()">
+    <i class="fa-solid fa-paperclip"></i>
+</button>
+
+<input
+type="file"
+id="fileInput"
+hidden
+accept=".txt,.pdf,.png,.jpg,.jpeg,.doc,.docx"
+onchange="handleFileUpload(event)"
+>
+
+<button class="icon-btn voice-btn" onclick="startVoice()">
+<i class="fa-solid fa-microphone"></i>
+</button>
+
+<input 
+type="text"
+id="userInput"
+placeholder="Ask MediPulse AI anything..."
+onkeydown="if(event.key==='Enter') sendMessage()"
+>
+
+<button class="icon-btn send-btn" onclick="sendMessage()">
+<i class="fa-solid fa-paper-plane"></i>
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+// SUPABASE
+
+const supabaseUrl = "https://covmgrilycetqtpwolfl.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
+
+const supabaseClient = supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+);
+
+let currentUserId = null;
+let currentConversationId = null;
+let uploadedFile = null;
+let uploadedFileContent = "";
+
+// PAGE LOAD
+
+window.addEventListener("DOMContentLoaded", async () => {
+
+    const { data:{ session } } =
+    await supabaseClient.auth.getSession();
+
+    if(!session){
+        window.location.href = "/login";
+        return;
+    }
+
+    currentUserId = session.user.id;
+
+    loadConversationsSidebar();
+
+});
+
+// SIDEBAR
+
+function toggleSidebar(forceOpen = null){
+
+    const sidebar =
+    document.getElementById("sidebar");
+
+    const overlay =
+    document.getElementById("sidebarOverlay");
+
+    const isOpen =
+    sidebar.classList.contains("active");
+
+    if(forceOpen === true || (!isOpen && forceOpen === null)){
+
+        sidebar.classList.add("active");
+        overlay.classList.add("active");
+        document.body.style.overflow = "hidden";
+
+    }else{
+
+        sidebar.classList.remove("active");
+        overlay.classList.remove("active");
+        document.body.style.overflow = "auto";
+
+    }
+}
+
+// LOAD SIDEBAR
+
+async function loadConversationsSidebar(){
+
+    try{
+
+        const { data: conversations, error } =
+        await supabaseClient
+        .from("conversations")
+        .select("*")
+        .eq("user_id", currentUserId)
+        .order("created_at", { ascending:false });
+
+        if(error) throw error;
+
+        const container =
+        document.getElementById("chatHistoryList");
+
+        container.innerHTML = "";
+
+        conversations.forEach(conv => {
+
+            const item =
+            document.createElement("div");
+
+            item.classList.add("history-item");
+
+            if(conv.id === currentConversationId){
+
+                item.style.background =
+                "linear-gradient(135deg, rgba(0,217,255,0.18), rgba(255,0,255,0.12))";
+
+                item.style.border =
+                "1px solid rgba(0,217,255,0.35)";
+
+                item.style.boxShadow =
+                "0 0 20px rgba(0,217,255,0.2)";
+            }
+
+            item.innerHTML = `
+            <div class="thread-clickable"
+            onclick="switchConversation(${conv.id})">
+
+            <i class="fa-regular fa-message"></i>
+
+            <span>${conv.title}</span>
+
+            </div>
+
+            <i class="fa-solid fa-trash delete-thread-btn"
+            onclick="deleteConversation(event, ${conv.id})"></i>
+            `;
+
+            container.appendChild(item);
+
+        });
+
+    }catch(err){
+
+        console.error(err);
+
+    }
+
+}
+
+// NEW CHAT
+
+function startNewChat(){
+
+    currentConversationId = null;
+
+    document.getElementById("chatBox").innerHTML = `
+    <div class="message ai-message">
+    Hello 👋 I am MediPulse AI. How may I assist you today?
+    </div>
+    `;
+
+    loadConversationsSidebar();
+
+    toggleSidebar(false);
+
+}
+
+// SWITCH CHAT
+
+async function switchConversation(convId){
+
+    currentConversationId = convId;
+
+    loadConversationsSidebar();
+
+    toggleSidebar(false);
+
+    try{
+
+        const { data: messages, error } =
+        await supabaseClient
+        .from("chat_messages")
+        .select("*")
+        .eq("conversation_id", convId)
+        .order("created_at",{ ascending:true });
+
+        if(error) throw error;
+
+        const chatBox =
+        document.getElementById("chatBox");
+
+        chatBox.innerHTML = "";
+
+        messages.forEach(msg => {
+
+            const div =
+            document.createElement("div");
+
+            div.classList.add(
+                "message",
+                msg.role === "user"
+                ? "user-message"
+                : "ai-message"
+            );
+
+            div.innerText = msg.content;
+
+            chatBox.appendChild(div);
+
+        });
+
+        chatBox.scrollTop =
+        chatBox.scrollHeight;
+
+    }catch(err){
+
+        console.error(err);
+
+    }
+
+}
+
+// DELETE CHAT
+
+async function deleteConversation(event, convId){
+
+    event.stopPropagation();
+
+    if(!confirm("Delete this chat?")) return;
+
+    try{
+
+        const { error } =
+        await supabaseClient
+        .from("conversations")
+        .delete()
+        .eq("id", convId);
+
+        if(error) throw error;
+
+        if(currentConversationId === convId){
+
+            startNewChat();
+
+        }else{
+
+            loadConversationsSidebar();
+
+        }
+
+    }catch(err){
+
+        console.error(err);
+
+    }
+
+}
+
+// FILE UPLOAD + READING (UPDATED)
+async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    uploadedFile = file;
+    const chatBox = document.getElementById("chatBox");
+
+    // Add a visual file-attachment preview to the chat interface
+    const preview = document.createElement("div");
+    preview.classList.add("message", "user-message");
+    preview.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-file-medical" style="color: #00d9ff;"></i>
+            <span>Attached: <b>${file.name}</b> (${(file.size / 1024).toFixed(1)} KB)</span>
+        </div>
+    `;
+    chatBox.appendChild(preview);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Handle Local Content Extraction based on file type
+    try {
+        if (file.type === "text/plain") {
+            // Read standard text files straight in the browser
+            uploadedFileContent = await file.text();
+        } 
+        else if (file.type === "application/pdf" || file.type.includes("word")) {
+            // Convert heavy binaries to Base64 to safely ship them inside JSON packets
+            uploadedFileContent = await convertFileToBase64(file);
+        } 
+        else if (file.type.includes("image")) {
+            // Process images as base64 data URLs
+            uploadedFileContent = await convertFileToBase64(file);
+        } 
+        else {
+            // Fallback default text extraction
+            uploadedFileContent = await file.text();
+        }
+        console.log(`Successfully packed "${file.name}" for backend processing.`);
+    } catch (err) {
+        console.error("Error preprocessing file:", err);
+        uploadedFileContent = "Error reading file content locally.";
+    }
+}
+
+// Helper utility to turn binary files into transportable text strings
+function convertFileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file); // Reads file into encoded base64 string
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+
+
+
+// SEND MESSAGE
+
+// SEND MESSAGE (UPDATED PORTION)
+async function sendMessage() {
+    const input = document.getElementById("userInput");
+    const message = input.value.trim();
+
+    // Prevent submitting empty entries unless a file is being sent solo
+    if (message === "" && !uploadedFile) return;
+
+    const chatBox = document.getElementById("chatBox");
+
+    // DISPLAY USER MESSAGE OR FILE NOTE
+    const userDiv = document.createElement("div");
+    userDiv.classList.add("message", "user-message");
+    userDiv.innerText = message || `Processing attached file: ${uploadedFile.name}`;
+    chatBox.appendChild(userDiv);
+
+    input.value = "";
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // DISPLAY AI TYPING LOADER
+    const aiDiv = document.createElement("div");
+    aiDiv.classList.add("message", "ai-message");
+    aiDiv.innerHTML = `<div class="typing"><span></span><span></span><span></span></div>`;
+    chatBox.appendChild(aiDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+        // --- [Supabase conversation structure setup logic goes here] ---
+        if (!currentConversationId) {
+            const { data: newConv, error: convErr } = await supabaseClient
+                .from("conversations")
+                .insert([{ user_id: currentUserId, title: message ? message.substring(0, 25) : "File Upload Analysis" }])
+                .select();
+            if (convErr) throw convErr;
+            currentConversationId = newConv[0].id;
+            loadConversationsSidebar();
+        }
+
+        // Save User Input Log to Supabase
+        await supabaseClient.from("chat_messages").insert([
+            {
+                conversation_id: currentConversationId,
+                user_id: currentUserId,
+                role: "user",
+                content: message || `Uploaded file: ${uploadedFile.name}`
+            }
+        ]);
+
+        // Pull active message stream history
+        const { data: history } = await supabaseClient
+            .from("chat_messages")
+            .select("role, content")
+
+        // HTTP POST Payload to Python/Node Backend 
+        const response = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                message: message,
+                history: history || [],
+                file_content: uploadedFileContent, // Base64 or plain string data payload
+                file_name: uploadedFile ? uploadedFile.name : null,
+                file_type: uploadedFile ? uploadedFile.type : null
+            })
+        });
+
+        const data = await response.json();
+
+        // Save and display AI Response 
+        await supabaseClient.from("chat_messages").insert([
+            {
+                conversation_id: currentConversationId,
+                user_id: currentUserId,
+                role: "assistant",
+                content: data.reply
+            }
+        ]);
+
+        aiDiv.innerHTML = data.reply;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        speakText(data.reply);
+        loadConversationsSidebar();
+
+        // CRITICAL CRUMB CLEANUP: Clear variables so subsequent texts do not re-send the document
+        uploadedFile = null;
+        uploadedFileContent = "";
+
+    } catch (err) {
+        console.error(err);
+        aiDiv.innerHTML = `<span style="color:#ff0055;">⚠️ Error executing sequence.</span>`;
+    }
+}
+
+// VOICE
+
+function startVoice(){
+
+    const recognition =
+    new (
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition
+    )();
+
+    recognition.lang =
+    document.getElementById(
+        "languageSelect"
+    ).value;
+
+    recognition.start();
+
+    recognition.onresult =
+    function(event){
+
+        const text =
+        event.results[0][0].transcript;
+
+        document.getElementById(
+            "userInput"
+        ).value = text;
+
+        sendMessage();
+
+    };
+
+}
+
+// TEXT TO SPEECH
+
+function speakText(text){
+
+    let cleanText =
+    text.replace(/<\/?[^>]+(>|$)/g, "");
+
+    const speech =
+    new SpeechSynthesisUtterance();
+
+    speech.text = cleanText;
+
+    speech.rate = 0.95;
+
+    speech.lang =
+    document.getElementById(
+        "languageSelect"
+    ).value;
+
+    window.speechSynthesis.speak(speech);
+
+}
+
+</script>
+
+</body>
+</html>

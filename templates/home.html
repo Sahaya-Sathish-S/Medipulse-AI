@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MediPulse</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+</head>
+
+<body>
+    <!-- NAVBAR -->
+
+<nav>
+
+    <div class="logo">
+        MediPulse
+    </div>
+
+    <ul>
+
+        <li><a href="#">Home</a></li>
+        <li><a href="#">Features</a></li>
+        <li><a href="/chatbot">AI Assistant</a></li>
+        <li><a href="#">Emergency</a></li>
+        <li><a href="/free-map">Smart Navigation</a></li>
+
+    </ul>
+
+    <!-- LOGIN BUTTON -->
+
+    <a href="/login"
+    id="loginBtn">
+
+        <button class="nav-btn">
+            Login
+        </button>
+
+    </a>
+
+    <!-- PROFILE -->
+
+    <div class="profile-container"
+    id="profileContainer">
+
+        <img id="profileImage"
+        class="profile-image"
+        src="">
+
+        <div class="profile-dropdown">
+
+            <div class="profile-info">
+
+                <h4 id="profileName">
+                    User
+                </h4>
+
+                <p id="profileEmail">
+                    email
+                </p>
+
+            </div>
+
+            <a href="/profile">
+                Edit Profile
+            </a>
+
+            <button onclick="logout()">
+                Logout
+            </button>
+
+        </div>
+
+    </div>
+
+</nav>
+
+
+    <!-- HERO SECTION -->
+
+    <section class="hero">
+      
+        <div class="hero-content">
+
+            <h1>
+                AI Powered Smart Healthcare Platform
+            </h1>
+
+            <p>
+                Find emergency medicines instantly, connect with AI healthcare systems,
+                and access smart pharmacy solutions in real time.
+            </p>
+
+            <div class="hero-buttons">
+
+                <a href="/login" id="getStartedLink">
+
+                    <button class="primary-btn" >
+                        Get Started
+                    </button>
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- FEATURES -->
+
+    <section class="features-section">
+
+        <h2 class="section-title">
+            Core Features
+        </h2>
+
+        <div class="features-grid">
+
+            <div class="feature-card">
+
+                <i class="fa-solid fa-map-location-dot"></i>
+
+                <h3>AI Smart Medical Navigation</h3>
+
+                <p>
+                    Navigate instantly to nearby hospitals,
+                    pharmacies and emergency medical centers
+                    with live AI voice guidance.
+                </p>
+
+                <a href="/free-map">
+
+                    <button class="feature-nav-btn">
+                        Open Navigation
+                    </button>
+
+                </a>
+
+            </div>
+            
+            <div class="feature-card">
+
+                <i class="fa-solid fa-robot"></i>
+
+                <h3>AI Health Assistant</h3>
+
+                <p>
+                    AI chatbot helps users understand
+                    prescriptions and medicine usage.
+                </p>
+                
+                <a href="/chatbot">
+
+                    <button class="feature-nav-btn">
+                        AI Assistant
+                    </button>
+
+                </a>
+
+            </div>
+            
+            <div class="feature-card">
+
+                <i class="fa-solid fa-heart-pulse"></i>
+
+                <h3>Emergency Medicine AI</h3>
+
+                <p>
+                    Describe symptoms using text or voice.
+                    AI instantly suggests the best medicine
+                    for emergency support.
+                </p>
+
+                <a href="/emergency-medicine">
+
+                    <button class="feature-nav-btn">
+                        Emergency Medicine AI
+                    </button>
+
+                </a>
+
+            </div>
+
+            <div class="feature-card">
+
+                <i class="fa-solid fa-truck-medical"></i>
+
+                <h3>Emergency Mode</h3>
+
+                <p>
+                    One-click emergency access for hospitals,
+                    ambulances and emergency pharmacies.
+                </p>
+
+                <button class="feature-btn emergency-btn" onclick="callAmbulance()">
+
+                    Call Ambulance
+
+                </button>
+
+            </div>
+
+
+            <div class="feature-card prescription-card">
+
+                <i class="fa-solid fa-camera"></i>
+
+                <h3>Prescription Scanner</h3>
+
+                <p>
+                    Upload prescriptions and extract medicine
+                    names using AI Vision technology.
+                </p>
+
+                <a href="/prescription-scanner">
+
+                    <button class="feature-nav-btn">
+                        Prescription Scanner
+                    </button>
+
+                </a>
+
+            </div>
+
+
+            <div class="feature-card">
+
+                <i class="fa-solid fa-bell"></i>
+
+                <h3>Medicine Reminder System</h3>
+
+                <p>
+                    Get refill reminders, dosage alerts,
+                    and medicine expiry notifications.
+                </p>
+                <a href="/setup">
+
+                    <button class="feature-nav-btn">
+                        Medicine Reminder
+                    </button>
+
+                </a>
+
+            </div>            
+
+            <div class="feature-card">
+
+                <i class="fa-solid fa-hospital"></i>
+
+                <h3>Hospital Features</h3>
+
+                <p>
+                    Blood Donation System for finding the donators.
+                    The AI Eye scanner for identifying the disease in the Eye.
+                </p>
+                
+                <a href="/hospital">
+
+                    <button class="feature-nav-btn">
+                        Hospital Features
+                    </button>
+
+                </a>
+
+            </div>
+
+
+            <div class="feature-card">
+
+                <i class="fa-solid fa-qrcode"></i>
+
+                <h3>QR Fast Pickup</h3>
+
+                <p>
+                    Book medicines online and collect
+                    quickly using QR verification.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- SEARCH DEMO -->
+
+    <section class="search-demo">
+
+        <h2>
+            Search Example
+        </h2>
+
+        <div class="search-box">
+
+            <input type="text"
+            value="Paracetamol 650">
+
+            <button>
+                Search
+            </button>
+
+        </div>
+
+        <div class="result-box">
+
+            <h3>Available At:</h3>
+
+            <p>✔ Apollo Pharmacy</p>
+            <p>✔ MedPlus</p>
+            <p>✔ Local pharmacies nearby</p>
+
+        </div>
+
+    </section>
+
+
+    <!-- FOOTER -->
+
+    <footer>
+
+        <h2>MediPulse</h2>
+
+        <p>
+            AI Powered Smart Healthcare & Emergency Medicine Platform by Sathish
+        </p>
+
+    </footer>
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+const supabaseUrl =
+"https://covmgrilycetqtpwolfl.supabase.co"
+
+const supabaseKey =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc"
+
+const supabaseClient =
+supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+)
+
+/* CHECK LOGIN */
+
+async function checkUser(){
+
+    const {
+        data: { session }
+    } =
+    await supabaseClient.auth.getSession();
+
+    /* USER LOGGED IN */
+
+    if(session){
+
+        const user = session.user;
+
+        /* HIDE LOGIN */
+
+        document.getElementById(
+            "loginBtn"
+        ).style.display = "none";
+        
+        /* HIDE GET START BUTTON */
+        document.getElementById(
+            "getStartedLink"
+        ).style.display = "none";
+
+        /* SHOW PROFILE */
+
+        document.getElementById(
+            "profileContainer"
+        ).style.display = "block";
+
+        /* SET DATA */
+
+        document.getElementById(
+            "profileImage"
+        ).src =
+        user.user_metadata.avatar_url;
+
+        document.getElementById(
+            "profileName"
+        ).innerText =
+        user.user_metadata.full_name;
+
+        document.getElementById(
+            "profileEmail"
+        ).innerText =
+        user.email;
+
+    }
+
+}
+
+/* LOGOUT */
+
+async function logout(){
+
+    await supabaseClient.auth.signOut();
+
+    window.location.href =
+    "/login";
+
+}
+
+checkUser();
+
+</script>
+</body>
+</html>

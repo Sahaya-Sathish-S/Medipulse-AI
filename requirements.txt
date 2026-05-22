@@ -1,0 +1,7 @@
+Flask
+flask-cors
+requests
+pypdf
+APScheduler
+gunicorn
+python-dotenv

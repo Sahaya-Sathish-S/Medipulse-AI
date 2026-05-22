@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medicine Reminder Checker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        
+        body { 
+            min-height: 100vh; 
+            background: linear-gradient(rgba(10, 15, 30, 0.85), rgba(10, 15, 30, 0.9)), url('/static/images/background.png'); 
+            background-size: cover; 
+            background-position: center; 
+            background-attachment: fixed; 
+            padding: 40px 15px; 
+            color: #e2e8f0; 
+        }
+
+        /* Cyberpunk Glassmorphic Container */
+        .container { 
+            width: 100%; 
+            max-width: 950px; 
+            margin: auto; 
+            background: rgba(255, 255, 255, 0.03); 
+            border: 1px solid rgba(0, 217, 255, 0.2); 
+            border-radius: 30px; 
+            padding: 45px 35px; 
+            box-shadow: 0 0 50px rgba(0, 217, 255, 0.1), inset 0 0 20px rgba(255, 255, 255, 0.02);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .title { 
+            text-align: center; 
+            font-size: 42px; 
+            font-weight: 700; 
+            color: #00D9FF; 
+            margin-bottom: 10px; 
+            letter-spacing: 1px;
+            text-shadow: 0 0 30px rgba(0, 217, 255, 0.5);
+        }
+
+        .subtitle { 
+            text-align: center; 
+            color: #94a3b8; 
+            margin-bottom: 35px; 
+            font-size: 16px;
+        }
+
+        /* Glowing Live Digital Clock Banner */
+        .current-time { 
+            text-align: center; 
+            color: #00ffaa; 
+            font-size: 22px; 
+            font-weight: 600; 
+            margin-bottom: 40px; 
+            background: rgba(0, 255, 170, 0.05);
+            padding: 12px 25px;
+            border-radius: 50px;
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+            position: relative;
+            border: 1px solid rgba(0, 255, 170, 0.2);
+            box-shadow: 0 0 25px rgba(0, 255, 170, 0.15);
+        }
+
+        /* Interactive Premium Neon Cards */
+        .medicine-card { 
+            background: rgba(15, 23, 42, 0.6); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 24px; 
+            padding: 30px; 
+            margin-bottom: 30px; 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .medicine-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: #64748b;
+            transition: 0.3s;
+        }
+
+        /* State Indicator Variations */
+        .medicine-card.card-locked::before { background: #ff3366; }
+        .medicine-card.card-ready::before { background: #00ffaa; animation: pulseGlow 2s infinite; }
+        .medicine-card.card-completed::before { background: #00D9FF; }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 5px #00ffaa; }
+            50% { box-shadow: 0 0 20px #00ffaa; }
+            100% { box-shadow: 0 0 5px #00ffaa; }
+        }
+
+        .medicine-card:hover {
+            transform: scale(1.02) translateY(-5px);
+            background: rgba(20, 32, 58, 0.8);
+            border-color: rgba(0, 217, 255, 0.3);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), 0 0 25px rgba(0, 217, 255, 0.1);
+        }
+
+        .card-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .medicine-name { font-size: 28px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .medicine-time { color: #00D9FF; font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+
+        .card-details { 
+            margin-top: 20px; 
+            color: #cbd5e1; 
+            font-size: 15px; 
+            line-height: 1.8;
+            background: rgba(255,255,255,0.02);
+            padding: 15px 20px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        
+        .time-lock-warning {
+            margin-top: 15px;
+            padding: 10px 15px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .warn-locked { background: rgba(255, 51, 102, 0.1); border: 1px solid rgba(255, 51, 102, 0.2); color: #ff4d7d; }
+        .warn-ready { background: rgba(0, 255, 170, 0.1); border: 1px solid rgba(0, 255, 170, 0.2); color: #26ffb0; }
+
+        /* Actions Grid Layout */
+        .action-buttons { display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
+        
+        button { 
+            flex: 1; 
+            min-width: 150px;
+            padding: 16px; 
+            border: none; 
+            border-radius: 16px; 
+            color: white; 
+            font-weight: 600; 
+            font-size: 15px;
+            cursor: pointer; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        button:active:not(:disabled) { transform: translateY(-1px); }
+
+        .taken-btn { background: linear-gradient(135deg, #00b460, #00ff88); color: #052e16; box-shadow: 0 4px 15px rgba(0, 255, 136, 0.2); }
+        .taken-btn:disabled { background: #1e293b !important; color: #64748b !important; cursor: not-allowed; box-shadow: none !important; opacity: 0.6; }
+        
+        .edit-btn { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; }
+        .edit-btn:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(0, 217, 255, 0.4); }
+
+        /* Smooth Expanding Inline Form Fieldset */
+        .edit-box { 
+            display: none; 
+            margin-top: 25px; 
+            background: rgba(0, 0, 0, 0.25); 
+            border-radius: 20px; 
+            padding: 25px; 
+            border: 1px solid rgba(255,255,255,0.05);
+            animation: slideDown 0.4s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .edit-box label { display: block; color: #94a3b8; font-size: 13px; margin-bottom: 6px; font-weight: 500; }
+        .edit-box input { 
+            width: 100%; 
+            padding: 14px 18px; 
+            margin-bottom: 18px; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 14px; 
+            background: rgba(15, 23, 42, 0.6); 
+            color: white; 
+            outline: none; 
+            font-size: 15px;
+            transition: 0.3s;
+        }
+        .edit-box input:focus { border-color: #00D9FF; box-shadow: 0 0 15px rgba(0, 217, 255, 0.3); background: rgba(15, 23, 42, 0.9); }
+        
+        .save-btn { background: linear-gradient(135deg, #007bff, #00c6ff); box-shadow: 0 4px 15px rgba(0, 198, 255, 0.2); width: 100%; margin-top: 5px; }
+
+        .no-data { text-align: center; padding: 50px; font-size: 18px; color: #94a3b8; border: 2px dashed rgba(255,255,255,0.1); border-radius: 20px; }
+        .error-box { background: rgba(239, 68, 68, 0.1); padding: 20px; border-radius: 20px; color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.2); text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="title">Medicine Checker Hub</div>
+    <div class="subtitle">Secure real-time dosage verification linked directly to your custom profile schedule.</div>
+    <div class="current-time" id="currentTime"><i class="fa-solid fa-spinner fa-spin"></i> Initializing...</div>
+    
+    <div id="medicineContainer"></div>
+</div>
+
+<script>
+const supabaseUrl = "https://covmgrilycetqtpwolfl.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+// Global user container to hold essential email and profile metadata
+let currentUserProfile = null;
+let localDataCache = []; 
+
+function initClockAndScheduleTracking(){
+    setInterval(() => {
+        const timeObject = new Date();
+        document.getElementById("currentTime").innerHTML = `<i class="fa-regular fa-clock fa-fade"></i> System Time : ${timeObject.toLocaleTimeString()}`;
+        
+        evaluateIntakeTimeWindows();
+    }, 1000);
+}
+initClockAndScheduleTracking();
+
+async function renderDashboard(){
+    const mainBox = document.getElementById("medicineContainer");
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if(!session){
+            mainBox.innerHTML = `<div class="error-box"><i class="fa-solid fa-triangle-exclamation"></i> Active security token missing. Please authenticate to view contents.</div>`;
+            return;
+        }
+
+        const authenticatedUUID = session.user.id;
+
+        // --- NEW DATA ENRICHMENT FOR PYTHON BACKGROUND MAILER ---
+        // Pull the active user meta-profile profile record ahead of listing medicine rows
+        const { data: profileData, error: profileError } = await supabaseClient
+            .from("users")
+            .select("*")
+            .eq("id", authenticatedUUID)
+            .single();
+
+        if (!profileError && profileData) {
+            currentUserProfile = profileData;
+        }
+
+        const { data, error } = await supabaseClient
+            .from("medi")
+            .select("*")
+            .eq("user_id", authenticatedUUID)
+            .order("medicine_time", { ascending: true });
+
+        if(error){
+            mainBox.innerHTML = `<div class="error-box"><i class="fa-solid fa-circle-exclamation"></i> Query failure: ${error.message}</div>`;
+            return;
+        }
+
+        if(!data || data.length === 0){
+            mainBox.innerHTML = `<div class="no-data"><i class="fa-solid fa-folder-open fa-2x" style="margin-bottom:15px; color:#475569;"></i><br>No recorded medication workflows found. Visit the onboarding dashboard to add items.</div>`;
+            return;
+        }
+
+        localDataCache = data; 
+        mainBox.innerHTML = "";
+        
+        data.forEach((med) => {
+            mainBox.innerHTML += `
+            <div class="medicine-card" id="card-${med.id}">
+                <div class="card-top">
+                    <div class="medicine-name"><i class="fa-solid fa-capsules" style="color:#00D9FF;"></i> ${med.medicine_name}</div>
+                    <div class="medicine-time" id="display-time-${med.id}"><i class="fa-solid fa-clock"></i> Scheduled: ${med.medicine_time.slice(0,5)}</div>
+                </div>
+                <div class="card-details">
+                    <i class="fa-solid fa-receipt" style="color:#94a3b8; margin-right:5px;"></i> <b>Dosage Strategy:</b> ${med.dosage}<br>
+                    <i class="fa-solid fa-circle-info" style="color:#94a3b8; margin-right:5px;"></i> <b>Intake Status:</b> <span id="status-text-${med.id}">${med.taken ? "Completed Intake ✅" : "Awaiting Schedule ⏳"}</span>
+                </div>
+                
+                <div class="time-lock-warning" id="warning-${med.id}"></div>
+
+                <div class="action-buttons">
+                    <button class="taken-btn" id="take-btn-${med.id}" onclick="triggerTake(${med.id})">
+                        <i class="fa-solid fa-circle-check"></i> Mark Status As Taken
+                    </button>
+                    <button class="edit-btn" onclick="toggleEditor(${med.id})">
+                        <i class="fa-solid fa-sliders"></i> Modify Configuration
+                    </button>
+                </div>
+
+                <div class="edit-box" id="edit-${med.id}">
+                    <label>Medicine Custom Label Name</label>
+                    <input type="text" id="input-name-${med.id}" value="${med.medicine_name}">
+                    
+                    <label>Dosage Quantity / Instruction</label>
+                    <input type="text" id="input-dosage-${med.id}" value="${med.dosage}">
+                    
+                    <label>Change Medicine Scheduled Time</label>
+                    <input type="time" id="input-time-${med.id}" value="${med.medicine_time}">
+                    
+                    <button class="save-btn" onclick="pushUpdates(${med.id})">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Save Structural Schedule
+                    </button>
+                </div>
+            </div>`;
+        });
+
+        evaluateIntakeTimeWindows();
+
+    } catch (e) {
+        mainBox.innerHTML = `<div class="error-box">Fatal UI Exception: ${e.message}</div>`;
+    }
+}
+
+function evaluateIntakeTimeWindows() {
+    if (localDataCache.length === 0) return;
+
+    const currentSystemTime = new Date();
+    const systemHour = currentSystemTime.getHours();
+    const systemMinute = currentSystemTime.getMinutes();
+
+    localDataCache.forEach((med) => {
+        const cardElement = document.getElementById(`card-${med.id}`);
+        const takeButton = document.getElementById(`take-btn-${med.id}`);
+        const warningElement = document.getElementById(`warning-${med.id}`);
+        const statusText = document.getElementById(`status-text-${med.id}`);
+        
+        if (!cardElement || !takeButton || !warningElement) return;
+
+        // Parse target times mathematically
+        const [targetHour, targetMinute] = med.medicine_time.split(':').map(Number);
+
+        // Convert times entirely to absolute total day minutes
+        const systemTotalMinutes = (systemHour * 60) + systemMinute;
+        const targetTotalMinutes = (targetHour * 60) + targetMinute;
+        const timeDifference = systemTotalMinutes - targetTotalMinutes;
+
+        if (med.taken) {
+            cardElement.className = "medicine-card card-completed";
+            takeButton.disabled = true;
+            statusText.innerText = "Completed Intake ✅";
+            warningElement.className = "time-lock-warning warn-ready";
+            warningElement.innerHTML = `<i class="fa-solid fa-square-check"></i> Finished for today!`;
+        } 
+        // FIXED: The intake window stays active for 30 minutes from the target schedule
+        else if (timeDifference >= 0 && timeDifference < 30) {
+            cardElement.className = "medicine-card card-ready";
+            takeButton.disabled = false;
+            statusText.innerText = "Active Time Schedule! 🔔";
+            warningElement.className = "time-lock-warning warn-ready";
+            warningElement.innerHTML = `<i class="fa-solid fa-unlock fa-bounce"></i> Intake Window Open! Click below to confirm consumption.`;
+        } 
+        else {
+            cardElement.className = "medicine-card card-locked";
+            takeButton.disabled = true;
+            statusText.innerText = "Awaiting Schedule ⏳";
+            warningElement.className = "time-lock-warning warn-locked";
+            warningElement.innerHTML = `<i class="fa-solid fa-lock"></i> Time Locked. You can only confirm intake starting at exactly ${med.medicine_time.slice(0,5)}.`;
+        }
+    });
+}
+
+
+// --- MODIFIED SYSTEM ACTION 1: TRIGGER CONFIRMED INTAKE ---
+async function triggerTake(id) {
+    try {
+        const { error } = await supabaseClient
+            .from("medi")
+            .update({ taken: true, last_taken_time: new Date().toISOString() })
+            .eq("id", id);
+            
+        if(error) { alert(error.message); return; }
+
+        // Forward a cancellation notification request package to your local Python server
+        fetch('http://127.0.0.1:5000/api/medication_taken', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ medicine_id: id })
+        })
+        .then(res => res.json())
+        .then(data => console.log("Flask automation worker alerted:", data))
+        .catch(err => console.error("Flask connectivity tracking warning:", err));
+
+        alert("Medication intake logged successfully! Escalation countdown defused.");
+        renderDashboard();
+    } catch(err){ alert(err.message); }
+}
+
+function toggleEditor(id){
+    const box = document.getElementById(`edit-${id}`);
+    box.style.display = box.style.display === "block" ? "none" : "block";
+}
+
+// --- MODIFIED SYSTEM ACTION 2: PUSH SCHEDULER UPDATE PARAMETERS ---
+async function pushUpdates(rowId){
+    try{
+        const updatedName = document.getElementById(`input-name-${rowId}`).value.trim();
+        const updatedDosage = document.getElementById(`input-dosage-${rowId}`).value.trim();
+        const updatedTime = document.getElementById(`input-time-${rowId}`).value;
+
+        if(!updatedName || !updatedDosage || !updatedTime){ 
+            alert("Fields cannot be submitted blank."); 
+            return; 
+        }
+
+        const { error } = await supabaseClient
+            .from("medi")
+            .update({ 
+                medicine_name: updatedName, 
+                dosage: updatedDosage, 
+                medicine_time: updatedTime,
+                taken: false 
+            })
+            .eq("id", rowId);
+
+        if(error) { alert(error.message); return; }
+
+        // If user profiles loaded successfully, update the background scheduler immediately
+        if (currentUserProfile) {
+            const schedulerPayload = {
+                medicine_id: rowId,
+                medicine_time: updatedTime,
+                medicine_name: updatedName,
+                dosage: updatedDosage,
+                username: currentUserProfile.username || "User",
+                user_email: currentUserProfile.user_email,
+                family_name: currentUserProfile.family_name || "Family Member",
+                family_email: currentUserProfile.family_email
+            };
+
+            fetch('http://127.0.0.1:5000/api/schedule_reminder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(schedulerPayload)
+            })
+            .then(res => res.json())
+            .then(data => console.log("Python scheduler re-programmed:", data))
+            .catch(err => console.error("Scheduler update webhook pipeline error:", err));
+        }
+        
+        alert("Configuration updated! Intake lock window reset to new parameters.");
+        renderDashboard();
+    } catch(err){ alert(err.message); }
+}
+
+renderDashboard();
+</script>
+
+</body>
+</html>

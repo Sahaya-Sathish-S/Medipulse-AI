@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>MediPulse Login</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+
+    height:100vh;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-family:'Poppins',sans-serif;
+
+    background:
+    linear-gradient(rgba(0,0,0,0.7),
+    rgba(0,0,0,0.7)),
+    url('/static/images/background.png');
+
+    background-size:cover;
+    background-position:center;
+
+    color:white;
+}
+
+.container{
+
+    width:400px;
+
+    padding:40px;
+
+    border-radius:25px;
+
+    background:rgba(255,255,255,0.08);
+
+    backdrop-filter:blur(20px);
+
+    border:1px solid rgba(255,255,255,0.1);
+
+    text-align:center;
+}
+
+.logo{
+
+    font-size:35px;
+
+    font-family:'Orbitron',sans-serif;
+
+    color:#00D9FF;
+
+    margin-bottom:30px;
+}
+
+.google-btn{
+
+    width:100%;
+
+    padding:18px;
+
+    border:none;
+
+    border-radius:18px;
+
+    background:white;
+
+    color:black;
+
+    font-size:16px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    gap:10px;
+
+    transition:0.3s;
+}
+
+.google-btn:hover{
+
+    transform:translateY(-3px);
+
+    box-shadow:0 0 20px #00D9FF;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="logo">
+        MediPulse
+    </div>
+
+    <button class="google-btn"
+    onclick="googleLogin()">
+
+        <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
+        width="25">
+
+        Continue with Google
+
+    </button>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+const supabaseUrl = "https://covmgrilycetqtpwolfl.supabase.co"
+
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc"
+
+const supabaseClient = supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+)
+
+async function googleLogin(){
+
+    const { data, error } =
+    await supabaseClient.auth.signInWithOAuth({
+
+        provider: 'google',
+
+        options: {
+            redirectTo: 'http://127.0.0.1:5000/profile'
+        }
+
+    })
+
+    if(error){
+        console.log(error)
+    }
+
+}
+
+</script>
+
+</body>
+</html>

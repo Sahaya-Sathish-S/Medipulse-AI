@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register Donor</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: url("{{ url_for('static', filename='images/background.png') }}") no-repeat center center/cover;
+    color: white;
+}
+
+.overlay {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.65);
+    top: 0;
+    left: 0;
+}
+
+.container {
+    position: relative;
+    z-index: 2;
+    max-width: 900px;
+    margin: auto;
+    padding: 30px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+input, select, textarea {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+}
+
+textarea {
+    grid-column: span 2;
+    height: 80px;
+    resize: none;
+}
+
+button {
+    grid-column: span 2;
+    padding: 12px;
+    background: linear-gradient(135deg,#00d9ff,#7b2cff,#ff00ff);
+    border: none;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 10px;
+}
+
+button:hover {
+    box-shadow: 0 0 15px #00d9ff;
+}
+</style>
+</head>
+
+<body>
+
+<div class="overlay"></div>
+
+<div class="container">
+
+<h1>🧑‍⚕️ Donor Registration</h1>
+
+<form id="donorForm">
+
+<input id="full_name" placeholder="Full Name" required>
+<input id="age" type="number" placeholder="Age" required>
+<input id="dob" type="date" required>
+
+<input id="weight" type="number" step="0.1" placeholder="Weight (kg)">
+<input id="height" type="number" step="0.1" placeholder="Height (cm)">
+
+<select id="blood_group" required>
+<option value="" disabled selected>Select Blood Group</option>
+<option>A+</option>
+<option>A-</option>
+<option>B+</option>
+<option>B-</option>
+<option>O+</option>
+<option>O-</option>
+<option>AB+</option>
+<option>AB-</option>
+</select>
+
+<input id="guardian_name" placeholder="Guardian Name">
+
+<select id="marital_status">
+<option>Single</option>
+<option>Married</option>
+</select>
+
+<input id="email" type="email" placeholder="Email">
+<input id="phone" placeholder="Phone Number" required>
+
+<select id="alcohol_usage">
+<option value="No">Alcohol Usage: No</option>
+<option value="Yes">Alcohol Usage: Yes</option>
+</select>
+
+<select id="smoking">
+<option value="No">Smoking: No</option>
+<option value="Yes">Smoking: Yes</option>
+</select>
+
+<select id="occupation_status">
+<option>Studying</option>
+<option>Working</option>
+</select>
+
+<textarea id="address" placeholder="Residential Address" required></textarea>
+<textarea id="past_accident" placeholder="Any past accident or serious illness?"></textarea>
+
+<button type="submit">Register Donor</button>
+
+</form>
+
+</div>
+
+<script>
+// Replace these with your actual Supabase Project details
+const supabaseUrl = "https://covmgrilycetqtpwolfl.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+document.getElementById("donorForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const age = parseInt(document.getElementById("age").value);
+
+    // 🚨 AGE CHECK
+    if (age < 18) {
+        alert("❌ Registration denied. Donor must be 18+ years old.");
+        return;
+    }
+
+    const donor = {
+        full_name: document.getElementById("full_name").value,
+        age: age,
+        dob: document.getElementById("dob").value,
+        weight: document.getElementById("weight").value ? parseFloat(document.getElementById("weight").value) : null,
+        height: document.getElementById("height").value ? parseFloat(document.getElementById("height").value) : null,
+        blood_group: document.getElementById("blood_group").value,
+        address: document.getElementById("address").value,
+        guardian_name: document.getElementById("guardian_name").value,
+        marital_status: document.getElementById("marital_status").value,
+        email: document.getElementById("email").value,
+        phone: document.getElementById("phone").value,
+        alcohol_usage: document.getElementById("alcohol_usage").value,
+        smoking: document.getElementById("smoking").value,
+        past_accident: document.getElementById("past_accident").value,
+        occupation_status: document.getElementById("occupation_status").value,
+        available: true
+    };
+
+    const { error } = await supabaseClient
+        .from("donors")
+        .insert([donor]);
+
+    if (error) {
+        console.error(error);
+        alert("❌ Error saving donor: " + error.message);
+    } else {
+        alert("✅ Donor registered successfully!");
+        document.getElementById("donorForm").reset();
+    }
+});
+</script>
+
+</body>
+</html>

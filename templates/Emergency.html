@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emergency Blood Search</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: url("{{ url_for('static', filename='images/background.png') }}") no-repeat center center/cover;
+    color: white;
+}
+
+.overlay {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    top: 0;
+    left: 0;
+}
+
+.container {
+    position: relative;
+    z-index: 2;
+    padding: 30px;
+    text-align: center;
+}
+
+.search-box {
+    margin: 20px auto;
+}
+
+select, button {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-size: 16px;
+}
+
+select {
+    width: 150px;
+    margin-right: 10px;
+}
+
+button {
+    background: linear-gradient(135deg,#00d9ff,#7b2cff,#ff00ff);
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+button:hover {
+    box-shadow: 0 0 10px #00d9ff;
+}
+
+#results {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.donor-card {
+    background: rgba(255,255,255,0.12);
+    padding: 20px;
+    border-radius: 12px;
+    width: 320px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    text-align: left;
+}
+
+.donor-card h3 {
+    margin-top: 0;
+    color: #00e6e6;
+}
+
+.actions {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.actions a {
+    text-decoration: none;
+}
+
+.actions button {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="overlay"></div>
+
+<div class="container">
+
+<h1>🚨 Emergency Blood Search</h1>
+
+<div class="search-box">
+    <select id="blood_group">
+        <option>A+</option>
+        <option>A-</option>
+        <option>B+</option>
+        <option>B-</option>
+        <option>O+</option>
+        <option>O-</option>
+        <option>AB+</option>
+        <option>AB-</option>
+    </select>
+
+    <button onclick="searchDonors()">Search Donors</button>
+</div>
+
+<div id="results"></div>
+
+</div>
+
+<script>
+const supabaseUrl = "https://covmgrilycetqtpwolfl.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+// SEARCH DONORS VIA FRONTEND JAVASCRIPT
+async function searchDonors() {
+    const group = document.getElementById("blood_group").value;
+    const resultsDiv = document.getElementById("results");
+    resultsDiv.innerHTML = "<p>Searching database...</p>";
+
+    // Pure client-side database search call execution
+    const { data, error } = await supabaseClient
+        .from("donors")
+        .select("*")
+        .eq("blood_group", group)
+        .eq("available", true);
+
+    resultsDiv.innerHTML = "";
+
+    if (error) {
+        console.error(error);
+        resultsDiv.innerHTML = "<p>❌ Error pulling records.</p>";
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        resultsDiv.innerHTML = "<p>No active donors found for this blood group.</p>";
+        return;
+    }
+
+    data.forEach(d => {
+        // Sanitize string variables safely against character quote disruptions
+        const escapedName = d.full_name ? d.full_name.replace(/'/g, "\\'") : "Unknown Donor";
+        const escapedEmail = d.email ? d.email.replace(/'/g, "\\'") : "";
+
+        resultsDiv.innerHTML += `
+            <div class="donor-card">
+                <h3>${d.full_name} (${d.age} yrs)</h3>
+                <p>🩸 <strong>Blood Group:</strong> ${d.blood_group}</p>
+                <p>📍 <strong>Location:</strong> ${d.address}</p>
+                <p>📱 <strong>Phone:</strong> ${d.phone}</p>
+
+                <div class="actions">
+                    <a href="tel:${d.phone}">
+                        <button>📞 Call Now</button>
+                    </a>
+                    <button onclick="copyNumber('${d.phone}')">📋 Copy Number</button>
+                    
+                    <button id="mail-btn-${d.id}" style="background: #7b2cff;" 
+                            onclick="dispatchBackendEmail('${escapedEmail}', '${escapedName}', '${d.blood_group}', '${d.id}')">
+                        📧 Send Email
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// SECURE INTERFACE DISPATCH FOR EMAIL LOGIC VIA FLASK BACKEND BRIDGE
+async function dispatchBackendEmail(toEmail, donorName, bloodGroup, donorId) {
+    if (!toEmail) {
+        alert("❌ This donor profile does not contain a registered email address.");
+        return;
+    }
+
+    const actionButton = document.getElementById(`mail-btn-${donorId}`);
+    const originalDisplay = actionButton.innerText;
+
+    // Toggle button UI loading configuration states
+    actionButton.disabled = true;
+    actionButton.innerText = "⏳ Dispatching...";
+
+    try {
+        const response = await fetch('/api/send_emergency_email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                to_email: toEmail,
+                donor_name: donorName,
+                blood_group: bloodGroup
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.status === "success") {
+            alert(`✅ Donation request dispatch succeeded for ${donorName}!`);
+        } else {
+            alert(`❌ Pipeline notification error: ${result.message}`);
+        }
+    } catch (err) {
+        console.error("Networking Transmission Error:", err);
+        alert("❌ Failed to reach backend communication architecture server.");
+    } finally {
+        actionButton.disabled = false;
+        actionButton.innerText = originalDisplay;
+    }
+}
+
+// COPY PHONE
+function copyNumber(num) {
+    navigator.clipboard.writeText(num);
+    alert("Phone number copied to clipboard!");
+}
+</script>
+
+</body>
+</html>
