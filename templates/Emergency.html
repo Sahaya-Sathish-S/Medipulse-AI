@@ -202,8 +202,13 @@ async function dispatchBackendEmail(toEmail, donorName, bloodGroup, donorId) {
     actionButton.disabled = true;
     actionButton.innerText = "⏳ Dispatching...";
 
+    // Determine backend origin (Localhost vs Render production) dynamically
+    const backendOrigin = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "" 
+        : "https://medipulse-ai-zdmd.onrender.com";
+
     try {
-        const response = await fetch('/api/send_emergency_email', {
+        const response = await fetch(`${backendOrigin}/api/send_emergency_email`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -224,12 +229,13 @@ async function dispatchBackendEmail(toEmail, donorName, bloodGroup, donorId) {
         }
     } catch (err) {
         console.error("Networking Transmission Error:", err);
-        alert("❌ Failed to reach backend communication architecture server.");
+        alert("❌ Failed to reach backend communication architecture server. Please check if the backend instance is sleeping.");
     } finally {
         actionButton.disabled = false;
         actionButton.innerText = originalDisplay;
     }
 }
+
 
 // COPY PHONE
 function copyNumber(num) {
