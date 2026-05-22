@@ -17,8 +17,8 @@ CORS(app)
 
 # OPENROUTER API KEY (Keep this safe!)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-GMAIL_USER = os.getenv("GMAIL_USER")
-GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+GMAIL_USER = "sahayasathish60@gmail.com"          
+GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi" 
 
 scheduler = BackgroundScheduler(daemon=True)
 scheduler.start()
