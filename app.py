@@ -24,6 +24,9 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GMAIL_USER = "sahayasathish60@gmail.com"          
 GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi" 
 
+# Official Universal Free Tier Routing Identifier
+FREE_MODEL_ROUTER = "openrouter/free"
+
 # Background Scheduler Engine Setup
 scheduler = BackgroundScheduler(daemon=True)
 scheduler.start()
@@ -259,7 +262,7 @@ def prescription_scanner(): return render_template("prescription.html")
 
 
 # =========================================
-# AI EYE SCANNER ROUTE (FREE-TIER OPTIMIZED)
+# AI EYE SCANNER ROUTE (AUTO-ROUTED FREE TIER)
 # =========================================
 @app.route("/analyze_eye_scan", methods=["POST"])
 def analyze_eye_scan():
@@ -303,7 +306,7 @@ def analyze_eye_scan():
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
             json={
-                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1
+                "model": FREE_MODEL_ROUTER, # Dynamically uses an active free-tier vision model
                 "messages": messages,
                 "max_tokens": 800  
             },
@@ -321,7 +324,7 @@ def analyze_eye_scan():
 
 
 # =========================================
-# AI CHAT ROUTE (FREE-TIER OPTIMIZED)
+# AI CHAT ROUTE (AUTO-ROUTED FREE TIER)
 # =========================================
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -360,7 +363,7 @@ def chat():
                 "X-Title": "MediPulse AI"
             },
             json={
-                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1 
+                "model": FREE_MODEL_ROUTER, # Dynamically matches an open, active free-tier model
                 "messages": messages,
                 "max_tokens": 800  
             },
@@ -368,7 +371,7 @@ def chat():
         )
         
         if response.status_code != 200:
-            return jsonify({"reply": f"OpenRouter System Line Anomaly: {response.status_code}. Key states depleted."})
+            return jsonify({"reply": f"OpenRouter System Line Anomaly: {response.status_code}. Route failure on zero-cost balancing pool."})
 
         result = response.json()
         ai_reply = result["choices"][0]["message"]["content"]
@@ -392,7 +395,7 @@ def generate_title():
         res = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
-            json={"model": "meta-llama/llama-3.1-8b-instruct:free", "messages": title_prompt, "max_tokens": 50} # FIXED: Swapped to active free Llama 3.1
+            json={"model": FREE_MODEL_ROUTER, "messages": title_prompt, "max_tokens": 50}
         )
         generated_title = res.json()["choices"][0]["message"]["content"].strip()
     except Exception:
@@ -426,7 +429,7 @@ def medicine_ai():
                 "X-Title": "MediPulse AI Hub"
             },
             json={
-                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1
+                "model": FREE_MODEL_ROUTER,
                 "temperature": 0.2,
                 "messages": [
                     {"role": "system", "content": "You are a professional clinical pharmacy assistant. Output strict structured definitions."},
@@ -466,7 +469,7 @@ def map_ai():
                 "X-Title": "MediPulse AI Hub"
             },
             json={
-                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1
+                "model": FREE_MODEL_ROUTER,
                 "messages": [
                     {"role": "system", "content": "You are MediPulse Medical Navigation AI voice operator."},
                     {"role": "user", "content": prompt}
@@ -509,7 +512,7 @@ def analyze_ai():
                 "X-Title": "MediPulse Analytics AI"
             },
             json={
-                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1
+                "model": FREE_MODEL_ROUTER,
                 "messages": [
                     {"role": "system", "content": "You are a retail pharmacy operations logistics analyst."},
                     {"role": "user", "content": prompt}
@@ -565,7 +568,7 @@ def prescription_ai():
                 "X-Title": "MediPulse Prescription AI"
             },
             json={
-                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1
+                "model": FREE_MODEL_ROUTER,
                 "messages": [
                     {"role": "system", "content": "You are MediPulse Prescription Parsing Assistant."},
                     {"role": "user", "content": user_content}
