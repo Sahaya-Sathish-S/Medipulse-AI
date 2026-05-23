@@ -24,8 +24,14 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GMAIL_USER = "sahayasathish60@gmail.com"          
 GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi" 
 
-# Official Universal Free Tier Routing Identifier
-FREE_MODEL_ROUTER = "openrouter/free"
+# =========================================
+# OPENROUTER ROUTING PLATFORM DEFINITIONS
+# =========================================
+# Dynamic text router that automatically matches available free text backends
+FREE_TEXT_ROUTER = "openrouter/free"
+
+# Explicit vision-enabled free model to handle prescription images and eye scans
+FREE_VISION_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
 
 # Background Scheduler Engine Setup
 scheduler = BackgroundScheduler(daemon=True)
@@ -262,7 +268,7 @@ def prescription_scanner(): return render_template("prescription.html")
 
 
 # =========================================
-# AI EYE SCANNER ROUTE (AUTO-ROUTED FREE TIER)
+# AI EYE SCANNER ROUTE (MULTIMODAL FIX)
 # =========================================
 @app.route("/analyze_eye_scan", methods=["POST"])
 def analyze_eye_scan():
@@ -306,7 +312,7 @@ def analyze_eye_scan():
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
             json={
-                "model": FREE_MODEL_ROUTER, # Dynamically uses an active free-tier vision model
+                "model": FREE_VISION_MODEL, # Locked to active vision-enabled free architecture
                 "messages": messages,
                 "max_tokens": 800  
             },
@@ -314,7 +320,7 @@ def analyze_eye_scan():
         )
 
         if response.status_code != 200:
-            return jsonify({"reply": f"OpenRouter Free-Core Error Code: {response.status_code}"}), response.status_code
+            return jsonify({"reply": f"OpenRouter Free-Core Vision Error Code: {response.status_code}"}), response.status_code
 
         ai_reply = response.json()["choices"][0]["message"]["content"]
         return jsonify({"reply": ai_reply})
@@ -324,7 +330,7 @@ def analyze_eye_scan():
 
 
 # =========================================
-# AI CHAT ROUTE (AUTO-ROUTED FREE TIER)
+# AI CHAT ROUTE (AUTO-ROUTED FREE TEXT)
 # =========================================
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -363,7 +369,7 @@ def chat():
                 "X-Title": "MediPulse AI"
             },
             json={
-                "model": FREE_MODEL_ROUTER, # Dynamically matches an open, active free-tier model
+                "model": FREE_TEXT_ROUTER, # Dynamically processes along free conversational endpoints
                 "messages": messages,
                 "max_tokens": 800  
             },
@@ -371,7 +377,7 @@ def chat():
         )
         
         if response.status_code != 200:
-            return jsonify({"reply": f"OpenRouter System Line Anomaly: {response.status_code}. Route failure on zero-cost balancing pool."})
+            return jsonify({"reply": f"OpenRouter System Line Anomaly: {response.status_code}. Route failure on text pool tracking line."})
 
         result = response.json()
         ai_reply = result["choices"][0]["message"]["content"]
@@ -395,7 +401,7 @@ def generate_title():
         res = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
-            json={"model": FREE_MODEL_ROUTER, "messages": title_prompt, "max_tokens": 50}
+            json={"model": FREE_TEXT_ROUTER, "messages": title_prompt, "max_tokens": 50}
         )
         generated_title = res.json()["choices"][0]["message"]["content"].strip()
     except Exception:
@@ -429,7 +435,7 @@ def medicine_ai():
                 "X-Title": "MediPulse AI Hub"
             },
             json={
-                "model": FREE_MODEL_ROUTER,
+                "model": FREE_TEXT_ROUTER,
                 "temperature": 0.2,
                 "messages": [
                     {"role": "system", "content": "You are a professional clinical pharmacy assistant. Output strict structured definitions."},
@@ -469,7 +475,7 @@ def map_ai():
                 "X-Title": "MediPulse AI Hub"
             },
             json={
-                "model": FREE_MODEL_ROUTER,
+                "model": FREE_TEXT_ROUTER,
                 "messages": [
                     {"role": "system", "content": "You are MediPulse Medical Navigation AI voice operator."},
                     {"role": "user", "content": prompt}
@@ -512,7 +518,7 @@ def analyze_ai():
                 "X-Title": "MediPulse Analytics AI"
             },
             json={
-                "model": FREE_MODEL_ROUTER,
+                "model": FREE_TEXT_ROUTER,
                 "messages": [
                     {"role": "system", "content": "You are a retail pharmacy operations logistics analyst."},
                     {"role": "user", "content": prompt}
@@ -534,7 +540,7 @@ def analyze_ai():
 
 
 # =========================================
-# PRESCRIPTION AI ROUTE
+# PRESCRIPTION AI ROUTE (MULTIMODAL FIX)
 # =========================================
 @app.route("/prescription_ai", methods=["POST"])
 def prescription_ai():
@@ -568,7 +574,7 @@ def prescription_ai():
                 "X-Title": "MediPulse Prescription AI"
             },
             json={
-                "model": FREE_MODEL_ROUTER,
+                "model": FREE_VISION_MODEL, # Set to specific vision model to handle explicit image tracking inputs safely
                 "messages": [
                     {"role": "system", "content": "You are MediPulse Prescription Parsing Assistant."},
                     {"role": "user", "content": user_content}
