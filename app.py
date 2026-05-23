@@ -421,11 +421,13 @@ def chat():
 
     # Delivery request body data mappings
         # Delivery request body data mappings
-    data = {
-        "model": "openai/gpt-4o-mini",  
-        "messages": messages,
-        "max_tokens": 1000  # 💡 FIX: Caps output token volume to bypass Free Tier 402 sequence blockages!
-    }
+    # Change to this:
+data = {
+    "model": "meta-llama/llama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
+    "messages": messages,
+    "max_tokens": 1000  
+}
+
     # =====================================================================
     # ADD FROM HERE TO THE END OF THE ROUTE TO FIX THE CHAT SEQUENCE ERRORS
     # =====================================================================
@@ -549,7 +551,7 @@ def medicine_ai():
                 "X-Title": "MediPulse AI Hub"
             },
             json={
-                "model": "openai/gpt-4o-mini",
+                "model":"meta-llama/llama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
                 "temperature": 0.3, # Lowered for strict format consistency
                 "messages": [
                     {
@@ -634,7 +636,7 @@ def map_ai():
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
             json={
-                "model": "openai/gpt-4o-mini",
+                "model": "meta-llama/llama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
                 "messages": [
                     {"role": "system", "content": "You are MediPulse Medical Navigation AI."},
                     {"role": "user", "content": prompt}
@@ -756,7 +758,7 @@ def analyze_ai():
 
         # Delivery mapping profile array
         json_payload = {
-            "model": "openai/gpt-4o-mini",
+            "model": "meta-llama/llama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
             "messages": [
                 {
                     "role": "system",
@@ -896,7 +898,7 @@ def prescription_ai():
 
         # Delivery payload construction
         json_payload = {
-            "model": "openai/gpt-4o-mini",
+            "model": "meta-llama/llama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
             "messages": [
                 {
                     "role": "system",
