@@ -372,18 +372,23 @@ function evaluateIntakeTimeWindows() {
 }
 
 
-// --- MODIFIED SYSTEM ACTION 1: TRIGGER CONFIRMED INTAKE ---
+// --- FIXED SYSTEM ACTION 1: TRIGGER CONFIRMED INTAKE ---
 async function triggerTake(id) {
     try {
         const { error } = await supabaseClient
             .from("medi")
             .update({ taken: true, last_taken_time: new Date().toISOString() })
             .eq("id", id);
-            
+
         if(error) { alert(error.message); return; }
 
-        // Forward a cancellation notification request package to your local Python server
-        fetch('http://127.0.0.1:5000/api/medication_taken', {
+        // Dynamic origin tracking (Local vs Production Render environment)
+        const backendOrigin = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+            ? "" 
+            : "https://medipulse-ai-zdmd.onrender.com";
+
+        // Forward a cancellation notification request package to your server
+        fetch(`${backendOrigin}/api/medication_taken`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ medicine_id: id })
@@ -397,12 +402,7 @@ async function triggerTake(id) {
     } catch(err){ alert(err.message); }
 }
 
-function toggleEditor(id){
-    const box = document.getElementById(`edit-${id}`);
-    box.style.display = box.style.display === "block" ? "none" : "block";
-}
-
-// --- MODIFIED SYSTEM ACTION 2: PUSH SCHEDULER UPDATE PARAMETERS ---
+// --- FIXED SYSTEM ACTION 2: PUSH SCHEDULER UPDATE PARAMETERS ---
 async function pushUpdates(rowId){
     try{
         const updatedName = document.getElementById(`input-name-${rowId}`).value.trim();
@@ -439,7 +439,12 @@ async function pushUpdates(rowId){
                 family_email: currentUserProfile.family_email
             };
 
-            fetch('http://127.0.0.1:5000/api/schedule_reminder', {
+            // Dynamic origin tracking (Local vs Production Render environment)
+            const backendOrigin = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+                ? "" 
+                : "https://medipulse-ai-zdmd.onrender.com";
+
+            fetch(`${backendOrigin}/api/schedule_reminder`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(schedulerPayload)
@@ -448,11 +453,18 @@ async function pushUpdates(rowId){
             .then(data => console.log("Python scheduler re-programmed:", data))
             .catch(err => console.error("Scheduler update webhook pipeline error:", err));
         }
-        
+
         alert("Configuration updated! Intake lock window reset to new parameters.");
         renderDashboard();
     } catch(err){ alert(err.message); }
 }
+
+function toggleEditor(id){
+    const box = document.getElementById(`edit-${id}`);
+    box.style.display = box.style.display === "block" ? "none" : "block";
+}
+
+
 
 renderDashboard();
 </script>
