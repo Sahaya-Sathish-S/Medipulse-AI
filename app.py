@@ -30,8 +30,8 @@ GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi"
 # Dynamic text router that automatically matches available free text backends
 FREE_TEXT_ROUTER = "openrouter/free"
 
-# Explicit vision-enabled free model to handle prescription images and eye scans
-FREE_VISION_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
+# Reliable, standard-compliant free vision model for images and parsed data streams
+FREE_VISION_MODEL = "google/gemma-2-flash-8b:free"
 
 # Background Scheduler Engine Setup
 scheduler = BackgroundScheduler(daemon=True)
@@ -268,7 +268,7 @@ def prescription_scanner(): return render_template("prescription.html")
 
 
 # =========================================
-# AI EYE SCANNER ROUTE (MULTIMODAL FIX)
+# AI EYE SCANNER ROUTE (STABLE VISION)
 # =========================================
 @app.route("/analyze_eye_scan", methods=["POST"])
 def analyze_eye_scan():
@@ -312,7 +312,7 @@ def analyze_eye_scan():
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
             json={
-                "model": FREE_VISION_MODEL, # Locked to active vision-enabled free architecture
+                "model": FREE_VISION_MODEL, 
                 "messages": messages,
                 "max_tokens": 800  
             },
@@ -369,7 +369,7 @@ def chat():
                 "X-Title": "MediPulse AI"
             },
             json={
-                "model": FREE_TEXT_ROUTER, # Dynamically processes along free conversational endpoints
+                "model": FREE_TEXT_ROUTER, 
                 "messages": messages,
                 "max_tokens": 800  
             },
@@ -540,7 +540,7 @@ def analyze_ai():
 
 
 # =========================================
-# PRESCRIPTION AI ROUTE (MULTIMODAL FIX)
+# PRESCRIPTION AI ROUTE (STABLE VISION)
 # =========================================
 @app.route("/prescription_ai", methods=["POST"])
 def prescription_ai():
@@ -574,7 +574,7 @@ def prescription_ai():
                 "X-Title": "MediPulse Prescription AI"
             },
             json={
-                "model": FREE_VISION_MODEL, # Set to specific vision model to handle explicit image tracking inputs safely
+                "model": FREE_VISION_MODEL, 
                 "messages": [
                     {"role": "system", "content": "You are MediPulse Prescription Parsing Assistant."},
                     {"role": "user", "content": user_content}
