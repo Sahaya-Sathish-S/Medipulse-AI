@@ -1,7 +1,7 @@
 import base64
 import io
 import re
-from datetime import datetime, timedelta  # <-- FIXED: Added missing imports
+from datetime import datetime, timedelta  
 from flask import Flask, render_template, request, jsonify
 import requests
 from pypdf import PdfReader
@@ -16,16 +16,23 @@ from dotenv import load_dotenv
 app = Flask(__name__)
 CORS(app)
 
-# OPENROUTER API KEY (Keep this safe!)
+# Load configuration values securely from local file or cloud environment settings
+load_dotenv()
+
+# OPENROUTER SECURITY MANAGEMENT
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GMAIL_USER = "sahayasathish60@gmail.com"          
 GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi" 
 
+# Background Scheduler Engine Setup
 scheduler = BackgroundScheduler(daemon=True)
 scheduler.start()
 
 
 def send_email(to_email, subject, body):
+    """
+    Standard secure outbound automated SMTP mail delivery track.
+    """
     try:
         msg = MIMEMultipart()
         msg['From'] = GMAIL_USER
@@ -33,15 +40,15 @@ def send_email(to_email, subject, body):
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
 
-        # Standard secure production tunnel
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        # Secure Connection Establishment (TLS Connection Framework)
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_USER, to_email, msg.as_string())
         server.quit()
         print(f"--> [EMAIL SUCCESS] Automated dispatch sent to: {to_email}")
     except Exception as e:
         print(f"--> [EMAIL CRITICAL ERROR] Pipeline failed: {str(e)}")
-
 
 
 def send_initial_reminder(data):
@@ -64,17 +71,15 @@ def send_initial_reminder(data):
     if scheduler.get_job(escalation_job_id):
         scheduler.remove_job(escalation_job_id)
 
-    # From your app.py
-scheduler.add_job(
-    func=send_email,
-    trigger='date',
-    run_date=datetime.now(),
-    args=[to_email, subject, body]
-)
-
+    # Core scheduling allocation routine
+    scheduler.add_job(
+        id=escalation_job_id,
+        func=send_family_escalation,
+        trigger='date',
+        run_date=escalation_time,
+        args=[data]
+    )
     print(f"--> [ALERT ARMED] Family escalation track armed for 30 minutes from now.")
-
-
 
 
 def send_family_escalation(data):
@@ -108,8 +113,9 @@ def schedule_reminder():
         core_job_id = f"reminder_{medicine_id}"
 
         if scheduler.get_job(core_job_id):
-               scheduler.remove_job(core_job_id)
-scheduler.add_job(
+            scheduler.remove_job(core_job_id)
+
+        scheduler.add_job(
             id=core_job_id,
             func=send_initial_reminder,
             trigger='cron',
@@ -137,14 +143,12 @@ def medication_taken():
 
     return jsonify({"status": "success", "message": "State confirmed, no open countdown found."}), 200
 
-# Keep the rest of your AI chat, PDF extractors, and routes untouched down below...
   
 def extract_text_from_pdf(base64_data):
     """
     Decodes a base64 PDF stream and extracts raw structural text from pages.
     """
     try:
-        # Strip away potential data URI headers if sent from frontend
         if "," in base64_data:
             base64_data = base64_data.split(",")[1]
             
@@ -163,24 +167,22 @@ def extract_text_from_pdf(base64_data):
         print(f"Error reading PDF data payload: {e}")
         return f"[Error mining structural text from attached document: {str(e)}]"
 
-# =========================================
-# EMERGENCY BLOOD DONOR MAIL DISPATCH (FIXED PRODUCTION)
-# =========================================
 
+# =========================================
+# EMERGENCY BLOOD DONOR MAIL DISPATCH
+# =========================================
 @app.route('/api/send_emergency_email', methods=['POST'])
 def api_send_emergency_email():
     try:
         data = request.get_json()
-
+        
         to_email = data.get("to_email")
         donor_name = data.get("donor_name")
         blood_group = data.get("blood_group")
-
-        # Validation Check
+        
         if not to_email or not donor_name or not blood_group:
             return jsonify({"status": "error", "message": "Missing required dispatch parameters"}), 400
 
-        # Construct Contextual Alerts
         subject = f"🚨 URGENT: Emergency Blood Donation Request ({blood_group})"
         body = (
             f"Dear {donor_name},\n\n"
@@ -193,90 +195,72 @@ def api_send_emergency_email():
             f"— MediPulse Emergency Hub Operations Team"
         )
 
-        # PRODUCTION FIX: Call the email transmission sequence directly to bypass timezone and worker dropouts
-        print(f"--> [BLOOD ALERT INITIATED] Connecting directly to SMTP servers for {donor_name}...")
-        
-        # This calls your send_email function directly inline
         send_email(to_email, subject, body)
-
-        return jsonify({"status": "success", "message": f"Alert processing successfully initiated for {donor_name}"}), 200
+        return jsonify({"status": "success", "message": f"Alert successfully transmitted to {donor_name}"}), 200
 
     except Exception as e:
         print(f"--> [BLOOD MAIL SYSTEM ERROR]: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-
+# =========================================
+# FLASK INTERFACE RENDER COMPONENT MAPPINGS
+# =========================================
 @app.route("/")
-def home():
-    return render_template("home.html")
+def home(): return render_template("home.html")
 
 @app.route("/medicine-search")
-def medicine_search():
-    return render_template("ai_medicine.html")
+def medicine_search(): return render_template("ai_medicine.html")
 
 @app.route("/checker")
-def checker():
-    return render_template("checker.html")
+def checker(): return render_template("checker.html")
 
 @app.route("/setup")
-def setup():
-    return render_template("setup.html")
+def setup(): return render_template("setup.html")
 
 @app.route("/hospital")
-def hospital():
-    return render_template("hospital.html")
+def hospital(): return render_template("hospital.html")
 
 @app.route("/donation")
-def donation():
-    return render_template("donation.html")
+def donation(): return render_template("donation.html")
 
 @app.route("/register")
-def register():
-    return render_template("register.html")
+def register(): return render_template("register.html")
 
 @app.route("/emergency")
-def emergency():
-    return render_template("Emergency.html")
-
+def emergency(): return render_template("Emergency.html")
 
 @app.route("/emergency-medicine")
-def emergency_medicine():
-    return render_template("emergency_medicine_ai.html")
+def emergency_medicine(): return render_template("emergency_medicine_ai.html")
 
 @app.route("/scanner")
-def scanner():
-    return render_template("scanner.html")
-
+def scanner(): return render_template("scanner.html")
 
 @app.route("/free-map")
-def free_map():
-    return render_template("medical_map.html")
+def free_map(): return render_template("medical_map.html")
 
 @app.route("/chatbot")
-def chatbot():
-    return render_template("chatbot.html")
+def chatbot(): return render_template("chatbot.html")
 
 @app.route("/login")
-def login():
-    return render_template("login.html")
+def login(): return render_template("login.html")
 
 @app.route("/signup")
-def signup():
-    return render_template("signup.html")
+def signup(): return render_template("signup.html")
 
 @app.route("/profile")
-def profile():
-    return render_template("profile.html")
+def profile(): return render_template("profile.html")
 
 @app.route("/medical_analytics")
-def medical_analytics():
-    return render_template("analytics.html")
-    
-# =========================================
-# AI EYE SCANNER ROUTE (TOKEN BOUNDARY FIX)
-# =========================================
+def medical_analytics(): return render_template("analytics.html")
 
+@app.route("/prescription-scanner")
+def prescription_scanner(): return render_template("prescription.html")
+
+
+# =========================================
+# AI EYE SCANNER ROUTE (FREE-TIER OPTIMIZED)
+# =========================================
 @app.route("/analyze_eye_scan", methods=["POST"])
 def analyze_eye_scan():
     try:
@@ -300,137 +284,73 @@ def analyze_eye_scan():
 
         prompt = """
         Analyze this image of a human eye for preliminary screening purposes.
-        
-        Tasks:
-        1. Evaluate visible structures (Cornea, Iris, Sclera, Pupil).
-        2. Check for obvious anomalies: severe redness (conjunctivitis), cloudiness (cataracts), yellowing (jaundice), or abnormalities in pupil shape.
-        3. Provide a structured, easy-to-read summary.
-        
-        STRICT RESPONSE FORMAT:
-        - Preliminary Observations: [What is visible in this specific photo]
-        - Potential Indicators: [Normal / Detected signs of specific issues, or write "None detected visually"]
-        - Educational Insights: [Brief explanation of what those signs typically mean]
-        - Recommended Next Steps: [e.g., Visit an Optometrist/Ophthalmologist for physical testing]
-        
-        CRITICAL SAFETY WARNING: Always append a clear legal disclaimer stating that this AI tool does not replace a professional clinical diagnosis or an automated refraction exam.
+        Evaluate visible structures (Cornea, Iris, Sclera, Pupil). Check for severe redness, cloudiness, or yellowing.
+        Provide Observations, Indicators, Insights, and Recommended Next Steps. Include a clinical disclaimer.
         """
 
         messages = [
-            {
-                "role": "system",
-                "content": "You are MediPulse Ophthalmology AI, an expert clinical screening assistant capable of performing structural visual analysis on eye photographs."
-            },
+            {"role": "system", "content": "You are MediPulse Ophthalmology AI, an expert visual processing utility."},
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "text",
-                        "text": prompt
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{file_type};base64,{base64_clean}"
-                        }
-                    }
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:{file_type};base64,{base64_clean}"}}
                 ]
             }
         ]
 
-        # Payload delivery maps
-        json_payload = {
-            "model": "openai/gpt-4o-mini",
-            "messages": messages,
-            "max_tokens": 1000  # 💡 FIX: Drastically cuts cost to bypass Free Tier 402 restrictions!
-        }
-
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
-            json=json_payload,
+            json={
+                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine
+                "messages": messages,
+                "max_tokens": 800  
+            },
             timeout=30
         )
 
         if response.status_code != 200:
-            print(f"--> [OPENROUTER ERROR]: {response.text}")
-            return jsonify({"reply": f"OpenRouter API returned error code: {response.status_code}"}), response.status_code
+            return jsonify({"reply": f"OpenRouter Free-Core Error Code: {response.status_code}"}), response.status_code
 
-        result = response.json()
-        ai_reply = result["choices"][0]["message"]["content"]
-        
+        ai_reply = response.json()["choices"][0]["message"]["content"]
         return jsonify({"reply": ai_reply})
 
     except Exception as e:
-        print(f"Scanner Crash Details: {e}")
         return jsonify({"reply": f"Scanner Error: {str(e)}"}), 500
 
-# =========================================
-# PRESCRIPTION SCANNER PAGE
-# =========================================
 
-@app.route("/prescription-scanner")
-def prescription_scanner():
-    return render_template("prescription.html")
-# --- AI CHAT ROUTE WITH HISTORY CONTEXT & EXTRACTORS ---
+# =========================================
+# AI CHAT ROUTE (FREE-TIER OPTIMIZED)
+# =========================================
 @app.route("/chat", methods=["POST"])
 def chat():
-    payload = request.json
-    user_message = payload.get("message", "").strip()
-    chat_history = payload.get("history", [])
-    file_content = payload.get("file_content", "")
-    file_name = payload.get("file_name", "")
-    file_type = payload.get("file_type", "")
-
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    # Setup core custom system profile instructions
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are MediPulse AI, a smart healthcare assistant. Provide clean, short, conversational responses. "
-                "Support English, Tamil, and Hindi. You are made by Sahaya Sathish S, an aspiring Computer Science Engineering "
-                "Student who is passionate about coding and actively participates in symposiums and technical events to develop his skills. "
-                "He is also developing some projects like Busy AI (a smart business assistant that creates smart professional business "
-                "posters, reels, logos, websites, business analytics, and a chatbot to get business advice and improve), EcoSort AI "
-                "(a smart device and software to maintain and keep the environment clean by a smart IoT powered dustbin which scans waste items "
-                "and directs them to the right compartment, monitors the fill level, addresses the dustbin when filled, alerts waste collectors, "
-                "and uses sensors/webcams to find the type of waste), and CodeForge AI (an AI powered smart gaming platform so that students can "
-                "learn coding through quiz games, programming battles, and debugging events). He has won prizes in various technical events."
-            )
-        }
-    ]
-
-        # Append historical conversational frames securely by converting any dictionary data objects into standard text
-    for msg in chat_history:
-        content_element = msg.get("content", "")
-        
-        # If history content was saved as a nested structure or list block, cast it cleanly to string format
-        if isinstance(content_element, list):
-            content_element = str(content_element)
-            
-        messages.append({
-            "role": msg["role"],
-            "content": str(content_element)
-        })
-
-    # Delivery request body data mappings
-        # Delivery request body data mappings
-    # Change to this:
-    data = {
-        "model": "meta-llamallama-3-8b-instruct:free",  
-        "messages": messages,
-        "max_tokens": 1000  
-}
-
-    # =====================================================================
-    # ADD FROM HERE TO THE END OF THE ROUTE TO FIX THE CHAT SEQUENCE ERRORS
-    # =====================================================================
     try:
-        # Execute communication with OpenRouter API endpoints
+        payload = request.json
+        user_message = payload.get("message", "").strip()
+        chat_history = payload.get("history", [])
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are MediPulse AI, a smart healthcare assistant created by Sahaya Sathish S. "
+                    "Provide short, professional, and clear answers. Support English, Tamil, and Hindi."
+                )
+            }
+        ]
+
+        for msg in chat_history:
+            content_element = msg.get("content", "")
+            if isinstance(content_element, list):
+                content_element = str(content_element)
+            messages.append({
+                "role": msg["role"],
+                "content": str(content_element)
+            })
+
+        messages.append({"role": "user", "content": user_message})
+
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={
@@ -439,55 +359,40 @@ def chat():
                 "HTTP-Referer": "http://127.0.0.1:5000",
                 "X-Title": "MediPulse AI"
             },
-            json=data,
+            json={
+                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine 
+                "messages": messages,
+                "max_tokens": 800  
+            },
             timeout=30
         )
         
-        # Safe status check on network pipeline
         if response.status_code != 200:
-            print(f"--> [CHAT API ERROR]: STATUS {response.status_code} - {response.text}")
-            return jsonify({"reply": f"OpenRouter Core Error: {response.status_code}. Please verify your key balances."})
+            return jsonify({"reply": f"OpenRouter System Line Anomaly: {response.status_code}. Key states depleted."})
 
         result = response.json()
-        
-        # Structural keys check validation before accessing indices
-        if "choices" in result and len(result["choices"]) > 0 and "message" in result["choices"][0]:
-            ai_reply = result["choices"][0]["message"]["content"]
-        else:
-            print(f"--> [UNEXPECTED PAYLOAD MAP STRUCTURE]: {result}")
-            ai_reply = "I received an unparseable transmission structure sequence from the backend intelligence core."
+        ai_reply = result["choices"][0]["message"]["content"]
+        return jsonify({"reply": ai_reply})
             
     except Exception as e:
-        print(f"--> [CRITICAL ROUTE EXCEPTION]: {str(e)}")
-        ai_reply = "I'm having trouble connecting to my brain right now. Please try your message again."
-
-    return jsonify({"reply": ai_reply})
-
-    # =====================================================================
-    # STOP REPLACING STEP 1 HERE
-    # =====================================================================
+        return jsonify({"reply": f"Core Network Exception Matrix: {str(e)}"})
 
 
-# --- AI TITLE GENERATION ROUTE ---
+# =========================================
+# AI TITLE GENERATION ROUTE
+# =========================================
 @app.route("/generate_title", methods=["POST"])
 def generate_title():
     user_message = request.json.get("message", "New Conversation")
-    
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    
     title_prompt = [
-        {"role": "system", "content": "Generate a concise 2 to 4 word summary title for a chat thread based on this initial user message or file event. Respond with ONLY the title. No quotes, no markdown, no punctuation."},
+        {"role": "system", "content": "Generate a concise 2 to 4 word summary title. Return ONLY text."},
         {"role": "user", "content": user_message}
     ]
-
     try:
         res = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json={"model": "openai/gpt-4o-mini", "messages": title_prompt}
+            headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
+            json={"model": "meta-llama/llama-3-8b-instruct:free", "messages": title_prompt, "max_tokens": 50}
         )
         generated_title = res.json()["choices"][0]["message"]["content"].strip()
     except Exception:
@@ -495,16 +400,14 @@ def generate_title():
 
     return jsonify({"title": generated_title})
 
+
 # =========================================
 # EMERGENCY MEDICINE AI ROUTE
 # =========================================
-
 @app.route("/medicine_ai", methods=["POST"])
 def medicine_ai():
     try:
-        print("\n===== MEDICINE AI REQUEST START =====")
         data = request.get_json()
-
         user_message = data.get("message", "").strip()
         language = data.get("language", "english")
         medicine_database_text = data.get("medicine_database_text", "")
@@ -512,34 +415,8 @@ def medicine_ai():
         if user_message == "":
             return jsonify({"reply": "Please enter symptoms"})
 
-        prompt = f"""
-        You are MediPulse Emergency Medicine AI, a professional pharmacy assistant.
-        
-        Available Language: {language}
+        prompt = f"Language: {language}\nDatabase:\n{medicine_database_text}\nSymptoms:\n{user_message}"
 
-        IMPORTANT RULES:
-        1. Analyze symptoms carefully and recommend ONLY suitable OTC medicines.
-        2. Medicine names must be written in ENGLISH characters.
-        3. Keep answers concise, highly readable, and cleanly structured.
-        4. If medicine exists in the database text block below, state its specific block number.
-        5. If medicine is NOT available in the text blocks below, write exactly: "Medicine not available in blocks"
-        6. If symptoms point to severe or life-threatening status, sound an urgent warning to visit a hospital immediately.
-
-        STRICT RESPONSE FORMAT:
-        Medicine Recommended: [Medicine Name]
-        Dosage: [Short Dosage instruction]
-        Available Block: [Block Number OR "Medicine not available in blocks"]
-        Advice: [Short advice]
-        Warning: [Short warning]
-
-        AVAILABLE MEDICINE DATABASE:
-        {medicine_database_text}
-
-        USER SYMPTOMS:
-        {user_message}
-        """
-
-        print("\n===== SENDING TO OPENROUTER =====")
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={
@@ -549,393 +426,154 @@ def medicine_ai():
                 "X-Title": "MediPulse AI Hub"
             },
             json={
-                "model":"meta-llama/llama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
-                "temperature": 0.3, # Lowered for strict format consistency
+                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine
+                "temperature": 0.2,
                 "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are an expert emergency medicine recommendation assistant. You provide short, structured answers."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
+                    {"role": "system", "content": "You are a professional clinical pharmacy assistant. Output strict structured definitions."},
+                    {"role": "user", "content": prompt}
                 ],
-                "max_tokens": 600  # 💡 FIX: Caps token generation to prevent Free Tier pipeline blocks
+                "max_tokens": 600  
             },
             timeout=25
         )
 
-        print(f"STATUS CODE: {response.status_code}")
-
         if response.status_code != 200:
-            print(f"--> [OPENROUTER ERROR LOG]: {response.text}")
-            return jsonify({"reply": f"System Core Error (Status {response.status_code}). Please try again."})
+            return jsonify({"reply": f"System Core Error (Status {response.status_code})."})
 
-        result = response.json()
-
-        if "choices" in result and len(result["choices"]) > 0:
-            ai_reply = result["choices"][0]["message"]["content"]
-        else:
-            ai_reply = "Unable to process structural medicine parameters. Please attempt again."
-
-        print("\n===== AI REPLY SUCCESS =====")
+        ai_reply = response.json()["choices"][0]["message"]["content"]
         return jsonify({"reply": ai_reply})
 
     except Exception as e:
-        print(f"\n===== MEDICINE AI ERROR CRASH =====\n{str(e)}")
         return jsonify({"reply": f"Server Core Error: {str(e)}"})
 
         
+# =========================================
+# MAP NAVIGATION AI ROUTE
+# =========================================
 @app.route("/map_ai", methods=["POST"])
 def map_ai():
     try:
         data = request.json
         user_message = data.get("message", "")
-        latitude = data.get("latitude")
-        longitude = data.get("longitude")
-        destination = data.get("destination", "")
-        distance = data.get("distance", "")
-        duration = data.get("duration", "")
-        current_speed = data.get("speed", "")
-        current_time = data.get("current_time", "")
-
-        prompt = f"""
-        You are MediPulse Navigation AI.
-
-        Live User Details:
-        Current Latitude: {latitude}
-        Current Longitude: {longitude}
-        Destination: {destination}
-        Remaining Distance: {distance}
-        Estimated Arrival Time: {duration}
-        Current Speed: {current_speed} KM/H
-        Current Time: {current_time}
-
-        User Message:
-        {user_message}
-
-        Instructions:
-        - Act like a professional live navigation AI.
-        - Give very clear road directions.
-        - Explain routes simply.
-        - Keep responses short and direct like a maps voice assistant.
-        """
-
-        # FIXED: Added required OpenRouter Referer and Title flags
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "http://127.0.0.1:5000",  
-            "X-Title": "MediPulse AI Hub"
-        }
+        prompt = f"Live Navigation Data Matrix Request. Directive context string: {user_message}"
 
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://127.0.0.1:5000",  
+                "X-Title": "MediPulse AI Hub"
+            },
             json={
-                "model": "meta-llama/llama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
+                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine
                 "messages": [
-                    {"role": "system", "content": "You are MediPulse Medical Navigation AI."},
+                    {"role": "system", "content": "You are MediPulse Medical Navigation AI voice operator."},
                     {"role": "user", "content": prompt}
                 ],
-                "max_tokens": 500 # Kept lightweight
+                "max_tokens": 400 
             },
             timeout=25
         )
 
-        # DEBUGGING PRINT: Check your terminal to see exactly what OpenRouter says!
         if response.status_code != 200:
-            print(f"--> [MAP AI ROUTER ERROR] Status: {response.status_code} | Response: {response.text}")
-            
-            # Informative message based on common API structural faults
-            if response.status_code == 402:
-                return jsonify({"reply": "OpenRouter API limits reached or credit balance exhausted."})
-            return jsonify({"reply": f"OpenRouter Core Error (Status {response.status_code}). Please check server logs."})
+            return jsonify({"reply": f"OpenRouter Core Navigation Error (Status {response.status_code})."})
 
-        result = response.json()
-        
-        if "choices" in result and len(result["choices"]) > 0:
-            reply = result["choices"][0]["message"]["content"]
-        else:
-            reply = "I couldn't process the navigational payload structure successfully."
-
+        reply = response.json()["choices"][0]["message"]["content"]
         return jsonify({"reply": reply})
 
     except Exception as e:
-        print(f"--> [MAP AI CRITICAL FAILURE]: {str(e)}")
-        return jsonify({"reply": "Navigation service encountered an unexpected error."})
+        return jsonify({"reply": "Navigation service encountered an unexpected processing error."})
+
 
 # =========================================
-# FIXED: BUSINESS ANALYTICS AI ROUTE
+# BUSINESS ANALYTICS AI ROUTE
 # =========================================
 @app.route("/analyze_ai", methods=["POST"])
 def analyze_ai():
     try:
-        print("\n===== ANALYTICS AI START =====")
         data = request.get_json()
         purchases = data.get("purchases", [])
 
-        print(f"\nTOTAL PURCHASE RECORDS: {len(purchases)}")
-
         if len(purchases) == 0:
-            return jsonify({
-                "reply": "No purchase historical data records found inside dashboard telemetry panel."
-            })
+            return jsonify({"reply": "No purchase historical data records found."})
 
-        # =====================================
-        # CALCULATE BUSINESS ANALYTICS
-        # =====================================
-        total_profit = 0
-        total_quantity = 0
-        medicine_counts = {}
-        analytics_text = ""
-
-        for item in purchases:
-            customer_name = item.get("customer_name", "Unknown")
-            medicine_name = item.get("medicine_name", "Unknown")
-            quantity = int(item.get("quantity", 0))
-            total_price = float(item.get("total_price", 0))
-            purchase_time = item.get("purchase_time", "")
-
-            total_profit += total_price
-            total_quantity += quantity
-
-            # MEDICINE COUNT TRACKING
-            if medicine_name in medicine_counts:
-                medicine_counts[medicine_name] += quantity
-            else:
-                medicine_counts[medicine_name] = quantity
-
-            # BUILD ANALYTICS STRINGS DATA STRUCT
-            analytics_text += f"\nCustomer: {customer_name} | Medicine: {medicine_name} | Qty: {quantity} | Price: ₹{total_price} | Time: {purchase_time}\n"
-
-        # FIND TRENDING MEDICINE
-        trending_medicine = "Unknown"
-        max_sales = 0
-        for medicine, qty in medicine_counts.items():
-            if qty > max_sales:
-                max_sales = qty
-                trending_medicine = medicine
-
-        # =====================================
-        # GENERATE OPTIMIZED AI ENGINE PROMPT
-        # =====================================
-        prompt = f"""
-        You are MediPulse Pharmacy Business Analytics AI.
-        Analyze this medical shop metrics layout carefully to provide immediate optimization tactics.
-
-        Business Dashboard Metrics:
-        - Total Profit: ₹{total_profit}
-        - Total Medicines Sold: {total_quantity}
-        - Top Performing Variant: {trending_medicine}
-
-        Raw Segment Data Stream:
-        {analytics_text}
-
-        Tasks:
-        - Evaluate current store sales metrics performance.
-        - Identify clear system vulnerabilities (e.g., low velocity items or missing complementary item combos).
-        - Provide brief actionable marketing actions to increase next-quarter operations revenue.
-
-        Rules:
-        - Provide high-density professional feedback.
-        - Use clean Markdown tables or highly compressed bullet matrices.
-        - Keep responses concise and practical.
-        """
-
-        print("\n===== SENDING TO OPENROUTER =====")
-
-        # FIXED: Added browser referrer variables and application title keys
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "http://127.0.0.1:5000",
-            "X-Title": "MediPulse Analytics AI"
-        }
-
-        # Delivery mapping profile array
-        json_payload = {
-            "model": "meta-llama/llama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are a professional pharmacy operations analyst specialized in clinical supply chains and medical retail growth planning."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "max_tokens": 1000,  # 💡 FIX: Caps outbound token generation streams to stop server timeouts
-            "temperature": 0.3   # Lower temperature increases analytical reliability
-        }
+        prompt = f"Analyze metrics for analytics layer processing. Stream input elements: {str(purchases)}"
 
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=json_payload,
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://127.0.0.1:5000",
+                "X-Title": "MediPulse Analytics AI"
+            },
+            json={
+                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine
+                "messages": [
+                    {"role": "system", "content": "You are a retail pharmacy operations logistics analyst."},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 800,  
+                "temperature": 0.3   
+            },
             timeout=30
         )
 
-        print(f"OPENROUTER STATUS: {response.status_code}")
-
-        # Safe status mapping validation checking
         if response.status_code != 200:
-            print(f"--> [ANALYTICS API ERROR CODE]: {response.status_code} | Msg: {response.text}")
-            return jsonify({"reply": f"OpenRouter Core Failed (Status {response.status_code}). Check your balance or key access."})
+            return jsonify({"reply": f"OpenRouter Analytics Exception (Status {response.status_code})."})
 
-        result = response.json()
-
-        # Structural map index fallback validation checks
-        if "choices" in result and len(result["choices"]) > 0 and "message" in result["choices"][0]:
-            ai_reply = result["choices"][0]["message"]["content"]
-        else:
-            print(f"\nINVALID RESPONSE MAP PAYLOAD: {result}")
-            ai_reply = "Analytics parsing succeeded but target text generation arrays dropped during output assembly."
-
-        print("\n===== AI ANALYTICS SUCCESS =====")
+        ai_reply = response.json()["choices"][0]["message"]["content"]
         return jsonify({"reply": ai_reply})
 
     except Exception as e:
-        print(f"\n===== ANALYTICS AI SYSTEM CRASH =====\n{str(e)}")
         return jsonify({"reply": f"Analytics Server Pipeline Error: {str(e)}"})
 
 
-
 # =========================================
-# FIXED: PRESCRIPTION AI ROUTE
+# PRESCRIPTION AI ROUTE
 # =========================================
-
 @app.route("/prescription_ai", methods=["POST"])
 def prescription_ai():
     try:
         data = request.get_json()
-
         file_content = data.get("file_content", "")
-        file_name = data.get("file_name", "")
         file_type = data.get("file_type", "")
 
         if not file_content:
-            return jsonify({
-                "reply": "Please upload a valid prescription image or PDF document."
-            })
+            return jsonify({"reply": "Please upload a valid prescription item payload."})
 
-        # FIXED: Added required OpenRouter validation tracking headers
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "http://127.0.0.1:5000",
-            "X-Title": "MediPulse Prescription AI"
-        }
+        user_content = [{"type": "text", "text": "Parse the medical documentation structural entries systematically."}]
 
-        user_content = []
-
-        # =========================================
-        # IMAGE HANDLING
-        # =========================================
         if "image" in file_type:
-            base64_clean = file_content
-            if "," in base64_clean:
-                base64_clean = base64_clean.split(",")[1]
-
-            mime_match = re.search(r"data:([^;]+);base64,", file_content)
-            final_mime = mime_match.group(1) if mime_match else file_type
-
-            user_content.append({
-                "type": "text",
-                "text": """
-                Analyze this medical prescription carefully.
-                
-                Tasks:
-                - Read doctor handwriting systematically.
-                - Extract medicine names, precise dosage, and timing frequencies.
-                - Detail clear target instructions or medical purposes.
-
-                STRICT RESPONSE FORMAT:
-                Medicine Name: [Name]
-                Dosage: [e.g., 500mg]
-                Timing: [e.g., Once daily after meals]
-                Purpose: [Brief use description]
-                
-                If any handwriting string remains unparseable, append: "Some prescription text was unclear."
-                """
-            })
-
+            base64_clean = file_content.split(",")[1] if "," in file_content else file_content
             user_content.append({
                 "type": "image_url",
-                "image_url": {
-                    "url": f"data:{final_mime};base64,{base64_clean}"
-                }
+                "image_url": {"url": f"data:{file_type};base64,{base64_clean}"}
             })
-
-        # =========================================
-        # PDF HANDLING
-        # =========================================
         elif file_type == "application/pdf":
-            extracted_pdf_text = extract_text_from_pdf(file_content)
-
-            user_content.append({
-                "type": "text",
-                "text": f"""
-                This is an electronic prescription PDF document. 
-                Extract medicine structures completely.
-
-                Prescription Raw Text Content:
-                {extracted_pdf_text}
-
-                Provide clean bullet marks containing:
-                - Medicine names
-                - Dosage metrics
-                - Intended timings
-                - Special Instructions
-                """
-            })
+            user_content.append({"type": "text", "text": f"PDF context extraction stream: {extract_text_from_pdf(file_content)}"})
         else:
-            return jsonify({"reply": "Unsupported file format upload target detected."})
-
-        # Delivery payload construction
-        json_payload = {
-            "model": "meta-llama/llama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are MediPulse Prescription AI, an expert specialized in parsing clinical handwritten scripts and digital medical charts."
-                },
-                {
-                    "role": "user",
-                    "content": user_content
-                }
-            ],
-            "max_tokens": 1000, # 💡 FIX: Caps the image token limits to maintain reliable network processing profiles
-            "temperature": 0.2
-        }
+            return jsonify({"reply": "Unsupported file layout target data map."})
 
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=json_payload,
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://127.0.0.1:5000",
+                "X-Title": "MediPulse Prescription AI"
+            },
+            json={
+                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine
+                "messages": [
+                    {"role": "system", "content": "You are MediPulse Prescription Parsing Assistant."},
+                    {"role": "user", "content": user_content}
+                ],
+                "max_tokens": 800, 
+                "temperature": 0.2
+            },
             timeout=35
         )
 
-        # Checking status validity response pipeline
-        if response.status_code != 200:
-            print(f"--> [PRESCRIPTION ROUTE API ERROR]: Status {response.status_code} | Text: {response.text}")
-            return jsonify({"reply": f"OpenRouter Transmission Blocked (Status {response.status_code}). Please verify api keys."})
-
-        result = response.json()
-
-        if "choices" in result and len(result["choices"]) > 0:
-            ai_reply = result["choices"][0]["message"]["content"]
-        else:
-            ai_reply = "The data payload processed, but failed structural layout verification validation."
-
-        return jsonify({"reply": ai_reply})
-
-    except Exception as e:
-        print(f"--> [PRESCRIPTION BACKEND BREAK]: {str(e)}")
-        return jsonify({"reply": f"Prescription Service System Defect: {str(e)}"})
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
+        if response.status_code != 2
