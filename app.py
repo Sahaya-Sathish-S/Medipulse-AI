@@ -20,7 +20,7 @@ CORS(app)
 load_dotenv()
 
 # Secure Configuration Management
-GEMINI_API_KEY = "AIzaSyDy8IICOvKTzr7wiJwupLJcuwSX-fcelVs"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 GMAIL_USER = "sahayasathish60@gmail.com"          
 GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi" 
