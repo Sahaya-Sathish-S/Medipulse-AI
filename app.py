@@ -25,7 +25,8 @@ scheduler.start()
 
 def send_email(to_email, subject, body):
     """
-    FIXED: Added the missing SMTP core execution architecture
+    FIXED: Shifted framework from Port 587 (TLS) to Port 465 (SSL) 
+    to bypass cloud hosting outbound firewall blockades on Render.
     """
     try:
         msg = MIMEMultipart()
@@ -34,15 +35,15 @@ def send_email(to_email, subject, body):
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
 
-        # Secure Connection Establishment
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
+        # Secure Connection Establishment using SSL over Port 465
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_USER, to_email, msg.as_string())
         server.quit()
         print(f"--> [EMAIL SUCCESS] Automated dispatch sent to: {to_email}")
     except Exception as e:
         print(f"--> [EMAIL CRITICAL ERROR] Pipeline failed: {str(e)}")
+
 
 
 def send_initial_reminder(data):
