@@ -66,12 +66,12 @@ def send_initial_reminder(data):
         scheduler.remove_job(escalation_job_id)
 
     # From your app.py
-scheduler.add_job(
-    func=send_email,
-    trigger='date',
-    run_date=datetime.now(),
-    args=[to_email, subject, body]
-)
+    scheduler.add_job(
+        func=send_email,
+        trigger='date',
+        run_date=datetime.now(),
+        args=[to_email, subject, body]
+    )
 
     print(f"--> [ALERT ARMED] Family escalation track armed for 30 minutes from now.")
 
@@ -422,11 +422,11 @@ def chat():
     # Delivery request body data mappings
         # Delivery request body data mappings
     # Change to this:
-data = {
-    "model": "meta-llama/llama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
-    "messages": messages,
-    "max_tokens": 1000  
-}
+    data = {
+        "model": "meta-llamallama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
+        "messages": messages,
+        "max_tokens": 1000  
+    }
 
     # =====================================================================
     # ADD FROM HERE TO THE END OF THE ROUTE TO FIX THE CHAT SEQUENCE ERRORS
