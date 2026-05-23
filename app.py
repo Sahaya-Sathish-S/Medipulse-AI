@@ -12,6 +12,8 @@ from email.mime.multipart import MIMEMultipart
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
 from dotenv import load_dotenv
+from datetime import datetime
+
 app = Flask(__name__)
 CORS(app)
 
@@ -23,11 +25,8 @@ GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi"
 scheduler = BackgroundScheduler(daemon=True)
 scheduler.start()
 
+
 def send_email(to_email, subject, body):
-    """
-    FIXED: Shifted framework from Port 587 (TLS) to Port 465 (SSL) 
-    to bypass cloud hosting outbound firewall blockades on Render.
-    """
     try:
         msg = MIMEMultipart()
         msg['From'] = GMAIL_USER
@@ -35,7 +34,7 @@ def send_email(to_email, subject, body):
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
 
-        # Secure Connection Establishment using SSL over Port 465
+        # Standard secure production tunnel
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_USER, to_email, msg.as_string())
@@ -66,13 +65,14 @@ def send_initial_reminder(data):
     if scheduler.get_job(escalation_job_id):
         scheduler.remove_job(escalation_job_id)
 
-    scheduler.add_job(
-        id=escalation_job_id,
-        func=send_family_escalation,
-        trigger='date',
-        run_date=escalation_time,
-        args=[data]
-    )
+    # From your app.py
+scheduler.add_job(
+    func=send_email,
+    trigger='date',
+    run_date=datetime.now(),
+    args=[to_email, subject, body]
+)
+
     print(f"--> [ALERT ARMED] Family escalation track armed for 30 minutes from now.")
 
 
@@ -166,7 +166,7 @@ def extract_text_from_pdf(base64_data):
         return f"[Error mining structural text from attached document: {str(e)}]"
 
 # =========================================
-# EMERGENCY BLOOD DONOR MAIL DISPATCH
+# EMERGENCY BLOOD DONOR MAIL DISPATCH (FIXED PRODUCTION)
 # =========================================
 
 @app.route('/api/send_emergency_email', methods=['POST'])
@@ -195,20 +195,18 @@ def api_send_emergency_email():
             f"— MediPulse Emergency Hub Operations Team"
         )
 
-        # OPTIMIZATION: Run SMTP task instantly in a background thread to prevent Render HTTP 30s timeouts
-        scheduler.add_job(
-            func=send_email,
-            trigger='date',
-            run_date=datetime.now(),
-            args=[to_email, subject, body]
-        )
+        # PRODUCTION FIX: Call the email transmission sequence directly to bypass timezone and worker dropouts
+        print(f"--> [BLOOD ALERT INITIATED] Connecting directly to SMTP servers for {donor_name}...")
+        
+        # This calls your send_email function directly inline
+        send_email(to_email, subject, body)
 
-        print(f"--> [BLOOD ALERT QUEUED] Offloaded dispatch job to background threads for {donor_name}")
         return jsonify({"status": "success", "message": f"Alert processing successfully initiated for {donor_name}"}), 200
 
     except Exception as e:
         print(f"--> [BLOOD MAIL SYSTEM ERROR]: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 @app.route("/")
