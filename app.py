@@ -12,7 +12,6 @@ from email.mime.multipart import MIMEMultipart
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
 from dotenv import load_dotenv
-from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -109,9 +108,8 @@ def schedule_reminder():
         core_job_id = f"reminder_{medicine_id}"
 
         if scheduler.get_job(core_job_id):
-            scheduler.remove_job(core_job_id)
-
-        scheduler.add_job(
+               scheduler.remove_job(core_job_id)
+scheduler.add_job(
             id=core_job_id,
             func=send_initial_reminder,
             trigger='cron',
@@ -422,10 +420,10 @@ def chat():
     # Delivery request body data mappings
         # Delivery request body data mappings
     # Change to this:
-data = {
-    "model": "meta-llama/llama-3-8b-instruct:free",  # <-- Uses the 100% free tier open-source route
-    "messages": messages,
-    "max_tokens": 1000  
+    data = {
+        "model": "meta-llamallama-3-8b-instruct:free",  
+        "messages": messages,
+        "max_tokens": 1000  
 }
 
     # =====================================================================
