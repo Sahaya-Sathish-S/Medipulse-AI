@@ -303,7 +303,7 @@ def analyze_eye_scan():
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
             json={
-                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine
+                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1
                 "messages": messages,
                 "max_tokens": 800  
             },
@@ -360,7 +360,7 @@ def chat():
                 "X-Title": "MediPulse AI"
             },
             json={
-                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine 
+                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1 
                 "messages": messages,
                 "max_tokens": 800  
             },
@@ -392,7 +392,7 @@ def generate_title():
         res = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
-            json={"model": "meta-llama/llama-3-8b-instruct:free", "messages": title_prompt, "max_tokens": 50}
+            json={"model": "meta-llama/llama-3.1-8b-instruct:free", "messages": title_prompt, "max_tokens": 50} # FIXED: Swapped to active free Llama 3.1
         )
         generated_title = res.json()["choices"][0]["message"]["content"].strip()
     except Exception:
@@ -426,7 +426,7 @@ def medicine_ai():
                 "X-Title": "MediPulse AI Hub"
             },
             json={
-                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine
+                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1
                 "temperature": 0.2,
                 "messages": [
                     {"role": "system", "content": "You are a professional clinical pharmacy assistant. Output strict structured definitions."},
@@ -466,7 +466,7 @@ def map_ai():
                 "X-Title": "MediPulse AI Hub"
             },
             json={
-                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine
+                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1
                 "messages": [
                     {"role": "system", "content": "You are MediPulse Medical Navigation AI voice operator."},
                     {"role": "user", "content": prompt}
@@ -509,7 +509,7 @@ def analyze_ai():
                 "X-Title": "MediPulse Analytics AI"
             },
             json={
-                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine
+                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1
                 "messages": [
                     {"role": "system", "content": "You are a retail pharmacy operations logistics analyst."},
                     {"role": "user", "content": prompt}
@@ -565,7 +565,7 @@ def prescription_ai():
                 "X-Title": "MediPulse Prescription AI"
             },
             json={
-                "model": "meta-llama/llama-3-8b-instruct:free", # 100% Free Engine
+                "model": "meta-llama/llama-3.1-8b-instruct:free", # FIXED: Swapped to active free Llama 3.1
                 "messages": [
                     {"role": "system", "content": "You are MediPulse Prescription Parsing Assistant."},
                     {"role": "user", "content": user_content}
