@@ -1,6 +1,7 @@
 import base64
 import io
 import re
+import os
 from datetime import datetime, timedelta  
 from flask import Flask, render_template, request, jsonify
 import requests
@@ -10,7 +11,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from apscheduler.schedulers.background import BackgroundScheduler
-import os
 from dotenv import load_dotenv
 
 app = Flask(__name__)
@@ -19,25 +19,31 @@ CORS(app)
 # Load environment configuration securely
 load_dotenv()
 
-# Secure Configuration Management & Environment Sanitize
+# =========================================
+# NATIVE GEMINI & EMAIL GATEWAY SECURE CONFIG
+# =========================================
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     GEMINI_API_KEY = GEMINI_API_KEY.strip().replace('"', '').replace("'", "")
 
-GMAIL_USER = "sahayasathish60@gmail.com"          
-GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi" 
-
 # Centralized Google Gemini API Gateway Endpoint
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
+GMAIL_USER = "sahayasathish60@gmail.com"          
+GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi" 
+
+# Background Scheduler Initialize
 scheduler = BackgroundScheduler(daemon=True)
 scheduler.start()
 
 
+# =========================================
+# CORE SMTP EMAIL PIPELINE (PORT 587 TLS)
+# =========================================
 def send_email(to_email, subject, body):
     """
-    UPGRADED: Uses SSL over Port 465 for cross-platform cloud hosting reliability.
-    Prevents network dropped frames on Render and Vercel structures.
+    Uses Secure Connection Establishment over Port 587 (TLS) 
+    for cross-platform cloud hosting reliability.
     """
     try:
         msg = MIMEMultipart()
@@ -46,20 +52,21 @@ def send_email(to_email, subject, body):
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
 
-        # Secure Connection Establishment using explicit SMTP_SSL architecture via Port 465
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_USER, to_email, msg.as_string())
         server.quit()
-        print(f"--> [EMAIL SUCCESS] Cloud automated dispatch sent to: {to_email}")
+        print(f"--> [EMAIL SUCCESS] Automated dispatch sent to: {to_email}")
     except Exception as e:
         print(f"--> [EMAIL CRITICAL ERROR] Pipeline failed: {str(e)}")
 
 
+# =========================================
+# MEDICINE ALERTS & ESCALATION SCHEDULER
+# =========================================
 def send_initial_reminder(data):
-    """
-    Task 1: Fires at the exact time matching the user's prescription schedule.
-    """
+    """Fires at the exact time matching the user's prescription schedule."""
     subject = f"⚠️ MediPulse Reminder: Time to take {data['medicine_name']}"
     body = (
         f"Hello {data['username']},\n\n"
@@ -87,9 +94,7 @@ def send_initial_reminder(data):
 
 
 def send_family_escalation(data):
-    """
-    Task 2: Fires 30 minutes after the initial check if the user missed it.
-    """
+    """Fires 30 minutes after the initial check if the user missed it."""
     subject = f"🚨 URGENT: MediPulse Missed Medication Alert for {data['username']}"
     body = (
         f"Attention {data['family_name']},\n\n"
@@ -102,7 +107,7 @@ def send_family_escalation(data):
     send_email(data['family_email'], subject, body)
     print(f"--> [ESCALATED] Family alert dispatched for missed medicine ID: {data['medicine_id']}")
 
-    
+
 @app.route('/api/schedule_reminder', methods=['POST'])
 def schedule_reminder():
     try:
@@ -147,30 +152,6 @@ def medication_taken():
 
     return jsonify({"status": "success", "message": "State confirmed, no open countdown found."}), 200
 
-  
-def extract_text_from_pdf(base64_data):
-    """
-    Decodes a base64 PDF stream and extracts raw structural text from pages.
-    """
-    try:
-        if "," in base64_data:
-            base64_data = base64_data.split(",")[1]
-            
-        pdf_bytes = base64.b64decode(base64_data)
-        pdf_file = io.BytesIO(pdf_bytes)
-        reader = PdfReader(pdf_file)
-        
-        extracted_text = ""
-        for page_num, page in enumerate(reader.pages):
-            page_text = page.extract_text()
-            if page_text:
-                extracted_text += f"\n--- Page {page_num + 1} ---\n{page_text}"
-                
-        return extracted_text.strip() if extracted_text else "Empty PDF Document Content."
-    except Exception as e:
-        print(f"Error reading PDF data payload: {e}")
-        return f"[Error mining structural text from attached document: {str(e)}]"
-
 
 # =========================================
 # EMERGENCY BLOOD DONOR MAIL DISPATCH
@@ -179,7 +160,6 @@ def extract_text_from_pdf(base64_data):
 def api_send_emergency_email():
     try:
         data = request.get_json()
-        
         to_email = data.get("to_email")
         donor_name = data.get("donor_name")
         blood_group = data.get("blood_group")
@@ -201,65 +181,34 @@ def api_send_emergency_email():
 
         send_email(to_email, subject, body)
         return jsonify({"status": "success", "message": f"Alert successfully transmitted to {donor_name}"}), 200
-
     except Exception as e:
         print(f"--> [BLOOD MAIL SYSTEM ERROR]: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # =========================================
-# FLASK INTERFACE RENDER COMPONENT MAPPINGS
+# UTILITY HELPER: PDF DATA EXTRACTOR
 # =========================================
-@app.route("/")
-def home(): return render_template("home.html")
-
-@app.route("/medicine-search")
-def medicine_search(): return render_template("ai_medicine.html")
-
-@app.route("/checker")
-def checker(): return render_template("checker.html")
-
-@app.route("/setup")
-def setup(): return render_template("setup.html")
-
-@app.route("/hospital")
-def hospital(): return render_template("hospital.html")
-
-@app.route("/donation")
-def donation(): return render_template("donation.html")
-
-@app.route("/register")
-def register(): return render_template("register.html")
-
-@app.route("/emergency")
-def emergency(): return render_template("Emergency.html")
-
-@app.route("/emergency-medicine")
-def emergency_medicine(): return render_template("emergency_medicine_ai.html")
-
-@app.route("/scanner")
-def scanner(): return render_template("scanner.html")
-
-@app.route("/free-map")
-def free_map(): return render_template("medical_map.html")
-
-@app.route("/chatbot")
-def chatbot(): return render_template("chatbot.html")
-
-@app.route("/login")
-def login(): return render_template("login.html")
-
-@app.route("/signup")
-def signup(): return render_template("signup.html")
-
-@app.route("/profile")
-def profile(): return render_template("profile.html")
-
-@app.route("/medical_analytics")
-def medical_analytics(): return render_template("analytics.html")
-
-@app.route("/prescription-scanner")
-def prescription_scanner(): return render_template("prescription.html")
+def extract_text_from_pdf(base64_data):
+    """Decodes a base64 PDF stream and extracts raw structural text from pages."""
+    try:
+        if "," in base64_data:
+            base64_data = base64_data.split(",")[1]
+            
+        pdf_bytes = base64.b64decode(base64_data)
+        pdf_file = io.BytesIO(pdf_bytes)
+        reader = PdfReader(pdf_file)
+        
+        extracted_text = ""
+        for page_num, page in enumerate(reader.pages):
+            page_text = page.extract_text()
+            if page_text:
+                extracted_text += f"\n--- Page {page_num + 1} ---\n{page_text}"
+                
+        return extracted_text.strip() if extracted_text else "Empty PDF Document Content."
+    except Exception as e:
+        print(f"Error reading PDF data payload: {e}")
+        return f"[Error mining structural text from attached document: {str(e)}]"
 
 
 # =========================================
@@ -314,15 +263,14 @@ def analyze_eye_scan():
         if response.status_code != 200:
             return jsonify({"reply": f"Gemini API returned error code: {response.status_code}"}), response.status_code
 
-        ai_reply = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+        ai_reply = response.json()["contents"][0]["parts"][0]["text"] if "contents" in response.json() else response.json()["candidates"][0]["content"]["parts"][0]["text"]
         return jsonify({"reply": ai_reply})
-
     except Exception as e:
         return jsonify({"reply": f"Scanner Error: {str(e)}"}), 500
 
 
 # ==============================================================
-# 2. UPGRADED MULTI-MODAL AI CHAT ROUTE (FIXES IMAGE BLINDNESS)
+# 2. MULTI-MODAL AI CHAT ROUTE (GEMINI NATIVE)
 # ==============================================================
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -338,12 +286,18 @@ def chat():
             "Support English, Tamil, and Hindi. You can see images and document contents attached by the user. "
             "You are made by Sahaya Sathish S, an aspiring Computer Science Engineering "
             "Student who is passionate about coding and actively participates in symposiums and technical events to develop his skills. "
-            "He is also developing some projects like Busy AI, EcoSort AI, and CodeForge AI. He has won prizes in various technical events."
+            "He is also developing some projects like Busy AI (a smart business assistant that creates smart professional business "
+            "posters, reels, logos, websites, business analytics, and a chatbot to get business advice and improve), EcoSort AI "
+            "(a smart device and software to maintain and keep the environment clean by a smart IoT powered dustbin which scans waste items "
+            "and directs them to the right compartment, monitors the fill level, addresses the dustbin when filled, alerts waste collectors, "
+            "and uses sensors/webcams to find the type of waste), and CodeForge AI (an AI powered smart gaming platform so that students can "
+            "learn coding through quiz games, programming battles, and debugging events). He has won prizes in various technical events."
         )
 
         gemini_contents = []
         
-        if chat_history and len(chat_history) > 0:
+        # Hydrate text history context safely
+        if chat_history:
             for msg in chat_history:
                 role = "user" if msg.get("role") == "user" else "model"
                 content_element = msg.get("content", "")
@@ -357,7 +311,7 @@ def chat():
 
         current_user_parts = []
         
-        # Extract Image payload if passed through the active chatbot frame
+        # Image attachment evaluation block
         if file_content and "image" in file_type:
             base64_clean = file_content.split(",")[1] if "," in file_content else file_content
             current_user_parts.append({
@@ -366,8 +320,7 @@ def chat():
                     "data": base64_clean
                 }
             })
-        
-        # Extract PDF string context data structure inline 
+        # PDF document verification block
         elif file_content and file_type == "application/pdf":
             extracted_text = extract_text_from_pdf(file_content)
             user_message = f"[Attached PDF Document Content:\n{extracted_text}]\n\nUser Question: {user_message}"
@@ -393,7 +346,6 @@ def chat():
 
         ai_reply = response.json()["candidates"][0]["content"]["parts"][0]["text"]
         return jsonify({"reply": ai_reply})
-            
     except Exception as e:
         print(f"--> [CHAT EXCEPTION RUNTIME ERROR]: {str(e)}")
         return jsonify({"reply": "I'm having trouble connecting to my brain right now. Please try again."})
@@ -473,11 +425,10 @@ def medicine_ai():
 
         ai_reply = response.json()["candidates"][0]["content"]["parts"][0]["text"]
         return jsonify({"reply": ai_reply})
-
     except Exception as e:
         return jsonify({"reply": f"Server Core Error: {str(e)}"})
 
-        
+
 # =========================================
 # 5. MAP NAVIGATION AI ROUTE (GEMINI NATIVE)
 # =========================================
@@ -522,7 +473,6 @@ def map_ai():
 
         reply = response.json()["candidates"][0]["content"]["parts"][0]["text"]
         return jsonify({"reply": reply})
-
     except Exception as e:
         return jsonify({"reply": "Navigation service encountered an unexpected error."})
 
@@ -602,7 +552,6 @@ def analyze_ai():
 
         ai_reply = response.json()["candidates"][0]["content"]["parts"][0]["text"]
         return jsonify({"reply": ai_reply})
-
     except Exception as e:
         return jsonify({"reply": f"Analytics Server Pipeline Error: {str(e)}"})
 
@@ -614,7 +563,6 @@ def analyze_ai():
 def prescription_ai():
     try:
         data = request.get_json()
-
         file_content = data.get("file_content", "")
         file_name = data.get("file_name", "")
         file_type = data.get("file_type", "")
@@ -627,7 +575,6 @@ def prescription_ai():
         # =========================================
         if "image" in file_type:
             base64_clean = file_content.split(",")[1] if "," in file_content else file_content
-
             mime_match = re.search(r"data:([^;]+);base64,", file_content)
             final_mime = mime_match.group(1) if mime_match else file_type
 
@@ -697,9 +644,63 @@ def prescription_ai():
 
         ai_reply = response.json()["candidates"][0]["content"]["parts"][0]["text"]
         return jsonify({"reply": ai_reply})
-
     except Exception as e:
         return jsonify({"reply": f"Prescription Service System Defect: {str(e)}"})
+
+
+# =========================================
+# FLASK INTERFACE RENDER COMPONENT MAPPINGS
+# =========================================
+@app.route("/")
+def home(): return render_template("home.html")
+
+@app.route("/medicine-search")
+def medicine_search(): return render_template("ai_medicine.html")
+
+@app.route("/checker")
+def checker(): return render_template("checker.html")
+
+@app.route("/setup")
+def setup(): return render_template("setup.html")
+
+@app.route("/hospital")
+def hospital(): return render_template("hospital.html")
+
+@app.route("/donation")
+def donation(): return render_template("donation.html")
+
+@app.route("/register")
+def register(): return render_template("register.html")
+
+@app.route("/emergency")
+def emergency(): return render_template("Emergency.html")
+
+@app.route("/emergency-medicine")
+def emergency_medicine(): return render_template("emergency_medicine_ai.html")
+
+@app.route("/scanner")
+def scanner(): return render_template("scanner.html")
+
+@app.route("/free-map")
+def free_map(): return render_template("medical_map.html")
+
+@app.route("/chatbot")
+def chatbot(): return render_template("chatbot.html")
+
+@app.route("/login")
+def login(): return render_template("login.html")
+
+@app.route("/signup")
+def signup(): return render_template("signup.html")
+
+@app.route("/profile")
+def profile(): return render_template("profile.html")
+
+@app.route("/medical_analytics")
+def medical_analytics(): return render_template("analytics.html")
+
+@app.route("/prescription-scanner")
+def prescription_scanner(): return render_template("prescription.html")
 
 
 if __name__ == "__main__":
