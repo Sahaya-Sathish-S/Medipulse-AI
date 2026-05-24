@@ -704,16 +704,13 @@ async function searchNearby(type){
     document.getElementById("results").innerHTML =
     "Searching nearby places...";
 
-    markers.forEach(marker=>{
-
+    markers.forEach(marker => {
         map.removeLayer(marker);
-
     });
 
     markers = [];
 
     let radius = 10000;
-
     let query = "";
 
     if(type === "pharmacy"){
@@ -729,7 +726,7 @@ async function searchNearby(type){
         out body;
         `;
 
-    }else{
+    } else {
 
         query = `
         [out:json][timeout:25];
@@ -743,21 +740,34 @@ async function searchNearby(type){
 
     try{
 
-        const response =
-        await fetch(
+        const response = await fetch(
             "https://overpass-api.de/api/interpreter",
             {
-                method:"POST",
-                body:query
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: "data=" + encodeURIComponent(query)
             }
         );
 
-        const data =
-        await response.json();
+        if(!response.ok){
+            throw new Error(`HTTP Error ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        console.log(data);
+
+        if(data.elements.length === 0){
+            document.getElementById("results").innerHTML =
+            "No nearby places found.";
+            return;
+        }
 
         displayPlaces(data.elements);
 
-    }catch(err){
+    } catch(err){
 
         console.error(err);
 
