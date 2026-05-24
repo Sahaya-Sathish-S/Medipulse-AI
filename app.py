@@ -41,25 +41,44 @@ scheduler.start()
 # CORE SMTP EMAIL PIPELINE (PORT 587 TLS)
 # =========================================
 def send_email(to_email, subject, body):
-    """
-    Uses Secure Connection Establishment over Port 587 (TLS) 
-    for cross-platform cloud hosting reliability.
-    """
+
     try:
+
         msg = MIMEMultipart()
+
         msg['From'] = GMAIL_USER
         msg['To'] = to_email
         msg['Subject'] = subject
+
         msg.attach(MIMEText(body, 'plain'))
 
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+
+        server.ehlo()
+
         server.starttls()
+
+        server.ehlo()
+
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        server.sendmail(GMAIL_USER, to_email, msg.as_string())
+
+        server.sendmail(
+            GMAIL_USER,
+            to_email,
+            msg.as_string()
+        )
+
         server.quit()
-        print(f"--> [EMAIL SUCCESS] Automated dispatch sent to: {to_email}")
+
+        print(f"EMAIL SENT TO: {to_email}")
+
+        return True
+
     except Exception as e:
-        print(f"--> [EMAIL CRITICAL ERROR] Pipeline failed: {str(e)}")
+
+        print("EMAIL ERROR:", str(e))
+
+        return False
 
 
 # =========================================
