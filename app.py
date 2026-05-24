@@ -483,23 +483,33 @@ def map_ai():
 @app.route("/analyze_ai", methods=["POST"])
 def analyze_ai():
     try:
+        print("\n===== ANALYTICS AI START =====")
+
         data = request.get_json()
         purchases = data.get("purchases", [])
 
+        # =====================================
+        # VALIDATION
+        # =====================================
         if len(purchases) == 0:
-            return jsonify({"reply": "No purchase historical data records found inside dashboard telemetry panel."})
+            return jsonify({
+                "reply": "No purchase historical data records found inside dashboard telemetry panel."
+            })
 
+        # =====================================
+        # LOCAL ANALYTICS CALCULATION
+        # =====================================
         total_profit = 0
         total_quantity = 0
         medicine_counts = {}
-        analytics_text = ""
 
-        for item in purchases:
-            customer_name = item.get("customer_name", "Unknown")
+        # LIMIT RECORDS TO PREVENT GEMINI OVERLOAD
+        limited_purchases = purchases[:20]
+
+        for item in limited_purchases:
             medicine_name = item.get("medicine_name", "Unknown")
             quantity = int(item.get("quantity", 0))
             total_price = float(item.get("total_price", 0))
-            purchase_time = item.get("purchase_time", "")
 
             total_profit += total_price
             total_quantity += quantity
@@ -509,53 +519,130 @@ def analyze_ai():
             else:
                 medicine_counts[medicine_name] = quantity
 
-            analytics_text += f"\nCustomer: {customer_name} | Medicine: {medicine_name} | Qty: {quantity} | Price: ₹{total_price} | Time: {purchase_time}\n"
+        # =====================================
+        # FIND TOP SELLING MEDICINES
+        # =====================================
+        sorted_medicines = sorted(
+            medicine_counts.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
 
-        trending_medicine = "Unknown"
-        max_sales = 0
-        for medicine, qty in medicine_counts.items():
-            if qty > max_sales:
-                max_sales = qty
-                trending_medicine = medicine
+        top_medicines = sorted_medicines[:5]
 
+        top_medicine_text = ""
+        for med, qty in top_medicines:
+            top_medicine_text += f"- {med}: {qty} units sold\n"
+
+        trending_medicine = top_medicines[0][0] if top_medicines else "Unknown"
+
+        # =====================================
+        # OPTIMIZED GEMINI PROMPT
+        # =====================================
         prompt = f"""
         You are MediPulse Pharmacy Business Analytics AI.
-        Analyze this medical shop metrics layout carefully to provide immediate optimization tactics.
 
-        Business Dashboard Metrics:
+        Analyze this pharmacy sales summary and provide short business improvement advice.
+
+        BUSINESS SUMMARY:
         - Total Profit: ₹{total_profit}
         - Total Medicines Sold: {total_quantity}
-        - Top Performing Variant: {trending_medicine}
+        - Top Performing Medicine: {trending_medicine}
 
-        Raw Segment Data Stream:
-        {analytics_text}
+        TOP SELLING MEDICINES:
+        {top_medicine_text}
 
-        Tasks:
-        - Evaluate current store sales metrics performance.
-        - Identify clear system vulnerabilities (e.g., low velocity items or missing complementary item combos).
-        - Provide brief actionable marketing actions to increase next-quarter operations revenue.
+        TASKS:
+        1. Evaluate current pharmacy performance.
+        2. Identify weak areas or missed opportunities.
+        3. Suggest marketing or stock improvement ideas.
+        4. Keep response concise and professional.
 
-        Rules:
-        - Use clean Markdown tables or highly compressed bullet matrices.
-        - Keep responses concise and practical.
+        RESPONSE STYLE:
+        - Use bullet points
+        - Keep it short
+        - Make it practical
         """
 
+        # =====================================
+        # GEMINI PAYLOAD
+        # =====================================
         payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.3}
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.3,
+                "maxOutputTokens": 500
+            }
         }
 
-        response = requests.post(GEMINI_URL, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+        # =====================================
+        # GEMINI API REQUEST
+        # =====================================
+        response = requests.post(
+            GEMINI_URL,
+            json=payload,
+            headers={
+                "Content-Type": "application/json"
+            },
+            timeout=30
+        )
 
+        print("\n===== GEMINI RESPONSE =====")
+        print(response.text)
+
+        # =====================================
+        # STATUS CHECK
+        # =====================================
         if response.status_code != 200:
-            return jsonify({"reply": f"Gemini Analytics Failure (Status {response.status_code})."})
+            return jsonify({
+                "reply": f"Gemini Analytics Failure (Status {response.status_code})."
+            })
 
-        ai_reply = response.json()["candidates"][0]["content"]["parts"][0]["text"]
-        return jsonify({"reply": ai_reply})
+        result = response.json()
+
+        # =====================================
+        # SAFE RESPONSE EXTRACTION
+        # =====================================
+        if (
+            "candidates" in result and
+            len(result["candidates"]) > 0 and
+            "content" in result["candidates"][0] and
+            "parts" in result["candidates"][0]["content"] and
+            len(result["candidates"][0]["content"]["parts"]) > 0
+        ):
+
+            ai_reply = result["candidates"][0]["content"]["parts"][0]["text"]
+
+        else:
+            print("\n===== INVALID GEMINI RESPONSE =====")
+            print(result)
+
+            ai_reply = (
+                "Analytics AI could not generate a valid response. "
+                "The response structure returned from Gemini was incomplete."
+            )
+
+        print("\n===== ANALYTICS AI SUCCESS =====")
+
+        return jsonify({
+            "reply": ai_reply
+        })
+
     except Exception as e:
-        return jsonify({"reply": f"Analytics Server Pipeline Error: {str(e)}"})
+        print(f"\n===== ANALYTICS AI SYSTEM CRASH =====")
+        print(str(e))
 
-
+        return jsonify({
+            "reply": f"Analytics Server Pipeline Error: {str(e)}"
+        })
 # =========================================
 # 7. AI PRESCRIPTION ROUTE (GEMINI NATIVE)
 # =========================================
