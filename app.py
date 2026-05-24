@@ -23,8 +23,6 @@ load_dotenv()
 # NATIVE GEMINI & EMAIL GATEWAY SECURE CONFIG
 # =========================================
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    GEMINI_API_KEY = GEMINI_API_KEY.strip().replace('"', '').replace("'", "")
 
 # Centralized Google Gemini API Gateway Endpoint
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
