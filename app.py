@@ -19,8 +19,10 @@ CORS(app)
 # Load environment configuration securely
 load_dotenv()
 
-# Secure Configuration Management
+# Secure Configuration Management & Environment Sanitize
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    GEMINI_API_KEY = GEMINI_API_KEY.strip().replace('"', '').replace("'", "")
 
 GMAIL_USER = "sahayasathish60@gmail.com"          
 GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi" 
@@ -35,6 +37,7 @@ scheduler.start()
 def send_email(to_email, subject, body):
     """
     UPGRADED: Uses SSL over Port 465 for cross-platform cloud hosting reliability.
+    Prevents network dropped frames on Render and Vercel structures.
     """
     try:
         msg = MIMEMultipart()
@@ -51,7 +54,6 @@ def send_email(to_email, subject, body):
         print(f"--> [EMAIL SUCCESS] Cloud automated dispatch sent to: {to_email}")
     except Exception as e:
         print(f"--> [EMAIL CRITICAL ERROR] Pipeline failed: {str(e)}")
-
 
 
 def send_initial_reminder(data):
@@ -320,7 +322,7 @@ def analyze_eye_scan():
 
 
 # ==============================================================
-# UPGRADED MULTI-MODAL AI CHAT ROUTE (FIXES IMAGE BLINDNESS)
+# 2. UPGRADED MULTI-MODAL AI CHAT ROUTE (FIXES IMAGE BLINDNESS)
 # ==============================================================
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -334,14 +336,13 @@ def chat():
         system_context = (
             "You are MediPulse AI, a smart healthcare assistant. Provide clean, short, conversational responses. "
             "Support English, Tamil, and Hindi. You can see images and document contents attached by the user. "
-            "You are made by Sahaya Sathish S, an aspiring Computer Science Engineering Student..."
-            "He is a first year Computer Science Engineering student who studies in DMI Engineering College Aralvaimozhi."
-            "He is intrested to solve many problems faced by the public with his innovations."
+            "You are made by Sahaya Sathish S, an aspiring Computer Science Engineering "
+            "Student who is passionate about coding and actively participates in symposiums and technical events to develop his skills. "
+            "He is also developing some projects like Busy AI, EcoSort AI, and CodeForge AI. He has won prizes in various technical events."
         )
 
         gemini_contents = []
         
-        # 1. Rebuild History Layout safely
         if chat_history and len(chat_history) > 0:
             for msg in chat_history:
                 role = "user" if msg.get("role") == "user" else "model"
@@ -354,10 +355,9 @@ def chat():
                     "parts": [{"text": str(content_element)}]
                 })
 
-        # 2. Compile current user prompt block
         current_user_parts = []
         
-        # If the user uploaded an image directly into the chat, attach it to parts!
+        # Extract Image payload if passed through the active chatbot frame
         if file_content and "image" in file_type:
             base64_clean = file_content.split(",")[1] if "," in file_content else file_content
             current_user_parts.append({
@@ -367,12 +367,11 @@ def chat():
                 }
             })
         
-        # If the user uploaded a PDF document directly into the chat, extract text automatically
+        # Extract PDF string context data structure inline 
         elif file_content and file_type == "application/pdf":
             extracted_text = extract_text_from_pdf(file_content)
             user_message = f"[Attached PDF Document Content:\n{extracted_text}]\n\nUser Question: {user_message}"
 
-        # Append the actual text message string
         current_user_parts.append({"text": user_message if user_message else "Analyze this attachment."})
 
         gemini_contents.append({
@@ -380,15 +379,14 @@ def chat():
             "parts": current_user_parts
         })
 
-        # Final Delivery configuration
-        json_payload = {
+        payload = {
             "contents": gemini_contents,
             "systemInstruction": {
                 "parts": [{"text": system_context}]
             }
         }
 
-        response = requests.post(GEMINI_URL, json=json_payload, headers={"Content-Type": "application/json"}, timeout=30)
+        response = requests.post(GEMINI_URL, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
         
         if response.status_code != 200:
             return jsonify({"reply": f"Gemini Chat Link Anomaly Code: {response.status_code}."})
@@ -397,9 +395,8 @@ def chat():
         return jsonify({"reply": ai_reply})
             
     except Exception as e:
-        print(f"--> [CHAT VISION CRASH]: {str(e)}")
-        return jsonify({"reply": "I encountered an error trying to look at that image payload sequence."})
-
+        print(f"--> [CHAT EXCEPTION RUNTIME ERROR]: {str(e)}")
+        return jsonify({"reply": "I'm having trouble connecting to my brain right now. Please try again."})
 
 
 # =========================================
