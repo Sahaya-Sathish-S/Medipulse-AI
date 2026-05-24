@@ -29,8 +29,8 @@ if GEMINI_API_KEY:
 # Centralized Google Gemini API Gateway Endpoint
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
-GMAIL_USER = "sahayasathish60@gmail.com"          
-GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi" 
+GMAIL_USER = os.getenv("GMAIL_USER")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 
 # Background Scheduler Initialize
 scheduler = BackgroundScheduler(daemon=True)
