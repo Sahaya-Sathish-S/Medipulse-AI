@@ -21,6 +21,8 @@ load_dotenv()
 
 # Secure Configuration Management & Environment Sanitize
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    GEMINI_API_KEY = GEMINI_API_KEY.strip().replace('"', '').replace("'", "")
 
 GMAIL_USER = "sahayasathish60@gmail.com"          
 GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi" 
