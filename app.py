@@ -12,7 +12,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-
+import resend
 app = Flask(__name__)
 CORS(app)
 
@@ -40,45 +40,29 @@ scheduler.start()
 # =========================================
 # CORE SMTP EMAIL PIPELINE (PORT 587 TLS)
 # =========================================
+resend.api_key = os.getenv("RESEND_API_KEY")
+
 def send_email(to_email, subject, body):
 
     try:
+        params = {
+            "from": "MediPulse AI <onboarding@resend.dev>",
+            "to": [to_email],
+            "subject": subject,
+            "html": f"<p>{body}</p>"
+        }
 
-        msg = MIMEMultipart()
+        resend.Emails.send(params)
 
-        msg['From'] = GMAIL_USER
-        msg['To'] = to_email
-        msg['Subject'] = subject
-
-        msg.attach(MIMEText(body, 'plain'))
-
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-
-        server.ehlo()
-
-        server.starttls()
-
-        server.ehlo()
-
-        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-
-        server.sendmail(
-            GMAIL_USER,
-            to_email,
-            msg.as_string()
-        )
-
-        server.quit()
-
-        print(f"EMAIL SENT TO: {to_email}")
-
+        print("EMAIL SENT")
         return True
 
     except Exception as e:
-
-        print("EMAIL ERROR:", str(e))
-
+        print("EMAIL ERROR:", e)
         return False
+
+        
+
 
 
 # =========================================
