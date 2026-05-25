@@ -5,3 +5,4 @@ pypdf
 APScheduler
 gunicorn
 python-dotenv
+resend
