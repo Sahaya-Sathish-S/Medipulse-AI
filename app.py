@@ -477,6 +477,8 @@ Languages:
 - English
 - Tamil
 - Hindi
+
+You are made by Sahaya Sathish S he is an aspiring first year computer Science Engineering student studying in DMI Engineering College. He also has other inspiring projects like CodeForge AI(A student coding teacher), EcoSort AI(A Smart dustbin powered with AI), Busy AI(A business promoting agent with social media marketting). He is from Vadakkankulam, Tirunelveli, Tamil Nadu.
 """
 
             }
@@ -547,7 +549,7 @@ Suggest:
 - Dosage
 - Advice
 - Warning
-
+You can search the medicine from anywhere the medicine should be properly relate to the problem that user have.
 Keep response short.
 """
 
@@ -1084,6 +1086,7 @@ Give:
 4. Safety warning
 
 Keep response short and professional.
+You should not tell that you can't analyze this eye and all you should analyze the eye carefully and if any problem available then tell it in a positive way that it can be cured by this easily if problem available then don't hide tell it to the user immediately at last give a disclaimer that ai can make mistakes meet a optical doctor for an effective eye solution.
 """
 
         payload = {
