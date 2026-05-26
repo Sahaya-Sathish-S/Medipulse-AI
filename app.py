@@ -49,7 +49,7 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 MODELS = [
 
-    "openai/gpt-3.5-turbo",
+    "openai/gpt-4o-mini",
 
     "meta-llama/llama-3.1-8b-instruct",
 
@@ -1219,10 +1219,9 @@ def prescription_scanner(): return render_template("prescription.html")
 # MAIN
 # =========================================================
 
-app.run(
-    debug=False,
-    host="0.0.0.0",
-    port=5000,
-    threaded=True,
-    use_reloader=False
-)
+# =========================================================
+# MAIN
+# =========================================================
+
+if __name__ == "__main__":
+    app.run(debug=True)
