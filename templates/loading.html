@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>MediPulse AI</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Segoe UI',sans-serif;
+}
+
+body{
+overflow:hidden;
+background:black;
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+}
+
+.bg{
+position:fixed;
+width:100%;
+height:100%;
+object-fit:cover;
+z-index:-5;
+animation:bgZoom 12s ease-in-out infinite alternate;
+}
+
+@keyframes bgZoom{
+from{transform:scale(1);}
+to{transform:scale(1.1);}
+}
+
+.overlay{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.35);
+backdrop-filter:blur(3px);
+z-index:-4;
+}
+
+.ambient{
+position:absolute;
+width:800px;
+height:800px;
+border-radius:50%;
+
+background:
+radial-gradient(circle,
+rgba(255,0,120,.4),
+rgba(0,212,255,.35),
+rgba(157,77,255,.25),
+rgba(0,255,136,.2),
+transparent 70%);
+
+filter:blur(80px);
+
+animation:
+ambientRotate 14s linear infinite,
+ambientPulse 4s ease-in-out infinite;
+}
+
+@keyframes ambientRotate{
+from{transform:rotate(0deg);}
+to{transform:rotate(360deg);}
+}
+
+@keyframes ambientPulse{
+0%,100%{transform:scale(1);}
+50%{transform:scale(1.12);}
+}
+
+#container{
+position:relative;
+width:100%;
+height:100%;
+display:flex;
+justify-content:center;
+align-items:center;
+flex-direction:column;
+}
+
+.orbit{
+position:absolute;
+border-radius:50%;
+border:1px solid rgba(255,255,255,.12);
+}
+
+.orbit1{
+width:420px;
+height:420px;
+animation:spin 12s linear infinite;
+}
+
+.orbit2{
+width:520px;
+height:520px;
+animation:spin 18s linear infinite reverse;
+}
+
+.orbit3{
+width:620px;
+height:620px;
+animation:spin 24s linear infinite;
+}
+
+@keyframes spin{
+from{transform:rotate(0deg);}
+to{transform:rotate(360deg);}
+}
+
+.particle{
+position:absolute;
+width:6px;
+height:6px;
+border-radius:50%;
+background:white;
+box-shadow:0 0 10px white;
+animation:floatParticle linear infinite;
+}
+
+@keyframes floatParticle{
+0%{
+transform:translateY(100px);
+opacity:0;
+}
+20%{
+opacity:1;
+}
+100%{
+transform:translateY(-800px);
+opacity:0;
+}
+}
+
+#heartCanvas{
+position:absolute;
+width:100%;
+height:100%;
+}
+
+#logo{
+position:absolute;
+width:260px;
+opacity:0;
+filter:blur(25px);
+transform:scale(.2);
+animation:
+logoReveal 1.8s ease forwards 3s,
+floatLogo 4s ease-in-out infinite 5s;
+z-index:10;
+}
+
+@keyframes logoReveal{
+to{
+opacity:1;
+filter:blur(0);
+transform:scale(1);
+}
+}
+
+@keyframes floatLogo{
+0%,100%{
+transform:translateY(0);
+}
+50%{
+transform:translateY(-12px);
+}
+}
+
+.ecg{
+position:absolute;
+bottom:210px;
+width:90%;
+height:80px;
+overflow:hidden;
+opacity:.8;
+}
+
+.ecg svg{
+width:200%;
+height:100%;
+animation:ecgMove 3s linear infinite;
+}
+
+@keyframes ecgMove{
+from{
+transform:translateX(0);
+}
+to{
+transform:translateX(-50%);
+}
+}
+
+.welcome{
+position:absolute;
+bottom:60px;
+text-align:center;
+opacity:0;
+animation:fadeIn 1.5s forwards 3.8s;
+}
+
+@keyframes fadeIn{
+to{
+opacity:1;
+}
+}
+
+.welcome h2{
+font-size:18px;
+letter-spacing:4px;
+color:white;
+font-weight:300;
+}
+
+.welcome h1{
+font-size:48px;
+font-weight:800;
+
+background:
+linear-gradient(
+90deg,
+#ff4fd8,
+#00d4ff,
+#9d4dff,
+#00ff88);
+
+background-size:400%;
+
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+
+animation:textGlow 4s linear infinite;
+}
+
+@keyframes textGlow{
+0%{background-position:0%;}
+100%{background-position:400%;}
+}
+
+.progress-container{
+width:320px;
+height:10px;
+background:rgba(255,255,255,.1);
+border-radius:30px;
+overflow:hidden;
+margin-top:20px;
+}
+
+#progressBar{
+width:0%;
+height:100%;
+
+background:
+linear-gradient(
+90deg,
+#ff0080,
+#00d4ff,
+#9d4dff,
+#00ff88,
+#ff4444);
+
+background-size:400%;
+
+animation:barGlow 4s linear infinite;
+}
+
+@keyframes barGlow{
+0%{background-position:0%;}
+100%{background-position:400%;}
+}
+
+#percentage{
+margin-top:12px;
+color:white;
+font-size:18px;
+font-weight:600;
+}
+
+.icon{
+position:absolute;
+font-size:28px;
+opacity:.7;
+animation:floatIcon linear infinite;
+}
+
+@keyframes floatIcon{
+0%{
+transform:translateY(50px);
+opacity:0;
+}
+20%{
+opacity:1;
+}
+100%{
+transform:translateY(-120px);
+opacity:0;
+}
+}
+
+.i1{left:8%;bottom:20%;animation-duration:9s;}
+.i2{left:15%;bottom:70%;animation-duration:8s;}
+.i3{right:10%;bottom:18%;animation-duration:10s;}
+.i4{right:15%;bottom:70%;animation-duration:11s;}
+.i5{left:50%;bottom:85%;animation-duration:12s;}
+
+</style>
+</head>
+<body>
+
+<img src="static/images/background.png" class="bg">
+
+<div class="overlay"></div>
+
+<div id="container">
+
+<div class="ambient"></div>
+
+<div class="orbit orbit1"></div>
+<div class="orbit orbit2"></div>
+<div class="orbit orbit3"></div>
+
+<canvas id="heartCanvas"></canvas>
+
+<img src="static/images/logo.png" id="logo">
+
+<div class="ecg">
+<svg viewBox="0 0 1000 100">
+<polyline
+fill="none"
+stroke="#00dfff"
+stroke-width="4"
+points="
+0,50
+100,50
+150,50
+180,15
+220,85
+260,50
+340,50
+380,10
+420,90
+460,50
+1000,50"/>
+</svg>
+</div>
+
+<div class="welcome">
+
+<h2>WELCOME TO</h2>
+
+<h1>MediPulse AI</h1>
+
+<div class="progress-container">
+<div id="progressBar"></div>
+</div>
+
+<div id="percentage">0%</div>
+
+</div>
+
+<div class="icon i1">🩺</div>
+<div class="icon i2">❤️</div>
+<div class="icon i3">💊</div>
+<div class="icon i4">🧬</div>
+<div class="icon i5">🏥</div>
+
+</div>
+
+<script>
+
+// Particles (unchanged)
+for (let i = 0; i < 70; i++) {
+  const p = document.createElement("div");
+  p.className = "particle";
+  p.style.left = Math.random() * 100 + "%";
+  p.style.animationDuration = (6 + Math.random() * 8) + "s";
+  p.style.animationDelay = Math.random() * 5 + "s";
+  document.body.appendChild(p);
+}
+
+// Canvas setup
+const canvas = document.getElementById("heartCanvas");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// Heart formula
+function heart(t) {
+  return {
+    x: 16 * Math.pow(Math.sin(t), 3),
+    y: -(13 * Math.cos(t)
+      - 5 * Math.cos(2 * t)
+      - 2 * Math.cos(3 * t)
+      - Math.cos(4 * t))
+  };
+}
+
+// Draw heart based on progress (IMPORTANT CHANGE)
+function drawHeart(progress) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const maxT = progress * Math.PI * 2;
+
+  ctx.beginPath();
+
+  for (let t = 0; t < maxT; t += 0.02) {
+    let p = heart(t);
+
+    let x = canvas.width / 2 + p.x * 18;
+    let y = canvas.height / 2 + p.y * 18;
+
+    if (t === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+
+  let gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  gradient.addColorStop(0, "#ff0080");
+  gradient.addColorStop(0.25, "#00d4ff");
+  gradient.addColorStop(0.5, "#9d4dff");
+  gradient.addColorStop(0.75, "#00ff88");
+  gradient.addColorStop(1, "#ff4444");
+
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = 8;
+
+  const colors = ["#ff0080", "#00d4ff", "#9d4dff", "#00ff88", "#ff4444"];
+  ctx.shadowBlur = 35;
+  ctx.shadowColor = colors[Math.floor(Date.now() / 200) % colors.length];
+
+  ctx.stroke();
+}
+
+// Loader + Heart sync controller
+let percent = 0;
+
+const loader = setInterval(() => {
+
+  percent++;
+
+  // UI update
+  document.getElementById("percentage").innerHTML = percent + "%";
+  document.getElementById("progressBar").style.width = percent + "%";
+
+  // 🔥 HEART follows progress (SYNCED)
+  drawHeart(percent / 100);
+
+  if (percent >= 100) {
+    clearInterval(loader);
+
+    // ensure final full heart
+    drawHeart(1);
+
+    setTimeout(() => {
+      window.location.href = "/home";
+    }, 500);
+  }
+
+}, 60); // 🔥 faster loading (adjust speed here)
+
+</script>
+
+</body>
+</html>
