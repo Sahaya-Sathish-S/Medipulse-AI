@@ -365,30 +365,32 @@ def send_emergency_email():
     try:
         data = request.get_json()
         
-        # 1. DEFINE THE SUBJECT HERE
+        # Define the variables here BEFORE calling send_email
         subject = "🚨 Emergency Blood Requirement"
-        
-        # 2. DEFINE THE BODY HERE
         body = f"""
 Dear {data.get('donor_name')},
+
 Emergency blood needed.
+
 Blood Group: {data.get('blood_group')}
+
 Please help if possible.
+
 - MediPulse
 """
-        
-        # 3. NOW CALL THE FUNCTION WITH THE DEFINED VARIABLES
+
+        # Now call the function with the defined variables
         send_email(
             data.get("to_email"),
-            subject,  # This variable now exists!
+            subject,
             body
         )
 
         return jsonify({"status": "success", "message": "Email sent successfully!"}), 200
 
     except Exception as e:
+        # This catch block is what shows the error in your alert
         return jsonify({"status": "error", "message": str(e)}), 500
-
 
 
 # =========================================================
