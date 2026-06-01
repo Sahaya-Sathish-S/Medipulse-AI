@@ -1167,15 +1167,12 @@ You should not tell that you can't analyze this eye and all you should analyze t
 # =========================================================
 # PAGE ROUTES
 # =========================================================
-
 @app.route("/")
 def loading(): return render_template("loading.html")
 
 @app.route("/home")
 def home(): return render_template("home.html")
 
-
->>>>>>> d82b805 (Initial commit for Medipulse-AI)
 @app.route("/medicine-search")
 def medicine_search(): return render_template("ai_medicine.html")
 
@@ -1223,18 +1220,6 @@ def medical_analytics(): return render_template("analytics.html")
 
 @app.route("/prescription-scanner")
 def prescription_scanner(): return render_template("prescription.html")
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> d82b805 (Initial commit for Medipulse-AI)
-# =========================================================
-# MAIN
-# =========================================================
-
-# =========================================================
-# MAIN
-# =========================================================
 
 if __name__ == "__main__":
     app.run(debug=True)
