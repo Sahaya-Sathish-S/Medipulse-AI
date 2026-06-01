@@ -164,6 +164,12 @@ def send_email(to_email, subject, body):
 
     try:
 
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=10) 
+
+        server.starttls()
+
+        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        
         msg = MIMEMultipart()
 
         msg["From"] = GMAIL_USER
@@ -173,12 +179,6 @@ def send_email(to_email, subject, body):
         msg["Subject"] = subject
 
         msg.attach(MIMEText(body, "plain"))
-
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-
-        server.starttls()
-
-        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
 
         server.sendmail(
 
@@ -365,32 +365,26 @@ def send_emergency_email():
     try:
         data = request.get_json()
         
-        # Define the variables here BEFORE calling send_email
+        # 1. Ensure all required data exists
+        to_email = data.get("to_email")
+        donor_name = data.get("donor_name", "Donor")
+        blood_group = data.get("blood_group", "Unknown")
+
+        # 2. Define variables clearly before using them
         subject = "🚨 Emergency Blood Requirement"
-        body = f"""
-Dear {data.get('donor_name')},
+        body = f"Dear {donor_name},\n\nEmergency blood needed for blood group: {blood_group}.\n\nPlease help if possible.\n- MediPulse"
 
-Emergency blood needed.
-
-Blood Group: {data.get('blood_group')}
-
-Please help if possible.
-
-- MediPulse
-"""
-
-        # Now call the function with the defined variables
-        send_email(
-            data.get("to_email"),
-            subject,
-            body
-        )
-
-        return jsonify({"status": "success", "message": "Email sent successfully!"}), 200
+        # 3. Call your function
+        if to_email:
+            send_email(to_email, subject, body)
+            return jsonify({"status": "success", "message": "Email sent successfully!"}), 200
+        else:
+            return jsonify({"status": "error", "message": "No recipient email provided"}), 400
 
     except Exception as e:
-        # This catch block is what shows the error in your alert
+        # This catches any crash and reports it to your frontend popup
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 # =========================================================
