@@ -208,7 +208,7 @@ async function dispatchBackendEmail(toEmail, donorName, bloodGroup, donorId) {
 
     // Set a 60-second limit to wait for the free-tier server to wake up
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); 
+    const timeoutId = setTimeout(() => controller.abort(), 120000); 
 
     try {
         const response = await fetch(`${backendOrigin}/api/send_emergency_email`, {
