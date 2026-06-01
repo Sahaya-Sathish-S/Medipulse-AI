@@ -190,42 +190,60 @@ async function searchDonors() {
 
 // SECURE INTERFACE DISPATCH FOR EMAIL LOGIC VIA FLASK BACKEND BRIDGE
 async function dispatchBackendEmail(toEmail, donorName, bloodGroup, donorId) {
-    // ... (keep your existing check)
+    if (!toEmail) {
+        alert("❌ This donor profile does not contain a registered email address.");
+        return;
+    }
 
     const actionButton = document.getElementById(`mail-btn-${donorId}`);
     const originalDisplay = actionButton.innerText;
 
+    // UI Feedback: Tell the user we are waiting for the server to wake up
     actionButton.disabled = true;
-    // Update the button text to manage user expectation
-    actionButton.innerText = "⏳ Waking up server... please wait...";
+    actionButton.innerText = "⏳ Waking up server...";
+
+    const backendOrigin = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "" 
+        : "https://medipulseai-vjk3.onrender.com";
+
+    // Set a 60-second limit to wait for the free-tier server to wake up
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); 
 
     try {
-        // Use a timeout of 60 seconds to account for the "cold start" wake-up time
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); 
-
         const response = await fetch(`${backendOrigin}/api/send_emergency_email`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to_email: toEmail, donor_name: donorName, blood_group: bloodGroup }),
-            signal: controller.signal // Add this
+            body: JSON.stringify({
+                to_email: toEmail,
+                donor_name: donorName,
+                blood_group: bloodGroup
+            }),
+            signal: controller.signal
         });
 
-        clearTimeout(timeoutId); // Request succeeded, clear the timeout
+        clearTimeout(timeoutId); // Request got through, stop the timer
         
         const result = await response.json();
-        // ... (rest of your success handling)
+
+        if (response.ok && result.status === "success") {
+            alert(`✅ Donation request dispatch succeeded for ${donorName}!`);
+        } else {
+            alert(`❌ Pipeline notification error: ${result.message}`);
+        }
     } catch (err) {
         if (err.name === 'AbortError') {
-            alert("❌ Server took too long to wake up. Please try clicking the button again.");
+            alert("❌ The server took too long to wake up. Please try again in 10 seconds.");
         } else {
-            alert("❌ Failed to reach backend. Check your internet connection.");
+            console.error("Transmission Error:", err);
+            alert("❌ Failed to reach backend. Please check your internet.");
         }
     } finally {
         actionButton.disabled = false;
         actionButton.innerText = originalDisplay;
     }
 }
+
 
 
 
