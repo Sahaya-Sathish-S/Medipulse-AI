@@ -1167,11 +1167,8 @@ You should not tell that you can't analyze this eye and all you should analyze t
 # =========================================================
 # PAGE ROUTES
 # =========================================================
-@app.route("/")
-<<<<<<< HEAD
-def home(): return render_template("home.html")
 
-=======
+@app.route("/")
 def loading(): return render_template("loading.html")
 
 @app.route("/home")
