@@ -190,51 +190,43 @@ async function searchDonors() {
 
 // SECURE INTERFACE DISPATCH FOR EMAIL LOGIC VIA FLASK BACKEND BRIDGE
 async function dispatchBackendEmail(toEmail, donorName, bloodGroup, donorId) {
-    if (!toEmail) {
-        alert("❌ This donor profile does not contain a registered email address.");
-        return;
-    }
+    // ... (keep your existing check)
 
     const actionButton = document.getElementById(`mail-btn-${donorId}`);
     const originalDisplay = actionButton.innerText;
 
-    // Toggle button UI loading configuration states
     actionButton.disabled = true;
-    actionButton.innerText = "⏳ Dispatching...";
-
-    // Determine backend origin (Localhost vs Render production) dynamically
-    const backendOrigin = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-        ? "" 
-        : "https://medipulse-ai-zdmd.onrender.com";
+    // Update the button text to manage user expectation
+    actionButton.innerText = "⏳ Waking up server... please wait...";
 
     try {
+        // Use a timeout of 60 seconds to account for the "cold start" wake-up time
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); 
+
         const response = await fetch(`${backendOrigin}/api/send_emergency_email`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                to_email: toEmail,
-                donor_name: donorName,
-                blood_group: bloodGroup
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to_email: toEmail, donor_name: donorName, blood_group: bloodGroup }),
+            signal: controller.signal // Add this
         });
 
+        clearTimeout(timeoutId); // Request succeeded, clear the timeout
+        
         const result = await response.json();
-
-        if (response.ok && result.status === "success") {
-            alert(`✅ Donation request dispatch succeeded for ${donorName}!`);
-        } else {
-            alert(`❌ Pipeline notification error: ${result.message}`);
-        }
+        // ... (rest of your success handling)
     } catch (err) {
-        console.error("Networking Transmission Error:", err);
-        alert("❌ Failed to reach backend communication architecture server. Please check if the backend instance is sleeping.");
+        if (err.name === 'AbortError') {
+            alert("❌ Server took too long to wake up. Please try clicking the button again.");
+        } else {
+            alert("❌ Failed to reach backend. Check your internet connection.");
+        }
     } finally {
         actionButton.disabled = false;
         actionButton.innerText = originalDisplay;
     }
 }
+
 
 
 // COPY PHONE
