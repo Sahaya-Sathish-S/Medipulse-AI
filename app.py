@@ -159,48 +159,28 @@ def ask_ai(messages, temperature=0.4, max_tokens=1000):
 # =========================================================
 # EMAIL FUNCTION
 # =========================================================
-
 def send_email(to_email, subject, body):
-
     try:
-
-        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=10) 
-
+        # Use a slightly longer timeout for Render's network
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=30)
+        server.set_debuglevel(1) # This will print SMTP steps in your Render Logs!
         server.starttls()
-
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         
         msg = MIMEMultipart()
-
         msg["From"] = GMAIL_USER
-
         msg["To"] = to_email
-
         msg["Subject"] = subject
-
         msg.attach(MIMEText(body, "plain"))
-
-        server.sendmail(
-
-            GMAIL_USER,
-
-            to_email,
-
-            msg.as_string()
-
-        )
-
+        
+        server.sendmail(GMAIL_USER, to_email, msg.as_string())
         server.quit()
-
-        print("EMAIL SENT")
-
+        print(f"✅ EMAIL SUCCESSFULLY SENT TO {to_email}")
         return True
-
     except Exception as e:
-
-        print("EMAIL ERROR:", str(e))
-
+        print(f"❌ EMAIL CRASHED: {str(e)}")
         return False
+
 
 
 # =========================================================
@@ -364,26 +344,25 @@ def medication_taken():
 def send_emergency_email():
     try:
         data = request.get_json()
-        
-        # 1. Ensure all required data exists
         to_email = data.get("to_email")
         donor_name = data.get("donor_name", "Donor")
         blood_group = data.get("blood_group", "Unknown")
 
-        # 2. Define variables clearly before using them
         subject = "🚨 Emergency Blood Requirement"
         body = f"Dear {donor_name},\n\nEmergency blood needed for blood group: {blood_group}.\n\nPlease help if possible.\n- MediPulse"
 
-        # 3. Call your function
-        if to_email:
-            send_email(to_email, subject, body)
+        if not to_email:
+            return jsonify({"status": "error", "message": "No email provided"}), 400
+
+        # Execute email
+        if send_email(to_email, subject, body):
             return jsonify({"status": "success", "message": "Email sent successfully!"}), 200
         else:
-            return jsonify({"status": "error", "message": "No recipient email provided"}), 400
+            return jsonify({"status": "error", "message": "SMTP connection failed. Check logs."}), 500
 
     except Exception as e:
-        # This catches any crash and reports it to your frontend popup
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 
