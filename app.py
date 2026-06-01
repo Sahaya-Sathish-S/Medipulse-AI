@@ -364,19 +364,29 @@ def medication_taken():
 def send_emergency_email():
     try:
         data = request.get_json()
-        # ... (your email logic)
         
-        # Ensure send_email() is called and returns True/False
-        success = send_email(data.get("to_email"), subject, body)
+        # 1. DEFINE THE SUBJECT HERE
+        subject = "🚨 Emergency Blood Requirement"
         
-        if success:
-            return jsonify({"status": "success", "message": "Email sent successfully!"}), 200
-        else:
-            # If the email failed but no exception was raised
-            return jsonify({"status": "error", "message": "Failed to connect to SMTP server."}), 500
+        # 2. DEFINE THE BODY HERE
+        body = f"""
+Dear {data.get('donor_name')},
+Emergency blood needed.
+Blood Group: {data.get('blood_group')}
+Please help if possible.
+- MediPulse
+"""
+        
+        # 3. NOW CALL THE FUNCTION WITH THE DEFINED VARIABLES
+        send_email(
+            data.get("to_email"),
+            subject,  # This variable now exists!
+            body
+        )
+
+        return jsonify({"status": "success", "message": "Email sent successfully!"}), 200
 
     except Exception as e:
-        # This will now be captured by the frontend 'alert'
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
