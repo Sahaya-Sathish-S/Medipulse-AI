@@ -159,27 +159,32 @@ def ask_ai(messages, temperature=0.4, max_tokens=1000):
 # =========================================================
 # EMAIL FUNCTION
 # =========================================================
+import time
+
 def send_email(to_email, subject, body):
-    try:
-        # Use a slightly longer timeout for Render's network
-        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=30)
-        server.set_debuglevel(1) # This will print SMTP steps in your Render Logs!
-        server.starttls()
-        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        
-        msg = MIMEMultipart()
-        msg["From"] = GMAIL_USER
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg.attach(MIMEText(body, "plain"))
-        
-        server.sendmail(GMAIL_USER, to_email, msg.as_string())
-        server.quit()
-        print(f"✅ EMAIL SUCCESSFULLY SENT TO {to_email}")
-        return True
-    except Exception as e:
-        print(f"❌ EMAIL CRASHED: {str(e)}")
-        return False
+    # Try twice: once immediately, and once after a 2-second delay
+    for attempt in range(2):
+        try:
+            print(f"SMTP Attempt {attempt + 1}...")
+            server = smtplib.SMTP("smtp.gmail.com", 587, timeout=30)
+            server.starttls()
+            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            
+            msg = MIMEMultipart()
+            msg["From"] = GMAIL_USER
+            msg["To"] = to_email
+            msg["Subject"] = subject
+            msg.attach(MIMEText(body, "plain"))
+            
+            server.sendmail(GMAIL_USER, to_email, msg.as_string())
+            server.quit()
+            return True
+        except Exception as e:
+            print(f"SMTP Attempt {attempt + 1} failed: {e}")
+            if attempt == 0:
+                time.sleep(3) # Wait 3 seconds before retrying
+            else:
+                return False
 
 
 
