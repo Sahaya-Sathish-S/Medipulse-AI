@@ -200,17 +200,16 @@ async function dispatchBackendEmail(toEmail, donorName, bloodGroup, donorId) {
     const actionButton = document.getElementById(`mail-btn-${donorId}`);
     const originalDisplay = actionButton.innerText;
 
-    // UI Feedback: Tell the user we are waiting for the server to wake up
     actionButton.disabled = true;
-    actionButton.innerText = "⏳ Waking up server...";
+    actionButton.innerText = "⏳ Processing...";
 
     const backendOrigin = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
         ? "" 
         : "https://medipulseai-vjk3.onrender.com";
 
-    // Set a 60-second limit to wait for the free-tier server to wake up
+    // Timeout set to 60 seconds
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1000000); 
+    const timeoutId = setTimeout(() => controller.abort(), 60000); 
 
     try {
         const response = await fetch(`${backendOrigin}/api/send_emergency_email`, {
@@ -224,21 +223,22 @@ async function dispatchBackendEmail(toEmail, donorName, bloodGroup, donorId) {
             signal: controller.signal
         });
 
-        clearTimeout(timeoutId); // Request got through, stop the timer
-        
+        clearTimeout(timeoutId);
+
+        // Get the response data regardless of success or failure
         const result = await response.json();
 
-        if (response.ok && result.status === "success") {
-            alert(`✅ Donation request dispatch succeeded for ${donorName}!`);
+        if (response.ok) {
+            alert(`✅ ${result.message || "Email sent successfully!"}`);
         } else {
-            alert(`❌ Pipeline notification error: ${result.message}`);
+            // This displays the EXACT error message from your Flask 'except' block
+            alert(`❌ Server Error: ${result.message || "Unknown error occurred"}`);
         }
     } catch (err) {
         if (err.name === 'AbortError') {
-            alert("❌ The server took too long to wake up. Please try again in 10 seconds.");
+            alert("❌ The server timed out. It might be waking up; try again in 10 seconds.");
         } else {
-            console.error("Transmission Error:", err);
-            alert("❌ Failed to reach backend. Please check your internet.");
+            alert("❌ Network Error: " + err.message);
         }
     } finally {
         actionButton.disabled = false;
