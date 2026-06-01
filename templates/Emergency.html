@@ -212,7 +212,7 @@ async function dispatchBackendEmail(toEmail, donorName, bloodGroup, donorId) {
     const timeoutId = setTimeout(() => controller.abort(), 60000); 
 
     try {
-        const response = await fetch(`${backendOrigin}/api/send_emergency_email`, {
+                const response = await fetch(`${backendOrigin}/api/send_emergency_email`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -225,15 +225,22 @@ async function dispatchBackendEmail(toEmail, donorName, bloodGroup, donorId) {
 
         clearTimeout(timeoutId);
 
-        // Get the response data regardless of success or failure
-        const result = await response.json();
-
-        if (response.ok) {
-            alert(`✅ ${result.message || "Email sent successfully!"}`);
+        // --- NEW DEBUGGING LOGIC ---
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const result = await response.json();
+            if (response.ok) {
+                alert(`✅ ${result.message || "Email sent!"}`);
+            } else {
+                alert(`❌ Server Error: ${result.message}`);
+            }
         } else {
-            // This displays the EXACT error message from your Flask 'except' block
-            alert(`❌ Server Error: ${result.message || "Unknown error occurred"}`);
+            // The server returned HTML (an error page) instead of JSON
+            const errorText = await response.text();
+            console.error("Server returned HTML error:", errorText);
+            alert("❌ Server crashed. Check the Render Logs for the Python error.");
         }
+
     } catch (err) {
         if (err.name === 'AbortError') {
             alert("❌ The server timed out. It might be waking up; try again in 10 seconds.");
