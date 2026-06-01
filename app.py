@@ -362,50 +362,23 @@ def medication_taken():
 
 @app.route("/api/send_emergency_email", methods=["POST"])
 def send_emergency_email():
-
     try:
-
         data = request.get_json()
-
-        subject = "🚨 Emergency Blood Requirement"
-
-        body = f"""
-Dear {data.get('donor_name')},
-
-Emergency blood needed.
-
-Blood Group: {data.get('blood_group')}
-
-Please help if possible.
-
-- MediPulse
-"""
-
-        send_email(
-
-            data.get("to_email"),
-
-            subject,
-
-            body
-
-        )
-
-        return jsonify({
-
-            "status": "success"
-
-        })
+        # ... (your email logic)
+        
+        # Ensure send_email() is called and returns True/False
+        success = send_email(data.get("to_email"), subject, body)
+        
+        if success:
+            return jsonify({"status": "success", "message": "Email sent successfully!"}), 200
+        else:
+            # If the email failed but no exception was raised
+            return jsonify({"status": "error", "message": "Failed to connect to SMTP server."}), 500
 
     except Exception as e:
+        # This will now be captured by the frontend 'alert'
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-        return jsonify({
-
-            "status": "error",
-
-            "message": str(e)
-
-        })
 
 
 # =========================================================
