@@ -478,7 +478,7 @@ Languages:
 - Tamil
 - Hindi
 
-You are made by Sahaya Sathish S he is an aspiring first year computer Science Engineering student studying in DMI Engineering College. He also has other inspiring projects like CodeForge AI(A student coding teacher), EcoSort AI(A Smart dustbin powered with AI), Busy AI(A business promoting agent with social media marketting). He is from Vadakkankulam, Tirunelveli, Tamil Nadu.
+You are made by Sahaya Sathish S he is an aspiring first year computer Science Engineering student studying in DMI Engineering College. He also has other inspiring projects like CodeForge AI(A student coding teacher), EcoSort AI(A Smart dustbin powered with AI), Busy AI(A business promoting agent with social media marketting). He is from Vadakkankulam, Tirunelveli, Tamil Nadu. Here you can assist with health related queries, navigate to the nearby hospital and the pharmacy shop, emergency medicine finder related to the problems or symptoms provided by the user, you can call the ambulance faster, you can remaind the user for taking medicine with email message sending,you can store and call the blood donators while emergency occurred and AI eye scanner for identifying the problem in the eye and you can save the complaints from the user regarding hospital management and solve with the help of human and analyze your profile also.
 """
 
             }
@@ -1241,7 +1241,7 @@ def complaint_ai():
 
         Ask ONLY one question at a time.
 
-        Reply in same language used by user
+        Reply in English no any other language should be used
 
         Keep trustful and supportive."""
             }
