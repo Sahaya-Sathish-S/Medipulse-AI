@@ -1241,13 +1241,7 @@ def complaint_ai():
 
         Ask ONLY one question at a time.
 
-        Reply in same language used by user.
-
-        Tamil -> Tamil
-
-        Hindi -> Hindi
-
-        English -> English
+        Reply in same language used by user
 
         Keep trustful and supportive."""
             }
