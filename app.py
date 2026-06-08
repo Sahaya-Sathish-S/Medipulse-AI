@@ -32,7 +32,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app)
 
 
 # =========================================================
@@ -159,33 +159,48 @@ def ask_ai(messages, temperature=0.4, max_tokens=1000):
 # =========================================================
 # EMAIL FUNCTION
 # =========================================================
-import time
 
 def send_email(to_email, subject, body):
-    # Try twice: once immediately, and once after a 2-second delay
-    for attempt in range(2):
-        try:
-            print(f"SMTP Attempt {attempt + 1}...")
-            server = smtplib.SMTP("smtp.gmail.com", 587, timeout=30)
-            server.starttls()
-            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            
-            msg = MIMEMultipart()
-            msg["From"] = GMAIL_USER
-            msg["To"] = to_email
-            msg["Subject"] = subject
-            msg.attach(MIMEText(body, "plain"))
-            
-            server.sendmail(GMAIL_USER, to_email, msg.as_string())
-            server.quit()
-            return True
-        except Exception as e:
-            print(f"SMTP Attempt {attempt + 1} failed: {e}")
-            if attempt == 0:
-                time.sleep(3) # Wait 3 seconds before retrying
-            else:
-                return False
 
+    try:
+
+        msg = MIMEMultipart()
+
+        msg["From"] = GMAIL_USER
+
+        msg["To"] = to_email
+
+        msg["Subject"] = subject
+
+        msg.attach(MIMEText(body, "plain"))
+
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+
+        server.starttls()
+
+        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+
+        server.sendmail(
+
+            GMAIL_USER,
+
+            to_email,
+
+            msg.as_string()
+
+        )
+
+        server.quit()
+
+        print("EMAIL SENT")
+
+        return True
+
+    except Exception as e:
+
+        print("EMAIL ERROR:", str(e))
+
+        return False
 
 
 # =========================================================
@@ -347,28 +362,50 @@ def medication_taken():
 
 @app.route("/api/send_emergency_email", methods=["POST"])
 def send_emergency_email():
+
     try:
+
         data = request.get_json()
-        to_email = data.get("to_email")
-        donor_name = data.get("donor_name", "Donor")
-        blood_group = data.get("blood_group", "Unknown")
 
         subject = "🚨 Emergency Blood Requirement"
-        body = f"Dear {donor_name},\n\nEmergency blood needed for blood group: {blood_group}.\n\nPlease help if possible.\n- MediPulse"
 
-        if not to_email:
-            return jsonify({"status": "error", "message": "No email provided"}), 400
+        body = f"""
+Dear {data.get('donor_name')},
 
-        # Execute email
-        if send_email(to_email, subject, body):
-            return jsonify({"status": "success", "message": "Email sent successfully!"}), 200
-        else:
-            return jsonify({"status": "error", "message": "SMTP connection failed. Check logs."}), 500
+Emergency blood needed.
+
+Blood Group: {data.get('blood_group')}
+
+Please help if possible.
+
+- MediPulse
+"""
+
+        send_email(
+
+            data.get("to_email"),
+
+            subject,
+
+            body
+
+        )
+
+        return jsonify({
+
+            "status": "success"
+
+        })
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
 
+        return jsonify({
 
+            "status": "error",
+
+            "message": str(e)
+
+        })
 
 
 # =========================================================
@@ -1127,11 +1164,147 @@ You should not tell that you can't analyze this eye and all you should analyze t
             "reply": f"Diagnostic processing error: {str(e)}"
 
         })
+        
+# =========================================================
+# COMPLAINT ANALYZER AI
+# =========================================================
+
+def analyze_complaint(complaint_data):
+
+    prompt = f"""
+Analyze this hospital complaint.
+
+Problem:
+{complaint_data}
+
+Give response ONLY in JSON.
+
+{{
+  "category":"Billing/Doctor/Nurse/Staff/Cleanliness/Emergency/Medicine/Other",
+  "priority":"Low/Medium/High/Critical",
+  "solution":"Short admin suggestion"
+}}
+
+No explanation.
+"""
+
+    messages = [
+
+        {
+            "role":"system",
+            "content":"You are a hospital complaint analyzer."
+        },
+
+        {
+            "role":"user",
+            "content":prompt
+        }
+
+    ]
+
+    return ask_ai(messages)
+    
+# =========================================================
+# COMPLAINT CHAT AI
+# =========================================================
+@app.route("/complaint_ai", methods=["POST"])
+def complaint_ai():
+
+    print("COMPLAINT AI HIT")
+
+    try:
+
+        data = request.get_json()
+
+        print(data)
+
+        history = data.get("history", [])
+
+        messages = [
+            {
+                "role":"system",
+                "content":"""You are MediPulse Complaint Assistant.
+
+        Your job:
+
+        Collect complaint details one by one.
+
+        Ask:
+
+        1. Hospital Name
+        2. Problem
+        3. Date
+        4. Department
+        5. People involved
+        6. Evidence available
+        7. Additional details
+
+        Ask ONLY one question at a time.
+
+        Reply in same language used by user.
+
+        Tamil -> Tamil
+
+        Hindi -> Hindi
+
+        English -> English
+
+        Keep trustful and supportive."""
+            }
+        ]
+
+        messages.extend(history)
+
+        reply = ask_ai(messages)
+
+        print("AI REPLY:", reply)
+
+        return jsonify({
+            "reply": reply
+        })
+
+    except Exception as e:
+
+        print("ERROR:", str(e))
+
+        return jsonify({
+            "reply": str(e)
+        })
+@app.route("/analyze_complaint_ai", methods=["POST"])
+def analyze_complaint_ai():
+
+    try:
+
+        data = request.get_json()
+
+        complaint_text = data.get("complaint", "")
+
+        result = analyze_complaint(
+            complaint_text
+        )
+
+        return jsonify({
+            "reply": result
+        })
+
+    except Exception as e:
+
+        return jsonify({
+            "reply": str(e)
+        })
 # =========================================================
 # PAGE ROUTES
 # =========================================================
 @app.route("/")
 def loading(): return render_template("loading.html")
+
+@app.route("/complaint")
+def complaint():
+    return render_template("complaint.html")
+
+@app.route("/complaints_admin")
+def complaints_admin():
+    return render_template("view.html")
 
 @app.route("/home")
 def home(): return render_template("home.html")
