@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediPulse — Complaint Center</title>
+
+  <!-- Supabase — same CDN as chatbot.html -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Same fonts as chatbot.html -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    html, body {
+      height: 100%;
+      font-family: 'Poppins', sans-serif;
+      color: white;
+      overflow: hidden;
+    }
+
+    body {
+      background:
+        linear-gradient(rgba(0,0,0,0.72), rgba(5,8,22,0.90)),
+        url('/static/images/complaint.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Animated grid overlay — same as chatbot */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(circle, #00d9ff33 1px, transparent 1px),
+        radial-gradient(circle, #ff00ff33 1px, transparent 1px),
+        radial-gradient(circle, #ffffff11 1px, transparent 1px);
+      background-size: 120px 120px;
+      animation: bgMove 18s linear infinite;
+      z-index: 0;
+      pointer-events: none;
+    }
+    @keyframes bgMove {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-120px); }
+    }
+
+    /* ── OUTER SHELL ── */
+    .complaint-shell {
+      position: relative; z-index: 2;
+      width: 96%; max-width: 640px;
+      height: 96vh;
+      border-radius: 28px;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow:
+        0 0 40px rgba(0,217,255,0.08),
+        inset 0 0 20px rgba(255,255,255,0.03);
+    }
+
+    /* ── HEADER ── */
+    .c-header {
+      flex-shrink: 0;
+      padding: 18px 24px 14px;
+      display: flex; align-items: center; gap: 14px;
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .c-header-icon {
+      width: 46px; height: 46px; border-radius: 14px;
+      background: linear-gradient(135deg, #00d9ff, #7b2cff);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+      box-shadow: 0 0 20px rgba(0,217,255,0.4);
+      animation: iconGlow 3s ease-in-out infinite;
+    }
+    @keyframes iconGlow {
+      0%,100% { box-shadow: 0 0 20px rgba(0,217,255,0.4); }
+      50%      { box-shadow: 0 0 40px rgba(0,217,255,0.8); }
+    }
+    .c-header-text { flex: 1; }
+    .c-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 16px; font-weight: 700;
+      color: #00d9ff;
+      text-shadow: 0 0 12px #00d9ff, 0 0 25px #ff00ff;
+    }
+    .c-subtitle { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+
+    /* Voice toggle in header */
+    .voice-toggle-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: none; cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.08);
+      color: white; transition: .25s;
+    }
+    .voice-toggle-btn:hover { background: rgba(0,217,255,0.2); transform: scale(1.1); }
+    .voice-toggle-btn.voice-on {
+      background: linear-gradient(135deg, #00d9ff, #0066ff);
+      box-shadow: 0 0 16px rgba(0,217,255,0.5);
+    }
+
+    /* ── PROGRESS BAR ── */
+    .progress-track {
+      height: 3px;
+      background: rgba(255,255,255,0.07);
+      flex-shrink: 0;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #00d9ff, #ff00ff);
+      width: 0%;
+      transition: width .6s cubic-bezier(.4,0,.2,1);
+      box-shadow: 0 0 10px rgba(0,217,255,0.6);
+    }
+
+    /* ── QUESTION DISPLAY (centre stage) ── */
+    .question-stage {
+      flex: 0 0 auto;
+      min-height: 160px;
+      padding: 32px 30px 24px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      position: relative;
+    }
+    .q-step-label {
+      font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase;
+      color: #00d9ff; opacity: .65; margin-bottom: 14px;
+      font-family: 'Orbitron', sans-serif;
+      transition: opacity .3s;
+    }
+
+    /* AI thinking dots */
+    .ai-thinking {
+      display: none;
+      gap: 8px; align-items: center; justify-content: center;
+      padding: 18px 0;
+    }
+    .ai-thinking span {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #00d9ff;
+      animation: bounceDot 1.2s ease-in-out infinite;
+    }
+    .ai-thinking span:nth-child(2) { animation-delay: .18s; }
+    .ai-thinking span:nth-child(3) { animation-delay: .36s; }
+    @keyframes bounceDot {
+      0%,100% { transform: translateY(0); opacity: .4; }
+      50%      { transform: translateY(-10px); opacity: 1; }
+    }
+    .ai-thinking.show { display: flex; }
+
+    .q-text {
+      font-size: 18px; line-height: 1.75;
+      color: rgba(255,255,255,0.9);
+      font-weight: 400;
+    }
+
+    /* question in / out */
+    @keyframes qIn  { from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);} }
+    @keyframes qOut { from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-18px);} }
+    .q-enter { animation: qIn .5s cubic-bezier(.22,.68,0,1.2) both; }
+    .q-exit  { animation: qOut .28s ease both; }
+
+    /* ── DIVIDER ── */
+    .stage-divider {
+      height: 1px; flex-shrink: 0;
+      background: linear-gradient(90deg, transparent, rgba(0,217,255,0.2), transparent);
+      margin: 0 24px;
+    }
+
+    /* ── ERROR STRIP ── */
+    .error-banner {
+      display: none;
+      margin: 8px 24px 0;
+      padding: 10px 16px;
+      background: rgba(255,50,50,0.12);
+      border: 1px solid rgba(255,80,80,0.35);
+      border-radius: 10px;
+      font-size: 12px; color: #ff9999;
+      text-align: center;
+    }
+    .error-banner.show { display: block; }
+
+    /* ── SUBMIT BUTTON (hidden until step 7 done) ── */
+    #submitBtn {
+      display: none;
+      flex-shrink: 0;
+      margin: 10px 20px 4px;
+      padding: 14px;
+      border: none; border-radius: 18px; cursor: pointer;
+      color: white; font-size: 15px; font-weight: 600;
+      background: linear-gradient(135deg, #00d9ff, #7b2cff, #ff00ff);
+      background-size: 300% 300%;
+      animation: gradientMove 4s ease infinite;
+      box-shadow: 0 0 25px rgba(0,217,255,0.3), 0 0 50px rgba(255,0,255,0.15);
+      transition: .25s;
+    }
+    #submitBtn:hover { transform: scale(1.02); box-shadow: 0 0 40px rgba(0,217,255,0.5); }
+    #submitBtn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    @keyframes gradientMove {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* ── INPUT AREA (identical style to chatbot.html) ── */
+    .input-area {
+      flex-shrink: 0;
+      padding: 16px 18px 18px;
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(255,255,255,0.04);
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+
+    /* Mic button */
+    .icon-btn {
+      width: 54px; height: 54px; border: none; border-radius: 50%;
+      cursor: pointer; color: white; font-size: 20px;
+      display: flex; align-items: center; justify-content: center;
+      transition: .3s; flex-shrink: 0;
+    }
+    .icon-btn:hover { transform: translateY(-3px) scale(1.08); }
+
+    #micBtn {
+      background: linear-gradient(135deg, #ffcc00, #ff6600);
+      box-shadow: 0 0 20px rgba(255,165,0,0.4);
+    }
+    #micBtn.recording {
+      background: linear-gradient(135deg, #ff0055, #cc0000);
+      box-shadow: 0 0 30px rgba(255,0,85,0.7);
+      animation: micPulse 1s ease-in-out infinite;
+    }
+    @keyframes micPulse {
+      0%,100% { transform: scale(1); }
+      50%      { transform: scale(1.12); }
+    }
+
+    /* Text input */
+    #answerInput {
+      flex: 1; height: 54px;
+      padding: 0 20px;
+      border: none; border-radius: 50px;
+      background: rgba(255,255,255,0.08);
+      color: white; font-family: 'Poppins', sans-serif; font-size: 15px;
+      outline: none; transition: .3s;
+      caret-color: #00d9ff;
+    }
+    #answerInput::placeholder { color: rgba(255,255,255,0.35); }
+    #answerInput:focus {
+      background: rgba(255,255,255,0.12);
+      box-shadow: 0 0 20px rgba(0,217,255,0.25);
+    }
+    #answerInput:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* Send button */
+    #sendBtn {
+      background: linear-gradient(135deg, #00d9ff, #0066ff);
+      box-shadow: 0 0 20px rgba(0,217,255,0.4);
+    }
+
+    /* ── TRANSITION FLASH ── */
+    .flash-overlay {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(0,0,0,0);
+      pointer-events: none;
+      transition: background .3s ease;
+    }
+    .flash-overlay.active { background: rgba(0,0,0,0.75); }
+
+    /* ── SUCCESS SCREEN ── */
+    .success-screen {
+      position: fixed; inset: 0; z-index: 200;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(5,8,22,0.95);
+      backdrop-filter: blur(25px);
+    }
+    .success-card {
+      width: 90%; max-width: 480px;
+      padding: 44px 36px; border-radius: 28px; text-align: center;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(0,217,255,0.2);
+      box-shadow: 0 0 60px rgba(0,217,255,0.15), 0 0 40px rgba(255,0,255,0.1);
+      animation: successRise .8s cubic-bezier(.34,1.3,.64,1) both;
+    }
+    @keyframes successRise {
+      from { opacity:0; transform: scale(.8) translateY(40px); }
+      to   { opacity:1; transform: scale(1) translateY(0); }
+    }
+    .success-icon {
+      width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 24px;
+      background: linear-gradient(135deg, #00d9ff, #7b2cff);
+      display: flex; align-items: center; justify-content: center; font-size: 48px;
+      box-shadow: 0 0 50px rgba(0,217,255,0.5);
+      animation: iconGlow 2.5s ease-in-out infinite;
+    }
+    .success-card h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 22px; color: #00d9ff;
+      text-shadow: 0 0 15px #00d9ff; margin-bottom: 10px;
+    }
+    .success-msg { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.75; margin-bottom: 24px; }
+    .ticket-box {
+      padding: 16px 24px; border-radius: 16px;
+      background: rgba(0,217,255,0.07); border: 1px solid rgba(0,217,255,0.2);
+      margin-bottom: 20px;
+    }
+    .ticket-label { font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.35); text-transform: uppercase; margin-bottom: 8px; }
+    #ticketNumber {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 24px; font-weight: 700;
+      color: #00d9ff; letter-spacing: 4px;
+      text-shadow: 0 0 15px #00d9ff;
+    }
+    .trust-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px;
+    }
+    .trust-item {
+      padding: 10px 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+      font-size: 12px; color: rgba(255,255,255,0.55);
+      text-align: left;
+    }
+    .return-btn {
+      width: 100%; padding: 15px;
+      border: none; border-radius: 18px; cursor: pointer; color: white;
+      font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
+      background: linear-gradient(135deg, #00d9ff, #7b2cff, #ff00ff);
+      background-size: 300% 300%;
+      animation: gradientMove 4s ease infinite;
+      box-shadow: 0 0 25px rgba(0,217,255,0.3);
+    }
+
+    /* particles */
+    .sp {
+      position: fixed; width: 8px; height: 8px; border-radius: 50%;
+      pointer-events: none; z-index: 300;
+      animation: spFly ease-out forwards;
+    }
+    @keyframes spFly {
+      0%   { transform: translate(0,0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--dx),var(--dy)) scale(0); opacity: 0; }
+    }
+
+    /* Scrollbar — same as chatbot */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(#00d9ff, #ff00ff); border-radius: 10px; }
+
+    @media (max-width: 600px) {
+      .complaint-shell { width: 100%; height: 100vh; border-radius: 0; }
+      .trust-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="flash-overlay" id="flashOverlay"></div>
+
+  <!-- SUCCESS SCREEN -->
+  <div class="success-screen" id="successScreen">
+    <div class="success-card">
+      <div class="success-icon">✓</div>
+      <h1>Case Registered</h1>
+      <p class="success-msg">
+        Your complaint has been officially recorded and<br>
+        forwarded to the administration team.<br>
+        We will take action promptly.
+      </p>
+      <div class="ticket-box">
+        <div class="ticket-label">Case Reference Number</div>
+        <div id="ticketNumber">MP-000000</div>
+      </div>
+      <div class="trust-grid">
+        <div class="trust-item">🔒 Stored Securely</div>
+        <div class="trust-item">⚡ AI Analyzed</div>
+        <div class="trust-item">🏥 Admin Notified</div>
+        <div class="trust-item">📋 Review Pending</div>
+      </div>
+      <button class="return-btn" onclick="goHome()">Return to MediPulse</button>
+    </div>
+  </div>
+
+  <!-- MAIN SHELL -->
+  <div class="complaint-shell">
+
+    <!-- HEADER -->
+    <div class="c-header">
+      <div class="c-header-icon">⚖️</div>
+      <div class="c-header-text">
+        <div class="c-title">MediPulse Complaint Center</div>
+        <div class="c-subtitle">Your Voice Matters • We Listen • We Act</div>
+      </div>
+      <button class="voice-toggle-btn voice-on" id="voiceBtn" title="Toggle AI voice">🔊</button>
+    </div>
+
+    <!-- PROGRESS BAR -->
+    <div class="progress-track">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- QUESTION STAGE -->
+    <div class="question-stage">
+      <div class="q-step-label" id="stepLabel">INITIALISING…</div>
+      <div class="ai-thinking" id="aiThinking">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="q-text" id="qText"></div>
+    </div>
+
+    <div class="stage-divider"></div>
+
+    <!-- ERROR BANNER -->
+    <div class="error-banner" id="errorBanner"></div>
+
+    <!-- SUBMIT BUTTON -->
+    <button id="submitBtn">
+      <i class="fa-solid fa-paper-plane"></i>&nbsp; File Official Complaint
+    </button>
+
+    <!-- INPUT AREA (same layout as chatbot.html) -->
+    <div class="input-area">
+      <button class="icon-btn" id="micBtn" title="Speak your answer">
+        <i class="fa-solid fa-microphone"></i>
+      </button>
+      <input
+        type="text"
+        id="answerInput"
+        placeholder="Type your answer here..."
+        autocomplete="off"
+      />
+      <button class="icon-btn" id="sendBtn" title="Send answer">
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </div>
+
+  </div><!-- /.complaint-shell -->
+
+<script>
+//=================================================================
+// SUPABASE — same keys as chatbot.html
+//=================================================================
+const supabaseUrl  = "https://covmgrilycetqtpwolfl.supabase.co";
+const supabaseKey  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+//=================================================================
+// STATE
+//=================================================================
+let currentUser       = null;
+let complaintTicket   = null;
+let voiceEnabled      = true;
+let currentLang       = "en-US";
+let recognition       = null;
+let isProcessing      = false;
+let stepCount         = 0;
+const TOTAL_STEPS     = 7;
+
+let conversationHistory = [];
+let complaintData = {
+  hospital_name:"", problem:"", incident_date:"",
+  department:"", people_involved:"", evidence:"", extra_details:"",
+  full_description:"", category:"", priority:"", ai_solution:"", conversation:[]
+};
+
+//=================================================================
+// DOM REFS
+//=================================================================
+const qText       = document.getElementById("qText");
+const stepLabel   = document.getElementById("stepLabel");
+const answerInput = document.getElementById("answerInput");
+const sendBtn     = document.getElementById("sendBtn");
+const micBtn      = document.getElementById("micBtn");
+const voiceBtn    = document.getElementById("voiceBtn");
+const submitBtn   = document.getElementById("submitBtn");
+const aiThinking  = document.getElementById("aiThinking");
+const progressBar = document.getElementById("progressBar");
+const flashOverlay= document.getElementById("flashOverlay");
+const errorBanner = document.getElementById("errorBanner");
+
+//=================================================================
+// AUTH — same pattern as chatbot.html
+//=================================================================
+window.addEventListener("DOMContentLoaded", async () => {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    window.location.href = "/login";
+    return;
+  }
+  currentUser = session.user;
+  init();
+});
+
+//=================================================================
+// ERROR
+//=================================================================
+function showError(msg) {
+  errorBanner.textContent = "⚠ " + msg;
+  errorBanner.classList.add("show");
+  setTimeout(() => errorBanner.classList.remove("show"), 8000);
+}
+function clearError() { errorBanner.classList.remove("show"); }
+
+//=================================================================
+// PROGRESS
+//=================================================================
+function setProgress(step) {
+  progressBar.style.width = Math.min((step / TOTAL_STEPS) * 100, 100) + "%";
+}
+
+//=================================================================
+// HELPERS
+//=================================================================
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function detectLanguage(text) {
+  if (/[\u0B80-\u0BFF]/.test(text)) return "ta-IN";
+  if (/[\u0900-\u097F]/.test(text)) return "hi-IN";
+  return "en-US";
+}
+
+//=================================================================
+// SPEECH RECOGNITION — same approach as chatbot.html startVoice()
+//=================================================================
+function setupRecognition() {
+  if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous     = false;
+  recognition.interimResults = false;
+  recognition.lang            = currentLang;
+
+  recognition.onresult = function(event) {
+    const transcript = event.results[0][0].transcript;
+    answerInput.value = transcript;
+    micBtn.classList.remove("recording");
+    // Detect language from spoken text
+    currentLang = detectLanguage(transcript);
+  };
+  recognition.onerror = function(e) {
+    micBtn.classList.remove("recording");
+    showError("Microphone error: " + e.error);
+  };
+  recognition.onend = function() {
+    micBtn.classList.remove("recording");
+  };
+}
+
+micBtn.addEventListener("click", function() {
+  if (!recognition) {
+    showError("Speech recognition not supported in this browser.");
+    return;
+  }
+  recognition.lang = currentLang;
+  try {
+    recognition.start();
+    micBtn.classList.add("recording");
+  } catch(e) {
+    showError("Could not start microphone: " + e.message);
+  }
+});
+
+//=================================================================
+// TEXT TO SPEECH — same as chatbot.html speakText()
+//=================================================================
+function speakText(text) {
+  if (!voiceEnabled) return;
+  window.speechSynthesis.cancel();
+  // strip any leftover HTML/emoji for cleaner speech
+  const clean = text.replace(/<[^>]*>/g, "").replace(/[^\w\s.,?!'-]/g, " ");
+  const utt = new SpeechSynthesisUtterance(clean);
+  utt.lang   = currentLang;
+  utt.rate   = 0.95;
+  utt.pitch  = 1;
+  utt.volume = 1;
+  window.speechSynthesis.speak(utt);
+}
+window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+
+voiceBtn.addEventListener("click", function() {
+  voiceEnabled = !voiceEnabled;
+  if (voiceEnabled) {
+    voiceBtn.textContent = "🔊";
+    voiceBtn.classList.add("voice-on");
+  } else {
+    voiceBtn.textContent = "🔇";
+    voiceBtn.classList.remove("voice-on");
+    window.speechSynthesis.cancel();
+  }
+});
+
+//=================================================================
+// SHOW / HIDE AI THINKING DOTS
+//=================================================================
+function showDots() {
+  qText.style.visibility   = "hidden";
+  stepLabel.style.opacity  = "0";
+  aiThinking.classList.add("show");
+}
+function hideDots() {
+  aiThinking.classList.remove("show");
+  qText.style.visibility  = "";
+  stepLabel.style.opacity = "1";
+}
+
+//=================================================================
+// FLASH TRANSITION
+//=================================================================
+async function flash() {
+  flashOverlay.classList.add("active");
+  await sleep(300);
+  flashOverlay.classList.remove("active");
+}
+
+//=================================================================
+// DISPLAY QUESTION — typewriter, same character-by-character style
+//=================================================================
+async function displayQuestion(text, label) {
+  // Exit current text
+  qText.classList.add("q-exit");
+  stepLabel.style.opacity = "0";
+  await sleep(280);
+
+  // Reset
+  stepLabel.textContent   = label || "";
+  stepLabel.style.opacity = "1";
+  qText.textContent       = "";
+  qText.classList.remove("q-exit");
+  qText.classList.add("q-enter");
+
+  // Typewriter
+  for (let i = 0; i < text.length; i++) {
+    qText.textContent += text.charAt(i);
+    await sleep(20);
+  }
+  qText.classList.remove("q-enter");
+
+  // Speak after typing done
+  speakText(text);
+}
+
+//=================================================================
+// SEND ANSWER → /complaint_ai endpoint (same fetch style as chatbot.html)
+//=================================================================
+async function sendAnswer() {
+  const text = answerInput.value.trim();
+  if (!text || isProcessing) return;
+
+  // Detect language from user's answer
+  currentLang = detectLanguage(text);
+  if (recognition) recognition.lang = currentLang;
+
+  clearError();
+  isProcessing          = true;
+  answerInput.disabled  = true;
+  sendBtn.disabled      = true;
+
+  // Store
+  conversationHistory.push({ role: "user", content: text });
+  stepCount++;
+
+  switch(stepCount) {
+    case 1: complaintData.hospital_name   = text; break;
+    case 2: complaintData.problem         = text; break;
+    case 3: complaintData.incident_date   = text; break;
+    case 4: complaintData.department      = text; break;
+    case 5: complaintData.people_involved = text; break;
+    case 6: complaintData.evidence        = text; break;
+    case 7: complaintData.extra_details   = text; break;
+  }
+  complaintData.full_description += "\nUser: " + text;
+  complaintData.conversation      = [...conversationHistory];
+  setProgress(stepCount);
+  answerInput.value = "";
+
+  // Flash + thinking
+  await flash();
+  showDots();
+
+  try {
+    const response = await fetch("/complaint_ai", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ history: conversationHistory })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error("Server " + response.status + " — " + errText.substring(0, 150));
+    }
+
+    const data  = await response.json();
+    const reply = data.reply || "Please continue.";
+
+    conversationHistory.push({ role: "assistant", content: reply });
+    hideDots();
+
+    const label = stepCount >= TOTAL_STEPS
+      ? "ALL DETAILS RECORDED"
+      : "QUESTION " + (stepCount + 1) + " OF " + TOTAL_STEPS;
+
+    await displayQuestion(reply, label);
+
+    if (stepCount >= TOTAL_STEPS) {
+      submitBtn.style.display  = "block";
+      answerInput.placeholder  = "All details recorded — file your complaint above.";
+    }
+
+  } catch(err) {
+    hideDots();
+    // Rollback
+    conversationHistory.pop();
+    stepCount--;
+    setProgress(stepCount);
+    complaintData.full_description = complaintData.full_description.replace("\nUser: " + text, "");
+    showError(err.message);
+    console.error("sendAnswer:", err);
+  }
+
+  isProcessing          = false;
+  answerInput.disabled  = false;
+  sendBtn.disabled      = false;
+  answerInput.focus();
+}
+
+//=================================================================
+// ANALYZE COMPLAINT → /analyze_complaint_ai
+//=================================================================
+async function analyzeComplaint() {
+  try {
+    const response = await fetch("/analyze_complaint_ai", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ complaint: complaintData.full_description })
+    });
+
+    if (!response.ok) throw new Error("Analyze " + response.status);
+
+    const data  = await response.json();
+    const raw   = data.reply || "";
+    const clean = raw.replace(/```json|```/gi, "").trim();
+
+    let parsed = {};
+    try {
+      parsed = JSON.parse(clean);
+    } catch(_) {
+      const cm = raw.match(/"category"\s*:\s*"([^"]+)"/i);
+      const pm = raw.match(/"priority"\s*:\s*"([^"]+)"/i);
+      const sm = raw.match(/"solution"\s*:\s*"([^"]+)"/i);
+      if (cm) parsed.category = cm[1];
+      if (pm) parsed.priority  = pm[1];
+      if (sm) parsed.solution  = sm[1];
+    }
+
+    complaintData.category    = parsed.category || "Other";
+    complaintData.priority    = parsed.priority  || "Medium";
+    complaintData.ai_solution = parsed.solution  || raw.substring(0, 300);
+
+  } catch(err) {
+    console.warn("analyzeComplaint:", err);
+    complaintData.category    = "Other";
+    complaintData.priority    = "Medium";
+    complaintData.ai_solution = "Unavailable";
+  }
+}
+
+//=================================================================
+// SAVE TO SUPABASE — same pattern as chatbot.html
+//=================================================================
+async function saveComplaint() {
+  submitBtn.textContent = "⏳ Filing Complaint…";
+  submitBtn.disabled    = true;
+
+  try {
+    complaintTicket = "MP-" + Math.floor(100000 + Math.random() * 900000);
+
+    // AI analysis first
+    await analyzeComplaint();
+
+    const { error } = await supabaseClient.from("complaints").insert({
+      user_id:               currentUser.id,
+      user_email:            currentUser.email,
+      user_name:             currentUser.user_metadata?.name || currentUser.email,
+      complaint_message:     complaintData.problem,
+      hospital_name:         complaintData.hospital_name,
+      incident_date:         complaintData.incident_date,
+      department:            complaintData.department,
+      people_involved:       complaintData.people_involved,
+      evidence_available:    complaintData.evidence,
+      extra_details:         complaintData.extra_details,
+      full_description:      complaintData.full_description,
+      complaint_category:    complaintData.category,
+      complaint_priority:    complaintData.priority,
+      ai_suggested_solution: complaintData.ai_solution,
+      complaint_language:    currentLang,
+      complaint_details:     complaintData,
+      ticket_number:         complaintTicket,
+      complaint_status:      "Pending",
+      created_at:            new Date().toISOString()
+    });
+
+    if (error) throw new Error(error.message);
+
+    showSuccessScreen();
+
+  } catch(err) {
+    showError("Submission failed: " + err.message);
+    console.error("saveComplaint:", err);
+    submitBtn.innerHTML  = '<i class="fa-solid fa-paper-plane"></i>&nbsp; File Official Complaint';
+    submitBtn.disabled   = false;
+  }
+}
+
+//=================================================================
+// SUCCESS SCREEN
+//=================================================================
+function showSuccessScreen() {
+  document.getElementById("ticketNumber").textContent = complaintTicket;
+  document.getElementById("successScreen").style.display = "flex";
+  launchParticles();
+  speakText("Your complaint has been officially registered. The administration has been notified. Thank you for helping improve healthcare.");
+}
+
+function goHome() { window.location.href = "/home"; }
+
+function launchParticles() {
+  const cols = ["#00d9ff","#ff00ff","#7b2cff","#ffffff","#ffcc00"];
+  for (let i = 0; i < 70; i++) {
+    const p = document.createElement("div");
+    p.className = "sp";
+    const angle = Math.random() * 2 * Math.PI;
+    const dist  = 100 + Math.random() * 280;
+    p.style.cssText = `
+      left: ${48 + Math.random()*4}%;
+      top:  ${48 + Math.random()*4}%;
+      background: ${cols[i % cols.length]};
+      --dx: ${Math.cos(angle)*dist}px;
+      --dy: ${Math.sin(angle)*dist}px;
+      animation-duration: ${1.2 + Math.random()*1.5}s;
+      animation-delay: ${Math.random()*0.6}s;
+    `;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 3500);
+  }
+}
+
+//=================================================================
+// EVENT LISTENERS
+//=================================================================
+sendBtn.addEventListener("click", sendAnswer);
+submitBtn.addEventListener("click", saveComplaint);
+
+answerInput.addEventListener("keydown", function(e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAnswer(); }
+});
+
+answerInput.addEventListener("input", function() {
+  const detected = detectLanguage(answerInput.value);
+  if (detected !== "en-US") {
+    currentLang = detected;
+    if (recognition) recognition.lang = currentLang;
+  }
+});
+
+//=================================================================
+// INIT — fetch first question from /complaint_ai with empty history
+//=================================================================
+async function init() {
+  setupRecognition();
+  showDots();
+  stepLabel.textContent = "CONNECTING…";
+
+  try {
+    const response = await fetch("/complaint_ai", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ history: [] })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error("Server " + response.status + " — " + errText.substring(0, 150));
+    }
+
+    const data    = await response.json();
+    const opening = data.reply || "Please tell me the name of the hospital where the incident occurred.";
+
+    conversationHistory.push({ role: "assistant", content: opening });
+    hideDots();
+    await displayQuestion(opening, "QUESTION 1 OF " + TOTAL_STEPS);
+    setProgress(0);
+
+  } catch(err) {
+    hideDots();
+    // Offline fallback — same as chatbot pattern
+    const fallback = "Please tell me the name of the hospital where the incident occurred.";
+    conversationHistory.push({ role: "assistant", content: fallback });
+    await displayQuestion(fallback, "QUESTION 1 OF " + TOTAL_STEPS);
+    showError("Could not reach AI server: " + err.message);
+    console.error("init:", err);
+  }
+
+  answerInput.focus();
+}
+</script>
+</body>
+</html>
