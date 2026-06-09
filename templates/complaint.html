@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MediPulse — Complaint Center</title>
 
-  <!-- Supabase — same CDN as chatbot.html -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- Same fonts as chatbot.html -->
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
@@ -369,7 +367,6 @@
 
   <div class="flash-overlay" id="flashOverlay"></div>
 
-  <!-- SUCCESS SCREEN -->
   <div class="success-screen" id="successScreen">
     <div class="success-card">
       <div class="success-icon">✓</div>
@@ -393,10 +390,8 @@
     </div>
   </div>
 
-  <!-- MAIN SHELL -->
   <div class="complaint-shell">
 
-    <!-- HEADER -->
     <div class="c-header">
       <div class="c-header-icon">⚖️</div>
       <div class="c-header-text">
@@ -406,12 +401,10 @@
       <button class="voice-toggle-btn voice-on" id="voiceBtn" title="Toggle AI voice">🔊</button>
     </div>
 
-    <!-- PROGRESS BAR -->
     <div class="progress-track">
       <div class="progress-bar" id="progressBar"></div>
     </div>
 
-    <!-- QUESTION STAGE -->
     <div class="question-stage">
       <div class="q-step-label" id="stepLabel">INITIALISING…</div>
       <div class="ai-thinking" id="aiThinking">
@@ -422,15 +415,12 @@
 
     <div class="stage-divider"></div>
 
-    <!-- ERROR BANNER -->
     <div class="error-banner" id="errorBanner"></div>
 
-    <!-- SUBMIT BUTTON -->
     <button id="submitBtn">
       <i class="fa-solid fa-paper-plane"></i>&nbsp; File Official Complaint
     </button>
 
-    <!-- INPUT AREA (same layout as chatbot.html) -->
     <div class="input-area">
       <button class="icon-btn" id="micBtn" title="Speak your answer">
         <i class="fa-solid fa-microphone"></i>
@@ -446,9 +436,7 @@
       </button>
     </div>
 
-  </div><!-- /.complaint-shell -->
-
-<script>
+  </div><script>
 //=================================================================
 // SUPABASE — same keys as chatbot.html
 //=================================================================
@@ -467,6 +455,8 @@ let recognition       = null;
 let isProcessing      = false;
 let stepCount         = 0;
 const TOTAL_STEPS     = 7;
+
+const ADMIN_EMAIL     = "sahayasathish60@gmail.com";
 
 let conversationHistory = [];
 let complaintData = {
@@ -491,7 +481,7 @@ const flashOverlay= document.getElementById("flashOverlay");
 const errorBanner = document.getElementById("errorBanner");
 
 //=================================================================
-// AUTH — same pattern as chatbot.html
+// AUTH — Check role and route accordingly
 //=================================================================
 window.addEventListener("DOMContentLoaded", async () => {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -499,7 +489,15 @@ window.addEventListener("DOMContentLoaded", async () => {
     window.location.href = "/login";
     return;
   }
+  
   currentUser = session.user;
+  
+  // Dynamic Admin Check Redistribution
+  if (currentUser.email === ADMIN_EMAIL) {
+    window.location.href = "/view.html"; 
+    return;
+  }
+  
   init();
 });
 
@@ -546,7 +544,6 @@ function setupRecognition() {
     const transcript = event.results[0][0].transcript;
     answerInput.value = transcript;
     micBtn.classList.remove("recording");
-    // Detect language from spoken text
     currentLang = detectLanguage(transcript);
   };
   recognition.onerror = function(e) {
@@ -578,7 +575,6 @@ micBtn.addEventListener("click", function() {
 function speakText(text) {
   if (!voiceEnabled) return;
   window.speechSynthesis.cancel();
-  // strip any leftover HTML/emoji for cleaner speech
   const clean = text.replace(/<[^>]*>/g, "").replace(/[^\w\s.,?!'-]/g, " ");
   const utt = new SpeechSynthesisUtterance(clean);
   utt.lang   = currentLang;
@@ -625,40 +621,34 @@ async function flash() {
 }
 
 //=================================================================
-// DISPLAY QUESTION — typewriter, same character-by-character style
+// DISPLAY QUESTION — typewriter style
 //=================================================================
 async function displayQuestion(text, label) {
-  // Exit current text
   qText.classList.add("q-exit");
   stepLabel.style.opacity = "0";
   await sleep(280);
 
-  // Reset
   stepLabel.textContent   = label || "";
   stepLabel.style.opacity = "1";
   qText.textContent       = "";
   qText.classList.remove("q-exit");
   qText.classList.add("q-enter");
 
-  // Typewriter
   for (let i = 0; i < text.length; i++) {
     qText.textContent += text.charAt(i);
     await sleep(20);
   }
   qText.classList.remove("q-enter");
-
-  // Speak after typing done
   speakText(text);
 }
 
 //=================================================================
-// SEND ANSWER → /complaint_ai endpoint (same fetch style as chatbot.html)
+// SEND ANSWER → /complaint_ai endpoint
 //=================================================================
 async function sendAnswer() {
   const text = answerInput.value.trim();
   if (!text || isProcessing) return;
 
-  // Detect language from user's answer
   currentLang = detectLanguage(text);
   if (recognition) recognition.lang = currentLang;
 
@@ -667,7 +657,6 @@ async function sendAnswer() {
   answerInput.disabled  = true;
   sendBtn.disabled      = true;
 
-  // Store
   conversationHistory.push({ role: "user", content: text });
   stepCount++;
 
@@ -685,7 +674,6 @@ async function sendAnswer() {
   setProgress(stepCount);
   answerInput.value = "";
 
-  // Flash + thinking
   await flash();
   showDots();
 
@@ -720,7 +708,6 @@ async function sendAnswer() {
 
   } catch(err) {
     hideDots();
-    // Rollback
     conversationHistory.pop();
     stepCount--;
     setProgress(stepCount);
@@ -786,7 +773,6 @@ async function saveComplaint() {
   try {
     complaintTicket = "MP-" + Math.floor(100000 + Math.random() * 900000);
 
-    // AI analysis first
     await analyzeComplaint();
 
     const { error } = await supabaseClient.from("complaints").insert({
@@ -875,7 +861,7 @@ answerInput.addEventListener("input", function() {
 });
 
 //=================================================================
-// INIT — fetch first question from /complaint_ai with empty history
+// INIT
 //=================================================================
 async function init() {
   setupRecognition();
@@ -904,7 +890,6 @@ async function init() {
 
   } catch(err) {
     hideDots();
-    // Offline fallback — same as chatbot pattern
     const fallback = "Please tell me the name of the hospital where the incident occurred.";
     conversationHistory.push({ role: "assistant", content: fallback });
     await displayQuestion(fallback, "QUESTION 1 OF " + TOTAL_STEPS);
