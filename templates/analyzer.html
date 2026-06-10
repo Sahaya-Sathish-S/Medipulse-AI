@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediPulse AI - Cognitive Profile Analytics</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.82)), url('/static/images/background.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* TOP NAVIGATION DECK */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 50px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 217, 255, 0.15);
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-group i {
+            color: #00D9FF;
+            font-size: 28px;
+            animation: pulseGlow 2s infinite alternate;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #00D9FF;
+            text-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
+        }
+
+        .profile-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid #ff00ff;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
+            transition: 0.3s ease;
+        }
+
+        .profile-icon:hover {
+            transform: scale(1.08) rotate(5deg);
+        }
+
+        .profile-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* MAIN LAYOUT CANVAS */
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .dashboard-header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 38px;
+            color: #ffffff;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-header h1 span {
+            color: #00D9FF;
+            text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+        }
+
+        .dashboard-header p {
+            color: #b0c4de;
+            font-size: 16px;
+        }
+
+        /* ARCHITECTURE CARDS GRID */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .glass-panel {
+            background: rgba(10, 25, 50, 0.45);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(0, 217, 255, 0.15);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #00D9FF, #ff00ff, #00D9FF);
+            background-size: 200% auto;
+            animation: moveGradient 4s linear infinite;
+        }
+
+        /* SUMMARY PILL COUNTERS */
+        .profile-summary-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 35px;
+        }
+
+        .summary-badge {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .summary-badge i {
+            font-size: 20px;
+            color: #ff00ff;
+        }
+
+        .summary-badge div p {
+            font-size: 11px;
+            color: #a0aec0;
+            text-transform: uppercase;
+        }
+
+        .summary-badge div h4 {
+            font-size: 15px;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* ACTION TRIGGER ELEMENT MODULE */
+        .trigger-zone {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 35px;
+        }
+
+        .pulse-trigger-btn {
+            background: linear-gradient(45deg, #00D9FF, #0077ff, #ff00ff);
+            background-size: 200% auto;
+            color: #ffffff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 20px 45px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(0, 217, 255, 0.3);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: moveGradient 3s linear infinite;
+        }
+
+        .pulse-trigger-btn:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 0 40px rgba(255, 0, 255, 0.6);
+        }
+
+        .pulse-trigger-btn:disabled {
+            background: #4a5568 !important;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* HOLOGRAPHIC DIAGNOSTIC LOADER */
+        .hologram-loader {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 40px 0;
+            gap: 20px;
+        }
+
+        .cyber-spinner {
+            width: 70px;
+            height: 70px;
+            border: 3px solid transparent;
+            border-top-color: #00D9FF;
+            border-bottom-color: #ff00ff;
+            border-radius: 50%;
+            animation: spinCyber 1.5s linear infinite;
+            position: relative;
+        }
+
+        .cyber-spinner::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            right: 6px;
+            bottom: 6px;
+            border: 3px solid transparent;
+            border-left-color: #00ffaa;
+            border-radius: 50%;
+            animation: spinCyber 3s linear infinite reverse;
+        }
+
+        .loader-status-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            color: #00D9FF;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            animation: pulseGlow 1.5s infinite alternate;
+        }
+
+        /* CONTEXT OUTPUT MATRIX CONTAINER */
+        .results-viewport {
+            display: none;
+            animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .results-viewport h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #00D9FF;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .terminal-block {
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 4px solid #ff00ff;
+            border-radius: 12px;
+            padding: 30px;
+            line-height: 1.8;
+            font-size: 15.5px;
+            color: #e2e8f0;
+            text-shadow: 0 0 2px rgba(255, 255, 255, 0.1);
+            text-align: justify;
+            white-space: pre-line;
+        }
+
+        /* ANIMATIONS GRAPHICS LIBRARY */
+        @keyframes moveGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes spinCyber {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulseGlow {
+            0% { opacity: 0.4; text-shadow: 0 0 5px rgba(0,217,255,0.2); }
+            100% { opacity: 1; text-shadow: 0 0 15px rgba(0,217,255,0.7); }
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* MOBILE RESPONSIVE MEDIA BREAKPOINTS */
+        @media (max-width: 768px) {
+            .top-bar { padding: 20px; }
+            .dashboard-header h1 { font-size: 28px; }
+            .glass-panel { padding: 25px; }
+            .pulse-trigger-btn { width: 100%; padding: 18px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="logo-group">
+            <i class="fa-solid fa-microchip"></i>
+            <div class="logo">MediPulse</div>
+        </div>
+        <div class="profile-icon">
+            <img id="dashboardUserAvatar" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Profile Token">
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>Clinical <span>Bio-Analytics</span> Engine</h1>
+            <p>Deconstruct client metadata clusters to uncover deep root health indicators.</p>
+        </div>
+
+        <div class="analytics-grid">
+            <div class="glass-panel">
+                
+                <div class="profile-summary-strip">
+                    <div class="summary-badge">
+                        <i class="fa-solid fa-user-doctor"></i>
+                        <div>
+                            <p>Subject Name</p>
+                            <h4 id="lbl_name">Loading...</h4>
+                        </div>
+                    </div>
+                    <div class="summary-badge">
+                        <i class="fa-solid fa-droplet" style="color: #ff3366;"></i>
+                        <div>
+                            <p>Blood Group</p>
+                            <h4 id="lbl_blood">--</h4>
+                        </div>
+                    </div>
+                    <div class="summary-badge">
+                        <i class="fa-solid fa-briefcase" style="color: #00ffaa;"></i>
+                        <div>
+                            <p>Occupation</p>
+                            <h4 id="lbl_job">Loading...</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="trigger-zone">
+                    <button class="pulse-trigger-btn" id="btnTriggerAnalysis" onclick="executeProfileDeepAnalysis()">
+                        <i class="fa-solid fa-brain" style="margin-right: 10px;"></i> INITIALIZE PROFILE AI ANALYSIS
+                    </button>
+                </div>
+
+                <div class="hologram-loader" id="diagnosticLoader">
+                    <div class="cyber-spinner"></div>
+                    <div class="loader-status-text" id="loaderText">Compiling biomedical metrics database...</div>
+                </div>
+
+                <div class="results-viewport" id="resultsViewport">
+                    <h3><i class="fa-solid fa-wand-magic-sparkles"></i> AI Deep Diagnostics Diagnostic Report</h3>
+                    <div class="terminal-block" id="diagnosticTerminalBlock">
+                        </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = "https://covmgrilycetqtpwolfl.supabase.co";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+        let targetedUserProfileDataset = null;
+
+        window.addEventListener("DOMContentLoaded", async () => {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+
+            if (!session) {
+                window.location.href = "/login";
+                return;
+            }
+
+            const user = session.user;
+
+            if (user.user_metadata.avatar_url) {
+                document.getElementById("dashboardUserAvatar").src = user.user_metadata.avatar_url;
+            }
+
+            // Target unique single key match criteria values row
+            const { data: profile, error } = await supabaseClient
+                .from("profiles")
+                .select("*")
+                .eq("user_id", user.id)
+                .maybeSingle();
+
+            if (profile) {
+                targetedUserProfileDataset = profile;
+                document.getElementById("lbl_name").innerText = profile.full_name || "Anonymous Patient";
+                document.getElementById("lbl_blood").innerText = profile.blood_group || "Unknown";
+                document.getElementById("lbl_job").innerText = profile.occupation || "Not Provided";
+            } else {
+                document.getElementById("lbl_name").innerText = "Profile Missing";
+                document.getElementById("btnTriggerAnalysis").disabled = true;
+                alert("No health profile found. Please configure your profile page metrics before utilizing the analytics platform.");
+            }
+        });
+
+        // AI analytical integration processor request lifecycle trigger mapping
+        async function executeProfileDeepAnalysis() {
+            if (!targetedUserProfileDataset) return;
+
+            const triggerBtn = document.getElementById("btnTriggerAnalysis");
+            const loader = document.getElementById("diagnosticLoader");
+            const loaderText = document.getElementById("loaderText");
+            const resultsView = document.getElementById("resultsViewport");
+            const terminal = document.getElementById("diagnosticTerminalBlock");
+
+            // Setup state UI animations
+            triggerBtn.disabled = true;
+            resultsView.style.display = "none";
+            loader.style.display = "flex";
+
+            // Stage cyclical pseudo diagnostic logging changes
+            const loadingSequences = [
+                "Accessing encrypted Supabase medical vaults...",
+                "Mapping physiological user metadata arrays...",
+                "Connecting with OpenRouter neural networks...",
+                "Structuring holistic clinical recovery roadmap..."
+            ];
+            
+            let phaseIndex = 0;
+            const textInterval = setInterval(() => {
+                if (phaseIndex < loadingSequences.length) {
+                    loaderText.innerText = loadingSequences[phaseIndex];
+                    phaseIndex++;
+                }
+            }, 1200);
+
+            try {
+                const response = await fetch("/api/medipulse_profile_deep_analyzer", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ profile: targetedUserProfileDataset })
+                });
+
+                const dataset = await response.json();
+                clearInterval(textInterval);
+                loader.style.display = "none";
+
+                if (dataset.status === "success") {
+                    resultsView.style.display = "block";
+                    animateTextStream(terminal, dataset.reply);
+                } else {
+                    alert(dataset.reply);
+                    triggerBtn.disabled = false;
+                }
+            } catch (err) {
+                clearInterval(textInterval);
+                loader.style.display = "none";
+                triggerBtn.disabled = false;
+                console.error(err);
+                alert("A communication failure interrupted the clinical analysis sequence.");
+            }
+        }
+
+        // Text writing typewriter style injector layout builder function
+        function animateTextStream(targetElement, fullText) {
+            targetElement.innerHTML = "";
+            let idx = 0;
+            const velocity = 8; // Adjust parsing generation display render speeds
+
+            function parseNextCharacter() {
+                if (idx < fullText.length) {
+                    targetElement.innerHTML += fullText.charAt(idx);
+                    idx++;
+                    setTimeout(parseNextCharacter, velocity);
+                } else {
+                    document.getElementById("btnTriggerAnalysis").disabled = false;
+                }
+            }
+            parseNextCharacter();
+        }
+    </script>
+</body>
+</html>
