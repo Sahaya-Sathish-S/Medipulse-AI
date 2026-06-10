@@ -380,7 +380,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const supabaseUrl = "https://covmgrilycetqtpwolfl.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
@@ -398,11 +398,11 @@
 
             const user = session.user;
 
-            if (user.user_metadata.avatar_url) {
+            if (user.user_metadata && user.user_metadata.avatar_url) {
                 document.getElementById("dashboardUserAvatar").src = user.user_metadata.avatar_url;
             }
 
-            // Target unique single key match criteria values row
+            // Fetch profile data directly using Javascript client side
             const { data: profile, error } = await supabaseClient
                 .from("profiles")
                 .select("*")
@@ -421,7 +421,7 @@
             }
         });
 
-        // AI analytical integration processor request lifecycle trigger mapping
+        // This sends the data retrieved by JS over to your Python Backend
         async function executeProfileDeepAnalysis() {
             if (!targetedUserProfileDataset) return;
 
@@ -440,7 +440,7 @@
             const loadingSequences = [
                 "Accessing encrypted Supabase medical vaults...",
                 "Mapping physiological user metadata arrays...",
-                "Connecting with OpenRouter neural networks...",
+                "Connecting with AI neural networks...",
                 "Structuring holistic clinical recovery roadmap..."
             ];
             
@@ -453,6 +453,7 @@
             }, 1200);
 
             try {
+                // Post data payload straight to Python API
                 const response = await fetch("/api/medipulse_profile_deep_analyzer", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -479,11 +480,11 @@
             }
         }
 
-        // Text writing typewriter style injector layout builder function
+        // Typewriter UI display stream logic
         function animateTextStream(targetElement, fullText) {
             targetElement.innerHTML = "";
             let idx = 0;
-            const velocity = 8; // Adjust parsing generation display render speeds
+            const velocity = 8; 
 
             function parseNextCharacter() {
                 if (idx < fullText.length) {
@@ -497,5 +498,6 @@
             parseNextCharacter();
         }
     </script>
+
 </body>
 </html>
