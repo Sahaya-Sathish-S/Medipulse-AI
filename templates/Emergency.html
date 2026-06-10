@@ -123,8 +123,6 @@ button:hover {
     </select>
 
     <button onclick="searchDonors()">Search Donors</button>
-    <button onclick="testConnection()">Test Backend Connection</button>
-
 </div>
 
 <div id="results"></div>
@@ -262,14 +260,7 @@ function copyNumber(num) {
     alert("Phone number copied to clipboard!");
 }
 
-async function testConnection() {
-    try {
-        const response = await fetch("https://medipulseai-vjk3.onrender.com/");
-        alert("Success! Backend responded: " + response.status);
-    } catch (err) {
-        alert("Failed: " + err.message);
-    }
-}
+
 
 </script>
 
