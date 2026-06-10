@@ -1354,5 +1354,9 @@ def prescription_scanner(): return render_template("prescription.html")
 @app.route("/view")
 def view(): return render_template("view.html")
 
+@app.route("/profile_analyzer_dashboard")
+def profile_analyzer_dashboard():
+    return render_template("analyzer.html")
+
 if __name__ == "__main__":
     app.run(debug=True)
