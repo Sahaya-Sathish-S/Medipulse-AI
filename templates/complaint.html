@@ -21,17 +21,15 @@
     }
 
     body {
-      background:
-        linear-gradient(rgba(0,0,0,0.72), rgba(5,8,22,0.90)),
-        url('/static/images/complaint.png');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-attachment: fixed;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+  background: url('/static/images/complaint.png'); /* Removed dark linear-gradient */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
     /* Animated grid overlay — same as chatbot */
     body::before {
@@ -53,29 +51,27 @@
 
     /* ── OUTER SHELL ── */
     .complaint-shell {
-      position: relative; z-index: 2;
-      width: 96%; max-width: 640px;
-      height: 96vh;
-      border-radius: 28px;
-      overflow: hidden;
-      display: flex; flex-direction: column;
-      background: rgba(255,255,255,0.06);
-      backdrop-filter: blur(30px);
-      -webkit-backdrop-filter: blur(30px);
-      border: 1px solid rgba(255,255,255,0.08);
-      box-shadow:
-        0 0 40px rgba(0,217,255,0.08),
-        inset 0 0 20px rgba(255,255,255,0.03);
-    }
+  position: relative; z-index: 2;
+  width: 96%; max-width: 640px;
+  height: 96vh;
+  border-radius: 28px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  background: rgba(255, 255, 255, 0.65); /* Changed from 0.06 dark to 0.65 vibrant light */
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+}
 
     /* ── HEADER ── */
     .c-header {
-      flex-shrink: 0;
-      padding: 18px 24px 14px;
-      display: flex; align-items: center; gap: 14px;
-      background: rgba(255,255,255,0.04);
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-    }
+  flex-shrink: 0;
+  padding: 18px 24px 14px;
+  display: flex; align-items: center; gap: 14px;
+  background: rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
     .c-header-icon {
       width: 46px; height: 46px; border-radius: 14px;
       background: linear-gradient(135deg, #00d9ff, #7b2cff);
@@ -95,7 +91,8 @@
       color: #00d9ff;
       text-shadow: 0 0 12px #00d9ff, 0 0 25px #ff00ff;
     }
-    .c-subtitle { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+    .c-subtitle { font-size: 11px; color: #444444; margin-top: 2px; } /* Darker text for visibility */
+
 
     /* Voice toggle in header */
     .voice-toggle-btn {
@@ -162,10 +159,10 @@
     .ai-thinking.show { display: flex; }
 
     .q-text {
-      font-size: 18px; line-height: 1.75;
-      color: rgba(255,255,255,0.9);
-      font-weight: 400;
-    }
+  font-size: 18px; line-height: 1.75;
+  color: #111111; /* Changed from white to deep charcoal */
+  font-weight: 500;
+}
 
     /* question in / out */
     @keyframes qIn  { from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);} }
@@ -217,12 +214,12 @@
 
     /* ── INPUT AREA (identical style to chatbot.html) ── */
     .input-area {
-      flex-shrink: 0;
-      padding: 16px 18px 18px;
-      display: flex; align-items: center; gap: 12px;
-      background: rgba(255,255,255,0.04);
-      border-top: 1px solid rgba(255,255,255,0.07);
-    }
+  flex-shrink: 0;
+  padding: 16px 18px 18px;
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255, 255, 255, 0.4);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
 
     /* Mic button */
     .icon-btn {
@@ -249,15 +246,17 @@
 
     /* Text input */
     #answerInput {
-      flex: 1; height: 54px;
-      padding: 0 20px;
-      border: none; border-radius: 50px;
-      background: rgba(255,255,255,0.08);
-      color: white; font-family: 'Poppins', sans-serif; font-size: 15px;
-      outline: none; transition: .3s;
-      caret-color: #00d9ff;
-    }
-    #answerInput::placeholder { color: rgba(255,255,255,0.35); }
+  flex: 1; height: 54px;
+  padding: 0 20px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #111111; /* Dark text inside input */
+  font-family: 'Poppins', sans-serif; font-size: 15px;
+  outline: none; transition: .3s;
+  caret-color: #00d9ff;
+}
+    #answerInput::placeholder { color: rgba(0, 0, 0, 0.4); }
     #answerInput:focus {
       background: rgba(255,255,255,0.12);
       box-shadow: 0 0 20px rgba(0,217,255,0.25);
