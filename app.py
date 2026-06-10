@@ -1351,8 +1351,8 @@ def medical_analytics(): return render_template("analytics.html")
 @app.route("/prescription-scanner")
 def prescription_scanner(): return render_template("prescription.html")
 
-@app.route("/viewcomplaint")
-def viewcomplaint(): return render_template("view.html")
+@app.route("/view")
+def view(): return render_template("view.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
