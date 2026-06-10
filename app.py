@@ -319,6 +319,66 @@ def schedule_reminder():
 
         })
 
+@app.route("/api/medipulse_profile_deep_analyzer", methods=["POST"])
+def medipulse_profile_deep_analyzer():
+    try:
+        data = request.get_json()
+        profile = data.get("profile", {})
+        
+        if not profile:
+            return jsonify({
+                "status": "error",
+                "reply": "⚠️ No profile dataset found to process. Please fill out your profile."
+            })
+
+        # Structured diagnostic prompt with strict structural rules
+        prompt = f"""
+You are the master clinical analyst for MediPulse AI, an advanced medical ecosystem.
+Analyze the following patient profile metrics thoroughly and output an insightful, deeply supportive, clinical response that is EXACTLY around 400 words. Do not exceed or fall short significantly.
+
+=== PATIENT COMPREHENSIVE DOSSIER ===
+- Full Name: {profile.get('full_name', 'N/A')}
+- Age / Gender: {profile.get('age', 'N/A')} years old | {profile.get('gender', 'N/A')}
+- Blood Type: {profile.get('blood_group', 'N/A')}
+- Current Profession: {profile.get('occupation', 'N/A')}
+- Academic/Studies: {profile.get('studies', 'N/A')}
+- Family Core Backdrop: Marital Status: {profile.get('marital_status', 'N/A')} | Family Occupation: {profile.get('family_occupation', 'N/A')}
+- Reported Chronic/Acute Health Problems: {profile.get('health_problem', 'No acute problems specified.')}
+
+=== EVALUATION OUTPUT PROTOCOL STRUCTURE ===
+1. CLINICAL ASSESSMENT SUMMARY: Cross-examine age, occupation strain, and reported health complaints.
+2. TAILORED ROOT-CAUSE STRATEGIES & LIFE PROTOCOLS: Actionable holistic, nutritional, ergonomic, or therapeutic guidance.
+3. PREVENTATIVE CARE RISK PROFILE: Custom warnings mapped directly to their lifestyle metrics.
+
+Maintain an empathetic, authoritative, and brilliantly sharp persona. Ensure the final text reads naturally as an integrated evaluation without code block schemas.
+"""
+
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a Chief Clinical Analyst and Medical UI Informatics Officer for MediPulse AI system."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+
+        # Call your existing fallback model sequencer
+        ai_reply = ask_ai(messages, temperature=0.5, max_tokens=1200)
+
+        return jsonify({
+            "status": "success",
+            "reply": ai_reply
+        })
+
+    catch Exception as e:
+        print("PROFILE ANALYSIS CRITICAL EXCEPTION ERROR:", str(e))
+        return jsonify({
+            "status": "error",
+            "reply": f"An infrastructure anomaly occurred during diagnostic processing: {str(e)}"
+        })
+
 
 # =========================================================
 # MEDICATION TAKEN
