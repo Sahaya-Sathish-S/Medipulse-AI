@@ -11,8 +11,7 @@ import requests
 from pypdf import PdfReader
 
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -160,46 +159,57 @@ def ask_ai(messages, temperature=0.4, max_tokens=1000):
 # EMAIL FUNCTION
 # =========================================================
 
+# =========================================================
+# EMAIL CONFIG (UPDATED FOR RENDER COMPATIBILITY VIA HTTP)
+# =========================================================
+
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+RESEND_URL = "https://api.resend.com/emails"
+# Note: On Resend's free tier without a custom domain, 
+# your "From" email must be onboarding@resend.dev
+EMAIL_FROM_ADDRESS = "onboarding@resend.dev"
+
+# =========================================================
+# EMAIL FUNCTION (BYPASSES SMTP BLOCKS ON CLOUD HOSTS)
+# =========================================================
+
 def send_email(to_email, subject, body):
-
+    if not RESEND_API_KEY:
+        print("EMAIL ERROR: RESEND_API_KEY missing in .env")
+        return False
+        
     try:
-
-        msg = MIMEMultipart()
-
-        msg["From"] = GMAIL_USER
-
-        msg["To"] = to_email
-
-        msg["Subject"] = subject
-
-        msg.attach(MIMEText(body, "plain"))
-
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-
-        server.starttls()
-
-        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-
-        server.sendmail(
-
-            GMAIL_USER,
-
-            to_email,
-
-            msg.as_string()
-
+        headers = {
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "from": EMAIL_FROM_ADDRESS,
+            "to": [to_email],
+            "subject": subject,
+            "text": body  # Sends clean plain text matching your setup
+        }
+        
+        print(f"\n===== SENDING EMAIL VIA HTTP TO: {to_email} =====")
+        response = requests.post(
+            RESEND_URL,
+            headers=headers,
+            json=payload,
+            timeout=15
         )
-
-        server.quit()
-
-        print("EMAIL SENT")
-
-        return True
-
+        
+        print("EMAIL STATUS:", response.status_code)
+        
+        if response.status_code in [200, 201]:
+            print("SUCCESS: Email delivered over HTTP successfully.")
+            return True
+        else:
+            print("FAILED EMAIL REQUEST:", response.text)
+            return False
+            
     except Exception as e:
-
-        print("EMAIL ERROR:", str(e))
-
+        print("EMAIL CRITICAL ERROR:", str(e))
         return False
 
 
