@@ -323,6 +323,7 @@ def schedule_reminder():
 def medipulse_profile_deep_analyzer():
     try:
         data = request.get_json()
+        # The JS frontend passes the object inside the 'profile' key
         profile = data.get("profile", {})
         
         if not profile:
@@ -372,7 +373,7 @@ Maintain an empathetic, authoritative, and brilliantly sharp persona. Ensure the
             "reply": ai_reply
         })
 
-    catch Exception as e:
+    except Exception as e:  # Fixed syntax here from 'catch' to 'except'
         print("PROFILE ANALYSIS CRITICAL EXCEPTION ERROR:", str(e))
         return jsonify({
             "status": "error",
