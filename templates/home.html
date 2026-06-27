@@ -10,7 +10,19 @@
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{--pink:#ff4fa3;--violet:#a855f7;--red:#ff3b5c;--orange:#ff7b2c;--yellow:#ffd700;--green:#00ffaa;--gold:#ffc94a;--blue:#00cfff;--deep:#0a0318;--dark-bg:#0d0528;--card-bg:rgba(13,5,41,.85)}
 html{scroll-behavior:smooth}
-body{font-family:'Poppins',sans-serif;background:var(--deep);color:#fff;overflow-x:hidden;margin:0}
+body{
+    font-family:'Poppins',sans-serif;
+    background:
+        linear-gradient(rgba(10,3,24,0.85), rgba(10,3,24,0.85)),
+        url('/static/images/background.png');
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    background-attachment:fixed;
+    color:#fff;
+    overflow-x:hidden;
+    margin:0;
+}
 
 /* ── NAVBAR ── */
 nav{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:.8rem 2rem;background:rgba(10,3,24,.92);backdrop-filter:blur(20px);border-bottom:1px solid rgba(168,85,247,.25);flex-wrap:wrap;gap:.5rem;box-shadow:0 0 30px rgba(255,79,163,.15)}
