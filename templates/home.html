@@ -11,17 +11,33 @@
 :root{--pink:#ff4fa3;--violet:#a855f7;--red:#ff3b5c;--orange:#ff7b2c;--yellow:#ffd700;--green:#00ffaa;--gold:#ffc94a;--blue:#00cfff;--deep:#0a0318;--dark-bg:#0d0528;--card-bg:rgba(13,5,41,.85)}
 html{scroll-behavior:smooth}
 body{
-    font-family:'Poppins',sans-serif;
     background:
         linear-gradient(rgba(10,3,24,0.85), rgba(10,3,24,0.85)),
         url('/static/images/background.png');
     background-size:cover;
     background-position:center;
-    background-repeat:no-repeat;
-    background-attachment:fixed;
-    color:#fff;
-    overflow-x:hidden;
-    margin:0;
+    background-repeat:repeat-y;
+}
+body::before{
+    content:'';
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:url('/static/images/background.png') center/cover no-repeat;
+    z-index:-2;
+}
+
+body::after{
+    content:'';
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(10,3,24,0.82);
+    z-index:-1;
 }
 
 /* ── NAVBAR ── */
@@ -48,7 +64,16 @@ nav ul li a:hover::after{transform:translateX(-50%) scaleX(1)}
 .profile-dropdown a:hover,.profile-dropdown button:hover{background:linear-gradient(135deg,rgba(255,79,163,.3),rgba(168,85,247,.3));transform:translateX(4px)}
 
 /* ── HERO ── */
-.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:flex-start;padding:7.5rem 3rem 3rem;overflow:hidden;z-index:2;background-image:url('/static/images/background.png');background-attachment:fixed;background-size:cover;background-position:center}
+.hero{
+    position:relative;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    padding:7.5rem 3rem 3rem;
+    overflow:hidden;
+    z-index:2;
+}
 .hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,3,24,.85) 0%,rgba(10,3,24,.5) 30%,rgba(10,3,24,.1) 60%,transparent 100%);z-index:1;pointer-events:none}
 .hero-glow{position:absolute;inset:0;z-index:0;pointer-events:none}
 .glow-top{position:absolute;top:-2px;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#ff4fa3,#a855f7,#00cfff,transparent);box-shadow:0 0 40px 15px rgba(255,79,163,.2);filter:blur(1px)}
