@@ -1,431 +1,536 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediPulse — AI Smart Healthcare</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--pink:#ff4fa3;--violet:#a855f7;--red:#ff3b5c;--orange:#ff7b2c;--yellow:#ffd700;--green:#00ffaa;--gold:#ffc94a;--blue:#00cfff;--deep:#0a0318;--dark-bg:#0d0528;--card-bg:rgba(13,5,41,.85)}
+html{scroll-behavior:smooth}
+body{font-family:'Poppins',sans-serif;background:var(--deep);color:#fff;overflow-x:hidden}
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+/* ── NAVBAR ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:.8rem 2rem;background:rgba(10,3,24,.92);backdrop-filter:blur(20px);border-bottom:1px solid rgba(168,85,247,.25);flex-wrap:wrap;gap:.5rem;box-shadow:0 0 30px rgba(255,79,163,.15)}
+.logo{font-family:'Orbitron',sans-serif;font-size:1.5rem;font-weight:900;background:linear-gradient(90deg,#ff4fa3,#a855f7,#00cfff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px;filter:drop-shadow(0 0 15px rgba(255,79,163,.4));transition:all .3s;text-decoration:none;display:flex;align-items:center;gap:.5rem}
+.logo:hover{filter:drop-shadow(0 0 25px rgba(168,85,247,.6))}
+nav ul{display:flex;list-style:none;gap:1.5rem;flex-wrap:wrap}
+nav ul li a{text-decoration:none;color:#b8b8b8;font-size:.85rem;font-weight:500;padding:.5rem 1rem;border-radius:20px;transition:all .3s;position:relative;display:block}
+nav ul li a::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%) scaleX(0);width:50%;height:2px;background:linear-gradient(90deg,#ff4fa3,#a855f7);border-radius:2px;transition:transform .35s}
+nav ul li a:hover{color:#fff;background:rgba(168,85,247,.1)}
+nav ul li a:hover::after{transform:translateX(-50%) scaleX(1)}
+.nav-btn{background:linear-gradient(135deg,#ff4fa3,#a855f7);color:#fff;border:none;padding:.5rem 1.4rem;border-radius:24px;font-family:'Poppins',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;box-shadow:0 0 20px rgba(255,79,163,.3);transition:all .3s;text-decoration:none;display:inline-block}
+.nav-btn:hover{transform:scale(1.1) translateY(-2px);box-shadow:0 0 40px rgba(255,79,163,.6),0 0 80px rgba(168,85,247,.3)}
+.nav-btn:active{transform:scale(.95)}
+.profile-container{display:none;position:relative}
+.profile-image{width:40px;height:40px;border-radius:50%;border:2px solid #ff4fa3;cursor:pointer;transition:all .3s;box-shadow:0 0 15px rgba(255,79,163,.3)}
+.profile-image:hover{transform:scale(1.1);box-shadow:0 0 25px rgba(255,79,163,.6)}
+.profile-dropdown{display:none;position:absolute;top:calc(100% + 12px);right:0;background:rgba(10,3,24,.98);border:1px solid rgba(168,85,247,.4);border-radius:16px;padding:1.2rem;min-width:200px;box-shadow:0 0 40px rgba(168,85,247,.3);backdrop-filter:blur(15px)}
+.profile-container:hover .profile-dropdown{display:block;animation:dropDown .3s ease-out}
+@keyframes dropDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.profile-dropdown h4{color:#ffd700;font-size:.9rem;margin-bottom:.3rem}
+.profile-dropdown p{color:#888;font-size:.75rem;margin-bottom:1rem}
+.profile-dropdown a,.profile-dropdown button{display:block;width:100%;padding:.5rem .8rem;border-radius:10px;border:none;background:rgba(168,85,247,.15);color:#fff;font-size:.8rem;cursor:pointer;text-decoration:none;text-align:left;margin-top:.5rem;transition:all .3s;font-weight:500;font-family:'Poppins',sans-serif}
+.profile-dropdown a:hover,.profile-dropdown button:hover{background:linear-gradient(135deg,rgba(255,79,163,.3),rgba(168,85,247,.3));transform:translateX(4px)}
 
-    <title>MediPulse</title>
+/* ── HERO ── */
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:flex-start;padding:7.5rem 3rem 3rem;overflow:hidden;z-index:2;background:linear-gradient(135deg,rgba(10,3,24,1) 0%,rgba(20,5,50,.95) 100%)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 50%,rgba(168,85,247,.12) 0%,transparent 65%);z-index:1;pointer-events:none}
+.hero-glow{position:absolute;inset:0;z-index:0;pointer-events:none}
+.glow-top{position:absolute;top:-2px;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#ff4fa3,#a855f7,#00cfff,transparent);box-shadow:0 0 40px 15px rgba(255,79,163,.2);filter:blur(1px)}
+.glow-bottom{position:absolute;bottom:-2px;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#00cfff,#a855f7,#ff4fa3,transparent);box-shadow:0 0 40px 15px rgba(0,207,255,.15)}
+.glow-left{position:absolute;left:-2px;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#ff4fa3,#a855f7,#00cfff);box-shadow:0 0 30px 10px rgba(255,79,163,.15)}
+.glow-right{position:absolute;right:-2px;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#00cfff,#a855f7,#ff4fa3);box-shadow:0 0 30px 10px rgba(0,207,255,.15)}
+.hero-content{position:relative;z-index:2;max-width:580px;animation:slideUp .8s ease-out}
+@keyframes slideUp{from{opacity:0;transform:translateY(50px)}to{opacity:1;transform:translateY(0)}}
+.hero-tag{display:inline-block;background:linear-gradient(135deg,rgba(255,79,163,.2),rgba(168,85,247,.2));border:1px solid rgba(255,79,163,.5);color:#ff4fa3;font-size:.75rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:.4rem 1.2rem;border-radius:24px;margin-bottom:1.2rem;box-shadow:0 0 20px rgba(255,79,163,.25)}
+.hero h1{font-family:'Orbitron',sans-serif;font-size:clamp(2rem,5vw,3.5rem);font-weight:900;line-height:1.2;margin-bottom:1.2rem;background:linear-gradient(135deg,#fff 0%,#ff4fa3 35%,#a855f7 65%,#00cfff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 25px rgba(255,79,163,.4))}
+.hero p{font-size:clamp(.9rem,1.9vw,1.1rem);color:rgba(255,255,255,.8);line-height:1.8;margin-bottom:2.2rem;max-width:520px;text-shadow:0 2px 15px rgba(0,0,0,.5)}
+.hero-buttons{display:flex;gap:1.2rem;flex-wrap:wrap;margin-bottom:2.5rem}
+.btn-primary{background:linear-gradient(135deg,#ff4fa3,#a855f7);color:#fff;border:none;padding:.9rem 2.4rem;border-radius:28px;font-family:'Poppins',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;box-shadow:0 0 30px rgba(255,79,163,.4),0 0 60px rgba(168,85,247,.2);transition:all .4s cubic-bezier(.23,1,.32,1)}
+.btn-primary:hover{transform:scale(1.08) translateY(-3px);box-shadow:0 0 50px rgba(255,79,163,.6),0 0 100px rgba(168,85,247,.3),0 12px 35px rgba(0,0,0,.4)}
+.btn-primary:active{transform:scale(.95)}
+.btn-outline{background:rgba(168,85,247,.12);color:#fff;border:1.5px solid rgba(168,85,247,.5);padding:.9rem 2.4rem;border-radius:28px;font-family:'Poppins',sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .4s;backdrop-filter:blur(10px)}
+.btn-outline:hover{background:rgba(168,85,247,.25);border-color:#a855f7;box-shadow:0 0 30px rgba(168,85,247,.4);transform:translateY(-3px)}
+.stats{display:flex;gap:3rem;margin-top:2.2rem;flex-wrap:wrap}
+.stat{text-align:center}
+.stat-num{font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;background:linear-gradient(90deg,#ffd700,#ff4fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 12px rgba(255,215,0,.4))}
+.stat-label{font-size:.8rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1.5px;margin-top:.4rem;font-weight:600}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+/* ── SECTIONS ── */
+section{position:relative;z-index:2;padding:4rem 2rem}
+.section-header{text-align:center;margin-bottom:2.5rem}
+.eyebrow{font-size:.75rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(90deg,#ff4fa3,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.8rem}
+.section-title{font-family:'Orbitron',sans-serif;font-size:clamp(1.6rem,3.5vw,2.6rem);font-weight:900;background:linear-gradient(135deg,#fff,#ff4fa3,#a855f7,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 18px rgba(255,79,163,.3));margin-bottom:.8rem}
+.section-desc{color:rgba(255,255,255,.55);font-size:.95rem;max-width:550px;margin:0 auto;line-height:1.7}
 
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+/* ── FEATURES ── */
+.features-section{max-width:1350px;margin:0 auto}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.8rem;margin-top:2rem}
+.feature-card{background:linear-gradient(135deg,var(--card-bg),rgba(20,8,50,.7));border:1px solid rgba(168,85,247,.2);border-radius:22px;padding:2rem;position:relative;overflow:hidden;transition:all .4s cubic-bezier(.23,1,.32,1)}
+.feature-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(255,79,163,.1),transparent 70%);opacity:0;transition:opacity .4s;pointer-events:none}
+.feature-card:hover::before{opacity:1}
+.feature-card:hover{transform:translateY(-12px) scale(1.02);border-color:#ff4fa3;box-shadow:0 0 40px rgba(255,79,163,.3),0 0 80px rgba(168,85,247,.15),0 20px 50px rgba(0,0,0,.6)}
+.card-icon{font-size:2.4rem;margin-bottom:1.2rem;display:block;transition:all .4s;filter:drop-shadow(0 0 15px rgba(255,79,163,.3))}
+.feature-card:hover .card-icon{transform:scale(1.2) rotate(-8deg)}
+.feature-card:nth-child(1) .card-icon{color:#00cfff}
+.feature-card:nth-child(2) .card-icon{color:#a855f7}
+.feature-card:nth-child(3) .card-icon{color:#ff3b5c}
+.feature-card:nth-child(4) .card-icon{color:#ff7b2c}
+.feature-card:nth-child(5) .card-icon{color:#ff4fa3}
+.feature-card:nth-child(6) .card-icon{color:#ffd700}
+.feature-card:nth-child(7) .card-icon{color:#00ffaa}
+.feature-card:nth-child(8) .card-icon{color:#ffc94a}
+.feature-card:nth-child(9) .card-icon{color:#00cfff}
+.feature-card h3{font-size:1.1rem;font-weight:700;margin-bottom:.8rem;color:#fff;transition:all .3s}
+.feature-card:hover h3{background:linear-gradient(90deg,#fff,#ff4fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.feature-card p{font-size:.85rem;color:rgba(255,255,255,.65);line-height:1.65;margin-bottom:1.4rem}
+.card-btn{display:inline-block;background:linear-gradient(135deg,rgba(255,79,163,.15),rgba(168,85,247,.15));color:#ff4fa3;border:1px solid rgba(255,79,163,.4);padding:.6rem 1.4rem;border-radius:20px;font-family:'Poppins',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;text-decoration:none;transition:all .3s;position:relative;overflow:hidden}
+.card-btn:hover{color:#fff;border-color:#ff4fa3;transform:translateY(-3px);box-shadow:0 0 25px rgba(255,79,163,.4);background:linear-gradient(135deg,rgba(255,79,163,.35),rgba(168,85,247,.35))}
+.emergency-btn{color:#ff3b5c !important;border-color:rgba(255,59,92,.5) !important;animation:emergencyPulse 1.5s ease-in-out infinite}
+@keyframes emergencyPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,92,0)}50%{box-shadow:0 0 0 8px rgba(255,59,92,.2)}}
 
-    <link rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+/* ── MEDICINE SEARCH ── */
+.search-section{max-width:900px;margin:0 auto;padding:0 0 2rem}
+.search-wrapper{position:relative;border-radius:28px;overflow:hidden;background:linear-gradient(135deg,rgba(13,5,41,.95),rgba(20,8,50,.9))}
+.search-wrapper::before{content:'';position:absolute;inset:0;border-radius:28px;padding:2px;background:linear-gradient(135deg,#ff4fa3,#a855f7,#00cfff,#00ffaa);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.search-inner{padding:2.8rem;position:relative;z-index:1}
+.search-title{font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:700;background:linear-gradient(90deg,#ff4fa3,#a855f7,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.5rem}
+.search-subtitle{font-size:.85rem;color:rgba(255,255,255,.45);margin-bottom:1.8rem}
+.search-box{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.2rem}
+.search-input{flex:1;min-width:200px;background:rgba(255,255,255,.06);border:1.5px solid rgba(168,85,247,.3);color:#fff;padding:1rem 1.6rem;border-radius:18px;font-family:'Poppins',sans-serif;font-size:.95rem;outline:none;transition:all .35s;backdrop-filter:blur(8px)}
+.search-input::placeholder{color:rgba(255,255,255,.35)}
+.search-input:focus{border-color:#ff4fa3;background:rgba(255,79,163,.06);box-shadow:0 0 25px rgba(255,79,163,.25),inset 0 0 20px rgba(255,79,163,.05)}
+.search-btn{background:linear-gradient(135deg,#ff4fa3,#a855f7);color:#fff;border:none;padding:1rem 2rem;border-radius:18px;font-family:'Poppins',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;box-shadow:0 0 25px rgba(255,79,163,.4);transition:all .35s;white-space:nowrap}
+.search-btn:hover{transform:scale(1.08) translateY(-2px);box-shadow:0 0 45px rgba(255,79,163,.6),0 0 90px rgba(168,85,247,.3)}
+.search-btn:active{transform:scale(.95)}
+.location-info{display:flex;align-items:center;gap:.8rem;font-size:.82rem;color:rgba(255,255,255,.5);margin-top:1.2rem;flex-wrap:wrap}
+.location-info i{color:#00cfff;font-size:.9rem}
+.detect-btn{background:rgba(0,207,255,.1);border:1px solid rgba(0,207,255,.4);color:#00cfff;padding:.4rem 1rem;border-radius:14px;font-size:.8rem;cursor:pointer;transition:all .3s;font-weight:600;font-family:'Poppins',sans-serif}
+.detect-btn:hover{background:rgba(0,207,255,.2);box-shadow:0 0 20px rgba(0,207,255,.3);transform:translateY(-2px)}
+.results-container{margin-top:1.8rem;display:none}
+.results-container.active{display:block}
+.result-item{background:rgba(255,79,163,.08);border:1px solid rgba(255,79,163,.25);border-radius:16px;padding:1.4rem;margin-bottom:1rem;display:flex;align-items:center;gap:1.2rem;transition:all .3s;animation:slideIn .4s ease-out}
+@keyframes slideIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+.result-item:hover{border-color:#ff4fa3;background:rgba(255,79,163,.15);transform:translateX(8px)}
+.status-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;box-shadow:0 0 12px currentColor;animation:statusPulse 2s ease-in-out infinite}
+.status-available{background:#00ffaa;color:#00ffaa}
+.status-unavailable{background:#ff3b5c;color:#ff3b5c}
+@keyframes statusPulse{0%,100%{opacity:1}50%{opacity:.5}}
+.result-details{flex:1}
+.result-name{font-weight:700;color:#fff;font-size:.95rem;margin-bottom:.3rem}
+.result-type{font-size:.8rem;color:rgba(255,255,255,.5)}
+.result-distance{margin-left:auto;background:rgba(255,215,0,.1);color:#ffd700;padding:.4rem .9rem;border-radius:12px;font-weight:600;font-size:.8rem;white-space:nowrap}
+.no-results{text-align:center;padding:2rem;color:rgba(255,255,255,.4);font-size:.9rem}
+.loading{text-align:center;padding:1.5rem;color:#ff4fa3;font-size:.9rem}
 
+/* ── HOW IT WORKS ── */
+.steps-section{max-width:1200px;margin:0 auto}
+.steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.8rem;margin-top:2.5rem}
+.step-card{background:linear-gradient(135deg,rgba(13,5,41,.9),rgba(15,6,45,.8));border:1px solid rgba(168,85,247,.2);border-radius:20px;padding:2.2rem 1.8rem;text-align:center;transition:all .4s}
+.step-card:hover{transform:translateY(-10px);border-color:#a855f7;box-shadow:0 0 35px rgba(168,85,247,.25)}
+.step-number{font-family:'Orbitron',sans-serif;font-size:2.4rem;font-weight:900;background:linear-gradient(135deg,#ff4fa3,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem}
+.step-card h4{font-size:1rem;font-weight:700;color:#fff;margin-bottom:.6rem}
+.step-card p{font-size:.85rem;color:rgba(255,255,255,.6);line-height:1.6}
+
+/* ── DIVIDER ── */
+.divider{width:100%;height:1.5px;background:linear-gradient(90deg,transparent,rgba(255,79,163,.3),rgba(168,85,247,.3),transparent);margin:0;position:relative;z-index:2}
+
+/* ── FOOTER ── */
+footer{position:relative;z-index:2;background:rgba(8,2,20,.98);border-top:1px solid rgba(168,85,247,.2);padding:3.5rem 2rem 1.5rem;text-align:center}
+.footer-logo{font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;background:linear-gradient(90deg,#ff4fa3,#a855f7,#00cfff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 18px rgba(255,79,163,.3));margin-bottom:1rem}
+footer p{font-size:.85rem;color:rgba(255,255,255,.4);line-height:1.9;margin-bottom:.5rem}
+.heart{color:#ff4fa3;display:inline-block;animation:heartBeat 1.2s ease-in-out infinite}
+@keyframes heartBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:var(--deep)}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#ff4fa3,#a855f7);border-radius:4px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(120px);background:linear-gradient(135deg,rgba(255,79,163,.95),rgba(168,85,247,.95));color:#fff;padding:1rem 2.2rem;border-radius:30px;font-size:.9rem;font-weight:600;z-index:9999;transition:transform .4s cubic-bezier(.23,1,.32,1);box-shadow:0 0 40px rgba(255,79,163,.5);pointer-events:none;border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(10px)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  nav{padding:.6rem 1rem}
+  nav ul li a{font-size:.75rem;padding:.3rem .6rem}
+  nav ul{gap:.8rem}
+  .hero{padding:6.5rem 1.5rem 2rem}
+  .search-inner{padding:1.8rem}
+  .search-box{flex-direction:column}
+  .search-btn{width:100%;text-align:center}
+  .stats{gap:1.5rem;margin-top:1.8rem}
+}
+@media(max-width:480px){
+  .hero h1{font-size:1.6rem}
+  .logo{font-size:1.2rem}
+  .hero p{font-size:1rem}
+  .hero-buttons{flex-direction:column}
+  .btn-primary,.btn-outline{width:100%;text-align:center;padding:.8rem 1.5rem}
+  .stats{flex-direction:column;gap:.8rem}
+  .stat-num{font-size:1.4rem}
+  nav ul{flex-direction:column;gap:.5rem;width:100%}
+  .search-inner{padding:1.2rem}
+  section{padding:2.5rem 1rem}
+}
+</style>
 </head>
-
 <body>
-    <!-- NAVBAR -->
 
+<!-- NAVBAR -->
 <nav>
-
-    <div class="logo">
-        MediPulse
+  <a href="#home" class="logo">
+    <i class="fa-solid fa-heart-pulse"></i> MediPulse
+  </a>
+  <ul>
+    <li><a href="#home">Home</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#search">Medicine</a></li>
+    <li><a href="#howitworks">How It Works</a></li>
+  </ul>
+  <a href="/login" id="loginBtn"><button class="nav-btn"><i class="fa-solid fa-sign-in-alt"></i> Login</button></a>
+  <div class="profile-container" id="profileContainer">
+    <img id="profileImage" class="profile-image" src="" alt="Profile">
+    <div class="profile-dropdown">
+      <h4 id="profileName">User</h4>
+      <p id="profileEmail">email@example.com</p>
+      <a href="/profile">Edit Profile</a>
+      <button onclick="logout()">Logout</button>
     </div>
-
-    <ul>
-
-        <li><a href="#">Home</a></li>
-        <li><a href="#">Features</a></li>
-        <li><a href="/chatbot">AI Assistant</a></li>
-        <li><a href="#">Emergency</a></li>
-        <li><a href="/free-map">Smart Navigation</a></li>
-
-    </ul>
-
-    <!-- LOGIN BUTTON -->
-
-    <a href="/login"
-    id="loginBtn">
-
-        <button class="nav-btn">
-            Login
-        </button>
-
-    </a>
-
-    <!-- PROFILE -->
-
-    <div class="profile-container"
-    id="profileContainer">
-
-        <img id="profileImage"
-        class="profile-image"
-        src="">
-
-        <div class="profile-dropdown">
-
-            <div class="profile-info">
-
-                <h4 id="profileName">
-                    User
-                </h4>
-
-                <p id="profileEmail">
-                    email
-                </p>
-
-            </div>
-
-            <a href="/profile">
-                Edit Profile
-            </a>
-
-            <button onclick="logout()">
-                Logout
-            </button>
-
-        </div>
-
-    </div>
-
+  </div>
 </nav>
 
-
-    <!-- HERO SECTION -->
-
-    <section class="hero">
-
-        <div class="hero-content">
-
-            <h1>
-                AI Powered Smart Healthcare Platform
-            </h1>
-
-            <p>
-                Find emergency medicines instantly, connect with AI healthcare systems,
-                and access smart pharmacy solutions in real time.
-            </p>
-
-            <div class="hero-buttons">
-
-                <a href="/login" id="getStartedLink">
-
-                    <button class="primary-btn" >
-                        Get Started
-                    </button>
-
-                </a>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- FEATURES -->
-
-    <section class="features-section">
-
-        <h2 class="section-title">
-            Core Features
-        </h2>
-
-        <div class="features-grid">
-
-            <div class="feature-card">
-
-                <i class="fa-solid fa-map-location-dot"></i>
-
-                <h3>AI Smart Medical Navigation</h3>
-
-                <p>
-                    Navigate instantly to nearby hospitals,
-                    pharmacies and emergency medical centers
-                    with live AI voice guidance.
-                </p>
-
-                <a href="/free-map">
-
-                    <button class="feature-nav-btn">
-                        Open Navigation
-                    </button>
-
-                </a>
-
-            </div>
-
-            <div class="feature-card">
-
-                <i class="fa-solid fa-robot"></i>
-
-                <h3>AI Health Assistant</h3>
-
-                <p>
-                    AI chatbot helps users understand
-                    prescriptions and medicine usage.
-                </p>
-
-                <a href="/chatbot">
-
-                    <button class="feature-nav-btn">
-                        AI Assistant
-                    </button>
-
-                </a>
-
-            </div>
-
-            <div class="feature-card">
-
-                <i class="fa-solid fa-heart-pulse"></i>
-
-                <h3>Emergency Medicine AI</h3>
-
-                <p>
-                    Describe symptoms using text or voice.
-                    AI instantly suggests the best medicine
-                    for emergency support.
-                </p>
-
-                <a href="/emergency-medicine">
-
-                    <button class="feature-nav-btn">
-                        Emergency Medicine AI
-                    </button>
-
-                </a>
-
-            </div>
-
-            <div class="feature-card">
-
-                <i class="fa-solid fa-truck-medical"></i>
-
-                <h3>Emergency Mode</h3>
-
-                <p>
-                    One-click emergency access for hospitals,
-                    ambulances and emergency pharmacies.
-                </p>
-
-                <button class="feature-btn emergency-btn" onclick="callAmbulance()">
-
-                    Call Ambulance
-
-                </button>
-
-            </div>
-
-            <div class="feature-card prescription-card">
-
-                <i class="fa-solid fa-camera"></i>
-
-                <h3>Prescription Scanner</h3>
-
-                <p>
-                    Upload prescriptions and extract medicine
-                    names using AI Vision technology.
-                </p>
-
-                <a href="/prescription-scanner">
-
-                    <button class="feature-nav-btn">
-                        Prescription Scanner
-                    </button>
-
-                </a>
-
-            </div>
-
-
-            <div class="feature-card">
-
-                <i class="fa-solid fa-bell"></i>
-
-                <h3>Medicine Reminder System</h3>
-
-                <p>
-                    Get refill reminders, dosage alerts,
-                    and medicine expiry notifications.
-                </p>
-                <a href="/setup">
-
-                    <button class="feature-nav-btn">
-                        Medicine Reminder
-                    </button>
-
-                </a>
-
-            </div>            
-
-            <div class="feature-card">
-
-                <i class="fa-solid fa-hospital"></i>
-
-                <h3>Hospital Features</h3>
-
-                <p>
-                    Blood Donation System for finding the donators.
-                    The AI Eye scanner for identifying the disease in the Eye.
-                </p>
-
-                <a href="/hospital">
-
-                    <button class="feature-nav-btn">
-                        Hospital Features
-                    </button>
-
-                </a>
-
-            </div>
-
-
-            <div class="feature-card">
-
-                <i class="fa-solid fa-complaint"></i>
-
-                <h3>Complaint System</h3>
-
-                <p>
-                    If you have any complaints regarding the hospital management or facility please provide here to correct it.
-                </p>
-                
-                <a href="/complaint">
-
-                    <button class="feature-nav-btn">
-                        Complaint
-                    </button>
-
-                </a>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- SEARCH DEMO -->
-
-    <section class="search-demo">
-
-        <h2>
-            Search Example
-        </h2>
-
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-glow">
+    <div class="glow-top"></div>
+    <div class="glow-bottom"></div>
+    <div class="glow-left"></div>
+    <div class="glow-right"></div>
+  </div>
+  <div class="hero-content">
+    <div class="hero-tag"><i class="fa-solid fa-sparkles"></i> Next-Gen Healthcare AI</div>
+    <h1>AI-Powered Smart Healthcare Platform</h1>
+    <p>Find emergency medicines instantly, connect with AI healthcare systems, and access smart pharmacy solutions in real time — anytime, anywhere.</p>
+    <div class="hero-buttons">
+      <button class="btn-primary" onclick="scrollToSection('search')"><i class="fa-solid fa-search"></i> Find Medicine</button>
+      <button class="btn-outline" onclick="scrollToSection('features')"><i class="fa-solid fa-circle-play"></i> Explore Features</button>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num">500+</div>
+        <div class="stat-label">Pharmacies</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">10K+</div>
+        <div class="stat-label">Medicines</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">25K+</div>
+        <div class="stat-label">Users</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-header">
+    <div class="eyebrow">✦ What We Offer</div>
+    <h2 class="section-title">Core Features</h2>
+    <p class="section-desc">Nine powerful AI-driven modules to transform your healthcare experience — from search to emergency response.</p>
+  </div>
+  <div class="features-section">
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <i class="fa-solid fa-map-location-dot card-icon"></i>
+        <h3>AI Smart Medical Navigation</h3>
+        <p>Navigate instantly to nearby hospitals, pharmacies and emergency medical centers with live AI voice guidance.</p>
+        <a href="/free-map" class="card-btn"><i class="fa-solid fa-arrow-right"></i> Open Navigation</a>
+      </div>
+
+      <div class="feature-card">
+        <i class="fa-solid fa-robot card-icon"></i>
+        <h3>AI Health Assistant</h3>
+        <p>AI chatbot helps users understand prescriptions, medicine usage, and get instant health guidance 24/7.</p>
+        <a href="/chatbot" class="card-btn"><i class="fa-solid fa-arrow-right"></i> Chat Now</a>
+      </div>
+
+      <div class="feature-card">
+        <i class="fa-solid fa-heart-pulse card-icon"></i>
+        <h3>Emergency Medicine AI</h3>
+        <p>Describe symptoms using text or voice. AI instantly suggests the best medicine for emergency support.</p>
+        <a href="/emergency-medicine" class="card-btn"><i class="fa-solid fa-arrow-right"></i> Get Help</a>
+      </div>
+
+      <div class="feature-card">
+        <i class="fa-solid fa-ambulance card-icon"></i>
+        <h3>Emergency Mode</h3>
+        <p>One-click emergency access for hospitals, ambulances and emergency pharmacies. Life-saving speed.</p>
+        <button class="card-btn emergency-btn" onclick="callAmbulance()"><i class="fa-solid fa-phone"></i> Call Ambulance</button>
+      </div>
+
+      <div class="feature-card">
+        <i class="fa-solid fa-camera card-icon"></i>
+        <h3>Prescription Scanner</h3>
+        <p>Upload prescriptions and extract medicine names using AI Vision technology. Instantly digitize your scripts.</p>
+        <a href="/prescription-scanner" class="card-btn"><i class="fa-solid fa-arrow-right"></i> Scan Now</a>
+      </div>
+
+      <div class="feature-card">
+        <i class="fa-solid fa-bell card-icon"></i>
+        <h3>Medicine Reminders</h3>
+        <p>Get refill reminders, dosage alerts, and medicine expiry notifications. Never miss a dose again.</p>
+        <a href="/setup" class="card-btn"><i class="fa-solid fa-arrow-right"></i> Set Reminder</a>
+      </div>
+
+      <div class="feature-card">
+        <i class="fa-solid fa-hospital card-icon"></i>
+        <h3>Hospital Features</h3>
+        <p>Blood Donation System for finding donors. AI Eye scanner for identifying eye diseases with precision.</p>
+        <a href="/hospital" class="card-btn"><i class="fa-solid fa-arrow-right"></i> Hospital Hub</a>
+      </div>
+
+      <div class="feature-card">
+        <i class="fa-solid fa-triangle-exclamation card-icon"></i>
+        <h3>Complaint System</h3>
+        <p>Report hospital management or facility issues directly. Your feedback improves healthcare quality.</p>
+        <a href="/complaint" class="card-btn"><i class="fa-solid fa-arrow-right"></i> File Complaint</a>
+      </div>
+
+      <div class="feature-card">
+        <i class="fa-solid fa-chart-line card-icon"></i>
+        <h3>Profile Analyzer</h3>
+        <p>Analyze your medical profile with AI to identify patterns, risks, and personalized health insights.</p>
+        <a href="/profile_analyzer_dashboard" class="card-btn"><i class="fa-solid fa-arrow-right"></i> Analyze Now</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- MEDICINE SEARCH -->
+<section id="search">
+  <div class="section-header">
+    <div class="eyebrow">✦ Real-Time Availability</div>
+    <h2 class="section-title">Find Medicine Near You</h2>
+    <p class="section-desc">Search any medicine and instantly see which pharmacies around you have it in stock.</p>
+  </div>
+  <div class="search-section">
+    <div class="search-wrapper">
+      <div class="search-inner">
+        <div class="search-title"><i class="fa-solid fa-pills"></i> Medicine Search</div>
+        <p class="search-subtitle">Enter a medicine name to check real-time availability at nearby pharmacies</p>
         <div class="search-box">
-
-            <input type="text"
-            value="Paracetamol 650">
-
-            <button>
-                Search
-            </button>
-
+          <input class="search-input" id="medicineInput" type="text" placeholder="e.g., Paracetamol 650, Ibuprofen, Aspirin..." autocomplete="off">
+          <button class="search-btn" onclick="searchMedicine()"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
         </div>
-
-        <div class="result-box">
-
-            <h3>Available At:</h3>
-
-            <p>✔ Apollo Pharmacy</p>
-            <p>✔ MedPlus</p>
-            <p>✔ Local pharmacies nearby</p>
-
+        <div class="location-info">
+          <i class="fa-solid fa-map-pin"></i>
+          <span id="locationText">Location not detected</span>
+          <button class="detect-btn" onclick="detectLocation()"><i class="fa-solid fa-crosshairs"></i> Detect</button>
         </div>
+        <div class="results-container" id="resultsContainer"></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    </section>
+<div class="divider"></div>
 
+<!-- HOW IT WORKS -->
+<section id="howitworks">
+  <div class="section-header">
+    <div class="eyebrow">✦ Simple Process</div>
+    <h2 class="section-title">How MediPulse Works</h2>
+    <p class="section-desc">Get complete healthcare support in four simple steps — no complexity, just powerful care.</p>
+  </div>
+  <div class="steps-section">
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-number">01</div>
+        <h4>Sign Up or Login</h4>
+        <p>Create your profile in seconds. Your health data stays private and fully secure.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">02</div>
+        <h4>Search or Describe</h4>
+        <p>Search for a medicine, describe symptoms, or scan your prescription — AI handles the rest.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">03</div>
+        <h4>Get Results Instantly</h4>
+        <p>Find nearby pharmacies, get AI diagnosis support, or call emergency services in one tap.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">04</div>
+        <h4>Stay Notified</h4>
+        <p>Medication reminders, refill alerts, and health tips keep you on track every single day.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-    <!-- FOOTER -->
+<div class="divider"></div>
 
-    <footer>
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo"><i class="fa-solid fa-heart-pulse"></i> MediPulse</div>
+  <p>AI Powered Smart Healthcare & Emergency Medicine Platform</p>
+  <p>Built with <span class="heart">❤</span> by Sathish &nbsp;·&nbsp; © 2025 MediPulse. All rights reserved.</p>
+</footer>
 
-        <h2>MediPulse</h2>
+<div class="toast" id="toast"></div>
 
-        <p>
-            AI Powered Smart Healthcare & Emergency Medicine Platform by Sathish
-        </p>
-
-    </footer>
-
-<script src="{{ url_for('static', filename='js/script.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
+// ── PHARMACIES DATABASE ──
+const PHARMACIES = [
+  {name: 'Apollo Pharmacy', type: 'Chain Pharmacy', distance: 0.4, stock: ['paracetamol', 'ibuprofen', 'amoxicillin', 'cetirizine', 'omeprazole', 'metformin', 'aspirin', 'azithromycin', 'panadol', 'crocin', 'dolo', 'rantac', 'combiflam', 'pantoprazole', 'vitamin c', 'zinc', 'calcium']},
+  {name: 'MedPlus', type: 'Chain Pharmacy', distance: 0.7, stock: ['paracetamol', 'cetirizine', 'omeprazole', 'dolo', 'crocin', 'rantac', 'combiflam', 'levocetirizine', 'ibuprofen', 'aspirin', 'montelukast', 'vitamin d', 'b12']},
+  {name: 'Wellness Forever', type: 'Health Store', distance: 1.1, stock: ['ibuprofen', 'metformin', 'atorvastatin', 'insulin', 'paracetamol', 'vitamin c', 'zinc', 'calcium', 'omega', 'cetirizine', 'biotin', 'iron', 'multivitamin']},
+  {name: 'Sai Medical', type: 'Local Pharmacy', distance: 1.4, stock: ['amoxicillin', 'azithromycin', 'doxycycline', 'ceftriaxone', 'paracetamol', 'dolo', 'ibuprofen', 'aspirin', 'metronidazole', 'ciprofloxacin']},
+  {name: 'Health Point', type: 'Local Pharmacy', distance: 1.8, stock: ['aspirin', 'atorvastatin', 'amlodipine', 'metoprolol', 'ibuprofen', 'combiflam', 'cetirizine', 'paracetamol', 'losartan', 'glimepiride']},
+  {name: 'CureFast Pharma', type: 'Online + Store', distance: 2.2, stock: ['paracetamol', 'ibuprofen', 'cetirizine', 'levocetirizine', 'montelukast', 'salbutamol', 'rantac', 'omeprazole', 'aspirin', 'domperidone', 'ondansetron']},
+  {name: 'LifeCare Stores', type: 'Superstore', distance: 3.0, stock: ['vitamin c', 'vitamin d', 'zinc', 'calcium', 'omega', 'biotin', 'iron', 'b12', 'paracetamol', 'ibuprofen', 'cetirizine', 'multivitamin', 'probiotics']},
+  {name: 'City Medical Center', type: 'Hospital Pharmacy', distance: 0.9, stock: ['amoxicillin', 'paracetamol', 'ibuprofen', 'metformin', 'atorvastatin', 'aspirin', 'cetirizine', 'omeprazole', 'dolo', 'insulin']},
+  {name: 'Prime Pharmacy', type: 'Local Pharmacy', distance: 2.5, stock: ['paracetamol', 'ibuprofen', 'aspirin', 'cetirizine', 'omeprazole', 'metformin', 'atorvastatin', 'amoxicillin', 'combiflam']},
+];
 
-const supabaseUrl =
-"https://covmgrilycetqtpwolfl.supabase.co"
-
-const supabaseKey =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc"
-
-const supabaseClient =
-supabase.createClient(
-    supabaseUrl,
-    supabaseKey
-)
-
-/* CHECK LOGIN */
-
-async function checkUser(){
-
-    const {
-        data: { session }
-    } =
-    await supabaseClient.auth.getSession();
-
-    /* USER LOGGED IN */
-
-    if(session){
-
-        const user = session.user;
-
-        /* HIDE LOGIN */
-
-        document.getElementById(
-            "loginBtn"
-        ).style.display = "none";
-
-        /* HIDE GET START BUTTON */
-        document.getElementById(
-            "getStartedLink"
-        ).style.display = "none";
-
-        /* SHOW PROFILE */
-
-        document.getElementById(
-            "profileContainer"
-        ).style.display = "block";
-
-        /* SET DATA */
-
-        document.getElementById(
-            "profileImage"
-        ).src =
-        user.user_metadata.avatar_url;
-
-        document.getElementById(
-            "profileName"
-        ).innerText =
-        user.user_metadata.full_name;
-
-        document.getElementById(
-            "profileEmail"
-        ).innerText =
-        user.email;
-
-    }
-
+// ── TOAST ──
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-/* LOGOUT */
+// ── SMOOTH SCROLL ──
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
 
-async function logout(){
+// ── DETECT LOCATION ──
+function detectLocation() {
+  if (!navigator.geolocation) { showToast('Geolocation not supported on your device.'); return; }
+  document.getElementById('locationText').textContent = 'Detecting location…';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`)
+        .then(r => r.json())
+        .then(d => {
+          const area = d.address.suburb || d.address.town || d.address.city || 'Your Area';
+          document.getElementById('locationText').textContent = `📍 ${area}`;
+          showToast(`Location detected: ${area}`);
+        })
+        .catch(() => {
+          document.getElementById('locationText').textContent = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        });
+    },
+    () => {
+      document.getElementById('locationText').textContent = 'Permission denied';
+      showToast('Please enable location access.');
+    }
+  );
+}
 
-    await supabaseClient.auth.signOut();
+// ── MEDICINE SEARCH ──
+function searchMedicine() {
+  const raw = document.getElementById('medicineInput').value.trim();
+  const resultsContainer = document.getElementById('resultsContainer');
+  if (!raw) { showToast('Please enter a medicine name.'); return; }
 
-    window.location.href =
-    "/login";
+  resultsContainer.classList.add('active');
+  resultsContainer.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Searching pharmacies…</div>';
 
+  setTimeout(() => {
+    // Strip dosage numbers, clean query
+    const q = raw.toLowerCase().replace(/\s*\d+\s*(mg|ml|g|mcg)?/gi, '').replace(/[^a-z\s]/g, '').trim();
+    const words = q.split(/\s+/).filter(w => w.length > 2);
+    const match = p => p.stock.some(m => m.includes(q) || q.includes(m) || words.some(w => m.includes(w)));
+
+    const available = PHARMACIES.filter(match);
+    const unavailable = PHARMACIES.filter(p => !match(p));
+
+    let html = '';
+    if (available.length > 0) {
+      html += `<p style="font-size:.85rem;color:#00ffaa;margin-bottom:.8rem;font-weight:600"><i class="fa-solid fa-circle-check"></i> ${available.length} pharmacies have <strong style="color:#ffd700">${raw}</strong></p>`;
+      available.forEach(p => {
+        html += `<div class="result-item">
+          <div class="status-dot status-available"></div>
+          <div class="result-details">
+            <div class="result-name">${p.name}</div>
+            <div class="result-type">${p.type} &nbsp;·&nbsp; <span style="color:#00ffaa">In Stock</span></div>
+          </div>
+          <div class="result-distance"><i class="fa-solid fa-location-dot"></i> ${p.distance.toFixed(1)} km</div>
+        </div>`;
+      });
+    }
+    if (unavailable.length > 0) {
+      html += `<p style="font-size:.82rem;color:rgba(255,255,255,.35);margin:1.2rem 0 .8rem;font-weight:600"><i class="fa-solid fa-circle-xmark" style="color:#ff3b5c"></i> Not available at ${unavailable.length} pharmacies</p>`;
+      unavailable.slice(0, 3).forEach(p => {
+        html += `<div class="result-item" style="opacity:.5">
+          <div class="status-dot status-unavailable"></div>
+          <div class="result-details">
+            <div class="result-name">${p.name}</div>
+            <div class="result-type">${p.type} &nbsp;·&nbsp; <span style="color:#ff3b5c">Out of Stock</span></div>
+          </div>
+          <div class="result-distance">${p.distance.toFixed(1)} km</div>
+        </div>`;
+      });
+    }
+    if (!available.length && !unavailable.length) {
+      html = '<div class="no-results"><i class="fa-solid fa-circle-exclamation"></i><br>No results found. Please check the medicine name.</div>';
+    }
+    resultsContainer.innerHTML = html;
+  }, 1100);
+}
+
+// ── CALL AMBULANCE ──
+function callAmbulance() {
+  showToast('🚨 Connecting to emergency services…');
+  setTimeout(() => { window.location.href = 'tel:108'; }, 600);
+}
+
+// ── SUPABASE AUTH ──
+const supabaseUrl = "https://covmgrilycetqtpwolfl.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+async function checkUser() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    const user = session.user;
+    document.getElementById('loginBtn').style.display = 'none';
+    document.getElementById('profileContainer').style.display = 'block';
+    document.getElementById('profileImage').src = user.user_metadata?.avatar_url || '';
+    document.getElementById('profileName').innerText = user.user_metadata?.full_name || 'User';
+    document.getElementById('profileEmail').innerText = user.email;
+  }
+}
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+  window.location.href = '/login';
 }
 
 checkUser();
 
+// ── ENTER KEY FOR SEARCH ──
+document.getElementById('medicineInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') searchMedicine();
+});
 </script>
 </body>
 </html>
