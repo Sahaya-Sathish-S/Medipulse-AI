@@ -16,8 +16,7 @@ The platform leverages Artificial Intelligence, Computer Vision, Cloud Computing
 
 🚀 Live Application
 
-Hosted Platform: https://medipulseai-vjk3.onrender.com
-
+Hosted Platform: https://medipulse-ai-gm8y.onrender.com
 «Sign in with your Google account to access the complete MediPulse AI experience.»
 
 ---
