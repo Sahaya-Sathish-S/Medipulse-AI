@@ -1,428 +1,431 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
 
-<html lang="en">  
-<head>  <meta charset="UTF-8">  
-<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>MediPulse</title>  
+    <title>MediPulse</title>
 
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">  
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-<link rel="stylesheet"  
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-</head>  <body>  
-    <!-- NAVBAR -->  <nav>  <div class="logo">  
-    MediPulse  
-</div>  
+</head>
 
-<ul>  
+<body>
+    <!-- NAVBAR -->
 
-    <li><a href="#">Home</a></li>  
-    <li><a href="#">Features</a></li>  
-    <li><a href="/chatbot">AI Assistant</a></li>  
-    <li><a href="#">Emergency</a></li>  
-    <li><a href="/free-map">Smart Navigation</a></li>  
+<nav>
 
-</ul>  
+    <div class="logo">
+        MediPulse
+    </div>
 
-<!-- LOGIN BUTTON -->  
+    <ul>
 
-<a href="/login"  
-id="loginBtn">  
+        <li><a href="#">Home</a></li>
+        <li><a href="#">Features</a></li>
+        <li><a href="/chatbot">AI Assistant</a></li>
+        <li><a href="#">Emergency</a></li>
+        <li><a href="/free-map">Smart Navigation</a></li>
 
-    <button class="nav-btn">  
-        Login  
-    </button>  
+    </ul>
 
-</a>  
+    <!-- LOGIN BUTTON -->
 
-<!-- PROFILE -->  
+    <a href="/login"
+    id="loginBtn">
 
-<div class="profile-container"  
-id="profileContainer"
-style="display:none;">  
+        <button class="nav-btn">
+            Login
+        </button>
 
-    <img id="profileImage"  
-    class="profile-image"  
-    src="">  
+    </a>
 
-    <div class="profile-dropdown">  
+    <!-- PROFILE -->
 
-        <div class="profile-info">  
+    <div class="profile-container"
+    id="profileContainer">
 
-            <h4 id="profileName">  
-                User  
-            </h4>  
+        <img id="profileImage"
+        class="profile-image"
+        src="">
 
-            <p id="profileEmail">  
-                email  
-            </p>  
+        <div class="profile-dropdown">
 
-        </div>  
+            <div class="profile-info">
 
-        <a href="/profile">  
-            Edit Profile  
-        </a>  
+                <h4 id="profileName">
+                    User
+                </h4>
 
-        <button onclick="logout()">  
-            Logout  
-        </button>  
+                <p id="profileEmail">
+                    email
+                </p>
 
-    </div>  
+            </div>
 
-</div>
+            <a href="/profile">
+                Edit Profile
+            </a>
 
-</nav>  <!-- HERO SECTION -->  
+            <button onclick="logout()">
+                Logout
+            </button>
 
-<section class="hero">  
+        </div>
 
-    <div class="hero-content">  
+    </div>
 
-        <h1>  
-            AI Powered Smart Healthcare Platform  
-        </h1>  
+</nav>
 
-        <p>  
-            Find emergency medicines instantly, connect with AI healthcare systems,  
-            and access smart pharmacy solutions in real time.  
-        </p>  
 
-        <div class="hero-buttons">  
+    <!-- HERO SECTION -->
 
-            <a href="/login" id="getStartedLink">  
+    <section class="hero">
 
-                <button class="primary-btn" >  
-                    Get Started  
-                </button>  
+        <div class="hero-content">
 
-            </a>  
+            <h1>
+                AI Powered Smart Healthcare Platform
+            </h1>
 
-        </div>  
+            <p>
+                Find emergency medicines instantly, connect with AI healthcare systems,
+                and access smart pharmacy solutions in real time.
+            </p>
 
-    </div>  
+            <div class="hero-buttons">
 
-</section>  
+                <a href="/login" id="getStartedLink">
 
+                    <button class="primary-btn" >
+                        Get Started
+                    </button>
 
-<!-- FEATURES -->  
+                </a>
 
-<section class="features-section">  
+            </div>
 
-    <h2 class="section-title">  
-        Core Features  
-    </h2>  
+        </div>
 
-    <div class="features-grid">  
+    </section>
 
-        <div class="feature-card">  
 
-            <i class="fa-solid fa-map-location-dot"></i>  
+    <!-- FEATURES -->
 
-            <h3>AI Smart Medical Navigation</h3>  
+    <section class="features-section">
 
-            <p>  
-                Navigate instantly to nearby hospitals,  
-                pharmacies and emergency medical centers  
-                with live AI voice guidance.  
-            </p>  
+        <h2 class="section-title">
+            Core Features
+        </h2>
 
-            <a href="/free-map">  
+        <div class="features-grid">
 
-                <button class="feature-nav-btn">  
-                    Open Navigation  
-                </button>  
+            <div class="feature-card">
 
-            </a>  
+                <i class="fa-solid fa-map-location-dot"></i>
 
-        </div>  
+                <h3>AI Smart Medical Navigation</h3>
 
-        <div class="feature-card">  
+                <p>
+                    Navigate instantly to nearby hospitals,
+                    pharmacies and emergency medical centers
+                    with live AI voice guidance.
+                </p>
 
-            <i class="fa-solid fa-robot"></i>  
+                <a href="/free-map">
 
-            <h3>AI Health Assistant</h3>  
+                    <button class="feature-nav-btn">
+                        Open Navigation
+                    </button>
 
-            <p>  
-                AI chatbot helps users understand  
-                prescriptions and medicine usage.  
-            </p>  
+                </a>
 
-            <a href="/chatbot">  
+            </div>
 
-                <button class="feature-nav-btn">  
-                    AI Assistant  
-                </button>  
+            <div class="feature-card">
 
-            </a>  
+                <i class="fa-solid fa-robot"></i>
 
-        </div>  
+                <h3>AI Health Assistant</h3>
 
-        <div class="feature-card">  
+                <p>
+                    AI chatbot helps users understand
+                    prescriptions and medicine usage.
+                </p>
 
-            <i class="fa-solid fa-heart-pulse"></i>  
+                <a href="/chatbot">
 
-            <h3>Emergency Medicine AI</h3>  
+                    <button class="feature-nav-btn">
+                        AI Assistant
+                    </button>
 
-            <p>  
-                Describe symptoms using text or voice.  
-                AI instantly suggests the best medicine  
-                for emergency support.  
-            </p>  
+                </a>
 
-            <a href="/emergency-medicine">  
+            </div>
 
-                <button class="feature-nav-btn">  
-                    Emergency Medicine AI  
-                </button>  
+            <div class="feature-card">
 
-            </a>  
+                <i class="fa-solid fa-heart-pulse"></i>
 
-        </div>  
+                <h3>Emergency Medicine AI</h3>
 
-        <div class="feature-card">  
+                <p>
+                    Describe symptoms using text or voice.
+                    AI instantly suggests the best medicine
+                    for emergency support.
+                </p>
 
-            <i class="fa-solid fa-truck-medical"></i>  
+                <a href="/emergency-medicine">
 
-            <h3>Emergency Mode</h3>  
+                    <button class="feature-nav-btn">
+                        Emergency Medicine AI
+                    </button>
 
-            <p>  
-                One-click emergency access for hospitals,  
-                ambulances and emergency pharmacies.  
-            </p>  
+                </a>
 
-            <button class="feature-btn emergency-btn" onclick="callAmbulance()">  
+            </div>
 
-                Call Ambulance  
+            <div class="feature-card">
 
-            </button>  
+                <i class="fa-solid fa-truck-medical"></i>
 
-        </div>  
+                <h3>Emergency Mode</h3>
 
-        <div class="feature-card prescription-card">  
+                <p>
+                    One-click emergency access for hospitals,
+                    ambulances and emergency pharmacies.
+                </p>
 
-            <i class="fa-solid fa-camera"></i>  
+                <button class="feature-btn emergency-btn" onclick="callAmbulance()">
 
-            <h3>Prescription Scanner</h3>  
+                    Call Ambulance
 
-            <p>  
-                Upload prescriptions and extract medicine  
-                names using AI Vision technology.  
-            </p>  
+                </button>
 
-            <a href="/prescription-scanner">  
+            </div>
 
-                <button class="feature-nav-btn">  
-                    Prescription Scanner  
-                </button>  
+            <div class="feature-card prescription-card">
 
-            </a>  
+                <i class="fa-solid fa-camera"></i>
 
-        </div>  
+                <h3>Prescription Scanner</h3>
 
+                <p>
+                    Upload prescriptions and extract medicine
+                    names using AI Vision technology.
+                </p>
 
-        <div class="feature-card">  
+                <a href="/prescription-scanner">
 
-            <i class="fa-solid fa-bell"></i>  
+                    <button class="feature-nav-btn">
+                        Prescription Scanner
+                    </button>
 
-            <h3>Medicine Reminder System</h3>  
+                </a>
 
-            <p>  
-                Get refill reminders, dosage alerts,  
-                and medicine expiry notifications.  
-            </p>  
-            <a href="/setup">  
+            </div>
 
-                <button class="feature-nav-btn">  
-                    Medicine Reminder  
-                </button>  
 
-            </a>  
+            <div class="feature-card">
 
-        </div>              
+                <i class="fa-solid fa-bell"></i>
 
-        <div class="feature-card">  
+                <h3>Medicine Reminder System</h3>
 
-            <i class="fa-solid fa-hospital"></i>  
+                <p>
+                    Get refill reminders, dosage alerts,
+                    and medicine expiry notifications.
+                </p>
+                <a href="/setup">
 
-            <h3>Hospital Features</h3>  
+                    <button class="feature-nav-btn">
+                        Medicine Reminder
+                    </button>
 
-            <p>  
-                Blood Donation System for finding the donators.  
-                The AI Eye scanner for identifying the disease in the Eye.  
-            </p>  
+                </a>
 
-            <a href="/hospital">  
+            </div>            
 
-                <button class="feature-nav-btn">  
-                    Hospital Features  
-                </button>  
+            <div class="feature-card">
 
-            </a>  
+                <i class="fa-solid fa-hospital"></i>
 
-        </div>  
+                <h3>Hospital Features</h3>
 
+                <p>
+                    Blood Donation System for finding the donators.
+                    The AI Eye scanner for identifying the disease in the Eye.
+                </p>
 
-        <div class="feature-card">  
+                <a href="/hospital">
 
-            <i class="fa-solid fa-complaint"></i>  
+                    <button class="feature-nav-btn">
+                        Hospital Features
+                    </button>
 
-            <h3>Complaint System</h3>  
+                </a>
 
-            <p>  
-                If you have any complaints regarding the hospital management or facility please provide here to correct it.  
-            </p>  
-              
-            <a href="/complaint">  
+            </div>
 
-                <button class="feature-nav-btn">  
-                    Complaint  
-                </button>  
 
-            </a>  
+            <div class="feature-card">
 
-        </div>  
+                <i class="fa-solid fa-complaint"></i>
 
-    </div>  
+                <h3>Complaint System</h3>
 
-</section>  
+                <p>
+                    If you have any complaints regarding the hospital management or facility please provide here to correct it.
+                </p>
+                
+                <a href="/complaint">
 
+                    <button class="feature-nav-btn">
+                        Complaint
+                    </button>
 
-<!-- SEARCH DEMO -->  
+                </a>
 
-<section class="search-demo">  
+            </div>
 
-    <h2>  
-        Search Example  
-    </h2>  
+        </div>
 
-    <div class="search-box">  
+    </section>
 
-        <input type="text"  
-        value="Paracetamol 650">  
 
-        <button>  
-            Search  
-        </button>  
+    <!-- SEARCH DEMO -->
 
-    </div>  
+    <section class="search-demo">
 
-    <div class="result-box">  
+        <h2>
+            Search Example
+        </h2>
 
-        <h3>Available At:</h3>  
+        <div class="search-box">
 
-        <p>✔ Apollo Pharmacy</p>  
-        <p>✔ MedPlus</p>  
-        <p>✔ Local pharmacies nearby</p>  
+            <input type="text"
+            value="Paracetamol 650">
 
-    </div>  
+            <button>
+                Search
+            </button>
 
-</section>  
+        </div>
 
+        <div class="result-box">
 
-<!-- FOOTER -->  
+            <h3>Available At:</h3>
 
-<footer>  
+            <p>✔ Apollo Pharmacy</p>
+            <p>✔ MedPlus</p>
+            <p>✔ Local pharmacies nearby</p>
 
-    <h2>MediPulse</h2>  
+        </div>
 
-    <p>  
-        AI Powered Smart Healthcare & Emergency Medicine Platform by Sathish  
-    </p>  
+    </section>
 
-</footer>
 
-<script src="{{ url_for('static', filename='js/script.js') }}"></script>  
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  
-<script>  
-  
-const supabaseUrl =  
-"https://covmgrilycetqtpwolfl.supabase.co"  
-  
-const supabaseKey =  
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc"  
-  
-const supabaseClient =  
-supabase.createClient(  
-    supabaseUrl,  
-    supabaseKey  
-)  
+    <!-- FOOTER -->
 
-/* SHOW USER UI */
+    <footer>
 
-function showUserProfile(user) {
+        <h2>MediPulse</h2>
 
-    /* HIDE LOGIN */
+        <p>
+            AI Powered Smart Healthcare & Emergency Medicine Platform by Sathish
+        </p>
 
-    document.getElementById(
-        "loginBtn"
-    ).style.display = "none";
+    </footer>
 
-    /* HIDE GET STARTED BUTTON */
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    document.getElementById(
-        "getStartedLink"
-    ).style.display = "none";
+<script>
 
-    /* SHOW PROFILE — use flex to match CSS layout */
+const supabaseUrl =
+"https://covmgrilycetqtpwolfl.supabase.co"
 
-    document.getElementById(
-        "profileContainer"
-    ).style.display = "flex";
+const supabaseKey =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc"
 
-    /* SET AVATAR with fallback if avatar_url is missing */
+const supabaseClient =
+supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+)
 
-    const avatarUrl = (user.user_metadata && user.user_metadata.avatar_url)
-        ? user.user_metadata.avatar_url
-        : "https://ui-avatars.com/api/?name=" + encodeURIComponent(
-            (user.user_metadata && user.user_metadata.full_name)
-            ? user.user_metadata.full_name
-            : "User"
-          ) + "&background=random";
+/* CHECK LOGIN */
 
-    document.getElementById(
-        "profileImage"
-    ).src = avatarUrl;
+async function checkUser(){
 
-    /* SET NAME with fallback */
+    const {
+        data: { session }
+    } =
+    await supabaseClient.auth.getSession();
 
-    document.getElementById(
-        "profileName"
-    ).innerText =
-    (user.user_metadata && user.user_metadata.full_name)
-        ? user.user_metadata.full_name
-        : "User";
+    /* USER LOGGED IN */
 
-    /* SET EMAIL */
+    if(session){
 
-    document.getElementById(
-        "profileEmail"
-    ).innerText = user.email;
+        const user = session.user;
+
+        /* HIDE LOGIN */
+
+        document.getElementById(
+            "loginBtn"
+        ).style.display = "none";
+
+        /* HIDE GET START BUTTON */
+        document.getElementById(
+            "getStartedLink"
+        ).style.display = "none";
+
+        /* SHOW PROFILE */
+
+        document.getElementById(
+            "profileContainer"
+        ).style.display = "block";
+
+        /* SET DATA */
+
+        document.getElementById(
+            "profileImage"
+        ).src =
+        user.user_metadata.avatar_url;
+
+        document.getElementById(
+            "profileName"
+        ).innerText =
+        user.user_metadata.full_name;
+
+        document.getElementById(
+            "profileEmail"
+        ).innerText =
+        user.email;
+
+    }
 
 }
 
-/* LISTEN FOR AUTH STATE CHANGES — fires reliably after session is restored */
+/* LOGOUT */
 
-supabaseClient.auth.onAuthStateChange((event, session) => {
+async function logout(){
 
-    if (session && session.user) {
-        showUserProfile(session.user);
-    }
+    await supabaseClient.auth.signOut();
 
-});
-  
-/* LOGOUT */  
-  
-async function logout(){  
-  
-    await supabaseClient.auth.signOut();  
-  
-    window.location.href =  
-    "/login";  
-  
-}  
-  
-</script>  </body>  
+    window.location.href =
+    "/login";
+
+}
+
+checkUser();
+
+</script>
+</body>
 </html>
