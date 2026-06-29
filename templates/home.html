@@ -46,7 +46,23 @@ nav ul li a:hover::after{transform:translateX(-50%) scaleX(1)}
 .profile-dropdown a:hover,.profile-dropdown button:hover{background:linear-gradient(135deg,rgba(255,79,163,.3),rgba(168,85,247,.3));transform:translateX(4px)}
 
 /* ── HERO ── */
-.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:flex-start;padding:7.5rem 3rem 3rem;overflow:hidden;z-index:2;background:linear-gradient(135deg,rgba(10,3,24,1) 0%,rgba(20,5,50,.95) 100%)}
+.hero{
+    position:relative;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    padding:7.5rem 3rem 3rem;
+    overflow:hidden;
+    z-index:2;
+
+    background:
+        linear-gradient(rgba(10,3,24,.7), rgba(20,5,50,.8)),
+        url("{{ url_for('static', filename='images/background.png') }}");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+}
 .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 50%,rgba(168,85,247,.12) 0%,transparent 65%);z-index:1;pointer-events:none}
 .hero-glow{position:absolute;inset:0;z-index:0;pointer-events:none}
 .glow-top{position:absolute;top:-2px;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#ff4fa3,#a855f7,#00cfff,transparent);box-shadow:0 0 40px 15px rgba(255,79,163,.2);filter:blur(1px)}
