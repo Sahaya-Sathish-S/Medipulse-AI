@@ -315,7 +315,7 @@ async function dispatchBackendEmail(toEmail, donorName, bloodGroup, donorId) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> Sending...';
 
     const backendOrigin = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-        ? "" : "https://medipulseai-vjk3.onrender.com";
+        ? "" : "https://medipulse-ai-i9ox.onrender.com";
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
