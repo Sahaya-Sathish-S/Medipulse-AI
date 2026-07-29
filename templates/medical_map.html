@@ -12,28 +12,26 @@ FILE NAME: medipulse_ai_navigation.html
 
 <title>MediPulse AI Smart Medical Navigation</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- FONTS -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-<link rel="stylesheet"
-href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+<!-- LEAFLET & FONT AWESOME -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
 
 :root{
-
-    --cyan:#00e5ff;
-    --violet:#8a5cff;
-    --magenta:#ff3fd8;
-    --bg-0:#050712;
+    --cyan:#00d9ff;
+    --violet:#7b2cff;
+    --magenta:#ff00ff;
+    --bg-0:#050816;
     --bg-1:#0b0f24;
-    --panel:rgba(255,255,255,0.045);
+    --panel:rgba(255,255,255,0.05);
     --panel-border:rgba(255,255,255,0.09);
-    --text-dim:rgba(255,255,255,0.62);
+    --text-dim:rgba(255,255,255,0.65);
     --danger:#ff5c7a;
     --ok:#3ce6a5;
 }
@@ -45,92 +43,80 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
 }
 
 body{
+    font-family:'Space Grotesk', 'Poppins', sans-serif;
 
-    font-family:'Space Grotesk',sans-serif;
-
+    /* COMBINED BACKGROUND: Gradient + background.png from Code 1 */
     background:
-    radial-gradient(circle at 15% 10%, #14183a55, transparent 45%),
-    radial-gradient(circle at 85% 90%, #2a0f3c66, transparent 50%),
-    linear-gradient(160deg, var(--bg-0), var(--bg-1) 60%, #05060f);
+    linear-gradient(
+        rgba(0,0,0,0.80),
+        rgba(5,8,22,0.92)
+    ),
+    url('/static/images/background.png');
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    background-attachment:fixed;
 
     min-height:100vh;
-
+    overflow:hidden;
     color:white;
 }
 
-/* AMBIENT GRID BACKGROUND (self-contained, no external image dependency) */
-
+/* ANIMATED PARTICLE GRID BACKGROUND OVERLAY */
 body::before{
-
     content:'';
-
     position:fixed;
-
     inset:0;
-
-    background-image:
-    linear-gradient(rgba(0,229,255,0.05) 1px,transparent 1px),
-    linear-gradient(90deg, rgba(0,229,255,0.05) 1px,transparent 1px);
-
-    background-size:56px 56px;
-
-    mask-image:radial-gradient(ellipse at 50% 0%, black 0%, transparent 75%);
-
-    animation:bgMove 26s linear infinite;
-
+    background:
+    radial-gradient(circle,#00d9ff33 1px,transparent 1px),
+    radial-gradient(circle,#ff00ff22 1px,transparent 1px);
+    background-size:120px 120px;
+    animation:bgMove 18s linear infinite;
     z-index:-1;
 }
 
 @keyframes bgMove{
-
     from{ transform:translateY(0); }
-    to{ transform:translateY(-56px); }
-
+    to{ transform:translateY(-120px); }
 }
 
 ::-webkit-scrollbar{ width:6px; }
-::-webkit-scrollbar-thumb{ background:rgba(0,229,255,0.35); border-radius:10px; }
+::-webkit-scrollbar-thumb{ background:rgba(0,217,255,0.35); border-radius:10px; }
 
 button{ font-family:inherit; }
 input{ font-family:inherit; }
 
-/* MAIN */
-
+/* MAIN CONTAINER */
 .main-container{
-
     display:flex;
-
     height:100vh;
     height:100dvh;
 }
 
 /* SIDEBAR */
-
 .sidebar{
-
-    width:400px;
-
+    width:410px;
     flex-shrink:0;
-
-    background:linear-gradient(180deg, rgba(8,10,26,0.96), rgba(5,6,16,0.98));
-
-    backdrop-filter:blur(24px);
-
+    background:
+    linear-gradient(
+        rgba(0,0,0,0.85),
+        rgba(5,8,22,0.95)
+    ),
+    url('/static/images/background.png');
+    background-size:cover;
+    background-position:center;
+    backdrop-filter:blur(30px);
     border-right:1px solid var(--panel-border);
-
     padding:20px;
-
     overflow-y:auto;
-
     display:flex;
     flex-direction:column;
     gap:16px;
 }
 
 /* LOGO */
-
 .logo-row{
-
     display:flex;
     align-items:center;
     justify-content:center;
@@ -138,7 +124,6 @@ input{ font-family:inherit; }
 }
 
 .logo-dot{
-
     width:9px;
     height:9px;
     border-radius:50%;
@@ -153,47 +138,29 @@ input{ font-family:inherit; }
 }
 
 .logo{
-
-    font-size:26px;
-
+    font-size:30px;
     font-family:'Orbitron',sans-serif;
-
     font-weight:700;
-
     letter-spacing:0.5px;
-
-    color:#eafcff;
-
-    text-shadow:0 0 18px rgba(0,229,255,0.55);
+    color:var(--cyan);
+    text-shadow:0 0 15px var(--cyan), 0 0 30px var(--magenta);
 }
 
 .tagline{
-
     text-align:center;
-
     font-size:11px;
-
     letter-spacing:2.5px;
-
     text-transform:uppercase;
-
     color:var(--text-dim);
-
     margin-top:-8px;
 }
 
-/* LIVE INFO */
-
+/* LIVE INFO DASHBOARD */
 .live-info{
-
     background:var(--panel);
-
     border-radius:18px;
-
     padding:16px 18px;
-
     border:1px solid var(--panel-border);
-
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:12px 16px;
@@ -216,96 +183,66 @@ input{ font-family:inherit; }
 }
 
 .stat-value{
-    font-size:15px;
+    font-size:14.5px;
     font-weight:600;
     font-variant-numeric:tabular-nums;
     color:#eafcff;
     word-break:break-word;
 }
 
-/* LOCATION SEARCH ROW */
-
+/* MANUAL LOCATION SEARCH */
 .location-row{
-
     display:flex;
     gap:8px;
 }
 
 .location-row input{
-
     flex:1;
-
     border:none;
-
     border-radius:14px;
-
     padding:13px 14px;
-
     outline:none;
-
     background:rgba(255,255,255,0.06);
-
     border:1px solid var(--panel-border);
-
     color:white;
-
     font-size:13.5px;
 }
 
 .location-row input::placeholder{ color:rgba(255,255,255,0.35); }
 
 .icon-btn{
-
     width:46px;
-
     flex-shrink:0;
-
     border:1px solid var(--panel-border);
-
     border-radius:14px;
-
     background:rgba(255,255,255,0.06);
-
     color:var(--cyan);
-
     cursor:pointer;
-
     font-size:15px;
 }
 
-.icon-btn:hover{ background:rgba(0,229,255,0.12); }
+.icon-btn:hover{ background:rgba(0,217,255,0.12); }
 
 /* BUTTONS */
-
 .action-row{
     display:flex;
     gap:10px;
 }
 
 .action-btn{
-
     flex:1;
-
     border:none;
-
     padding:15px 10px;
-
     border-radius:16px;
-
-    color:#04101a;
-
+    color:white;
     cursor:pointer;
-
     font-size:13.5px;
-
     font-weight:600;
-
     letter-spacing:0.2px;
-
     transition:transform 0.2s ease, box-shadow 0.2s ease;
-
     background:linear-gradient(135deg, var(--cyan), var(--violet) 55%, var(--magenta));
-
+    background-size:200% 200%;
+    animation:gradientMove 5s ease infinite;
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -315,48 +252,36 @@ input{ font-family:inherit; }
 .action-btn i{ font-size:16px; }
 
 .action-btn:hover{
-
     transform:translateY(-2px);
-    box-shadow:0 8px 22px rgba(0,229,255,0.25);
+    box-shadow:0 8px 22px rgba(0,217,255,0.3);
 }
 
-.action-btn:active{ transform:translateY(0); }
-
-.action-btn.full{ flex:none; width:100%; flex-direction:row; justify-content:center; padding:14px; }
+@keyframes gradientMove{
+    0%{ background-position:0% 50%; }
+    50%{ background-position:100% 50%; }
+    100%{ background-position:0% 50%; }
+}
 
 .gps-btn{
-
     width:100%;
-
-    border:1px solid rgba(0,229,255,0.35);
-
-    background:rgba(0,229,255,0.08);
-
+    border:1px solid rgba(0,217,255,0.35);
+    background:rgba(0,217,255,0.08);
     color:var(--cyan);
-
     border-radius:16px;
-
     padding:13px;
-
-    font-size:13px;
-
+    font-size:13.5px;
     font-weight:600;
-
     cursor:pointer;
-
     display:flex;
-
     align-items:center;
-
     justify-content:center;
-
     gap:8px;
+    transition:0.3s;
 }
 
-.gps-btn:hover{ background:rgba(0,229,255,0.15); }
+.gps-btn:hover{ background:rgba(0,217,255,0.18); }
 
-/* RESULTS */
-
+/* RESULTS LIST */
 .results{
     display:flex;
     flex-direction:column;
@@ -364,90 +289,57 @@ input{ font-family:inherit; }
 }
 
 .results-empty{
-
     text-align:center;
-
     color:var(--text-dim);
-
     font-size:12.5px;
-
     padding:14px 8px;
-
     border:1px dashed var(--panel-border);
-
     border-radius:14px;
 }
 
 .place-card{
-
     background:var(--panel);
-
     border-radius:18px;
-
     padding:15px 16px;
-
     border:1px solid var(--panel-border);
 }
 
 .place-name{
-
-    color:#eafcff;
-
-    font-size:15.5px;
-
+    color:var(--cyan);
+    font-size:16px;
     font-weight:600;
-
-    margin-bottom:4px;
+    margin-bottom:6px;
 }
 
 .place-meta{
-
     font-size:12px;
-
     color:var(--text-dim);
-
     display:flex;
-
     gap:14px;
 }
 
 .route-btn{
-
     width:100%;
-
     border:none;
-
-    padding:11px;
-
+    padding:12px;
     border-radius:12px;
-
     cursor:pointer;
-
     color:white;
-
     font-weight:600;
-
     font-size:13px;
-
     margin-top:12px;
-
-    background:linear-gradient(135deg, #00b8ff, #0057ff);
+    background:linear-gradient(135deg, var(--cyan), #0066ff);
+    transition:0.3s;
 }
 
-.route-btn:hover{ filter:brightness(1.1); }
+.route-btn:hover{ filter:brightness(1.15); transform:translateY(-1px); }
 
 /* AI CHAT */
-
 .ai-chat{
-
     background:var(--panel);
-
     border-radius:18px;
-
     padding:16px;
-
     border:1px solid var(--panel-border);
-
     display:flex;
     flex-direction:column;
     gap:10px;
@@ -455,127 +347,83 @@ input{ font-family:inherit; }
 }
 
 .ai-chat h3{
-
-    font-size:13px;
-
+    font-size:14px;
     letter-spacing:0.5px;
-
     color:var(--cyan);
-
     display:flex;
     align-items:center;
     gap:8px;
 }
 
 .chat-messages{
-
-    height:170px;
-
+    height:160px;
     overflow-y:auto;
-
     display:flex;
     flex-direction:column;
     gap:8px;
+    padding-right:4px;
 }
 
 .chat-bubble{
-
     padding:10px 13px;
-
     border-radius:13px;
-
     font-size:13px;
-
     line-height:1.45;
-
     max-width:88%;
 }
 
 .user{
-
     background:linear-gradient(135deg, #0057ff, #00b8ff);
-
     align-self:flex-end;
-
     border-bottom-right-radius:4px;
 }
 
 .ai{
-
-    background:rgba(255,255,255,0.07);
-
+    background:rgba(255,255,255,0.08);
     align-self:flex-start;
-
     border-bottom-left-radius:4px;
 }
 
-.ai.typing{ color:var(--text-dim); font-style:italic; }
-
 .chat-input{
-
     display:flex;
-
     gap:8px;
 }
 
 .chat-input input{
-
     flex:1;
-
     border:none;
-
     border-radius:13px;
-
     padding:12px 14px;
-
     outline:none;
-
     background:rgba(255,255,255,0.06);
-
     border:1px solid var(--panel-border);
-
     color:white;
-
     font-size:13px;
 }
 
 .send-btn{
-
     width:44px;
-
     flex-shrink:0;
-
     border:none;
-
     border-radius:13px;
-
     cursor:pointer;
-
     color:white;
-
     background:linear-gradient(135deg, var(--magenta), var(--violet));
-
     font-size:14px;
 }
 
 .send-btn:hover{ filter:brightness(1.1); }
 
-/* MAP */
-
+/* MAP CONTAINER */
 .map-container{
-
     flex:1;
-
     position:relative;
 }
 
 #map{
-
     width:100%;
-
     height:100%;
-
-    filter:saturate(0.85) brightness(0.95);
+    filter:saturate(0.9) brightness(0.95);
 }
 
 .leaflet-popup-content-wrapper{
@@ -586,125 +434,106 @@ input{ font-family:inherit; }
 
 .leaflet-popup-tip{ background:#0b0f24; }
 
-/* VOICE / REPEAT */
-
-.map-fab{
-
+/* VOICE FAB BUTTON */
+.voice-route-btn{
     position:absolute;
-
-    top:18px;
-
-    right:18px;
-
-    width:52px;
-
-    height:52px;
-
+    top:20px;
+    right:20px;
+    width:65px;
+    height:65px;
     border:1px solid rgba(255,255,255,0.15);
-
     border-radius:50%;
-
     cursor:pointer;
-
     color:white;
-
-    font-size:18px;
-
-    z-index:900;
-
+    font-size:22px;
+    z-index:999;
     background:linear-gradient(135deg, var(--magenta), var(--violet));
-
-    box-shadow:0 6px 18px rgba(0,0,0,0.4);
+    box-shadow:0 6px 20px rgba(0,0,0,0.5);
+    transition:0.3s;
 }
 
-.map-fab:hover{ filter:brightness(1.1); }
+.voice-route-btn:hover{ transform:scale(1.05); }
 
-/* TIME / STATUS BOX */
-
-.status-box{
-
+/* TIME & GPS STATUS BOX */
+.time-box{
     position:absolute;
-
-    bottom:18px;
-
-    right:18px;
-
-    z-index:900;
-
-    background:rgba(6,8,20,0.75);
-
-    padding:12px 16px;
-
-    border-radius:14px;
-
-    backdrop-filter:blur(14px);
-
-    border:1px solid var(--panel-border);
-
+    bottom:20px;
+    right:20px;
+    z-index:999;
+    background:rgba(0,0,0,0.65);
+    padding:12px 18px;
+    border-radius:16px;
+    backdrop-filter:blur(15px);
+    border:1px solid rgba(255,255,255,0.1);
     font-size:12.5px;
-
     line-height:1.7;
-
     text-align:right;
 }
 
-.status-box .gps-live{ color:var(--ok); }
-.status-box .gps-off{ color:var(--danger); }
+.gps-live{ color:var(--ok); font-weight:bold; }
+.gps-off{ color:var(--danger); font-weight:bold; }
 
-/* LANDSCAPE HINT (non-blocking) */
-
-#landscapeHint{
-
+/* STRICT PORTRAIT BLOCKER OVERLAY */
+#rotateOverlay{
     position:fixed;
-
-    left:50%;
-
-    bottom:18px;
-
-    transform:translateX(-50%);
-
-    z-index:1200;
-
-    background:rgba(6,8,20,0.92);
-
-    border:1px solid var(--panel-border);
-
-    color:var(--text-dim);
-
-    font-size:12px;
-
-    padding:10px 16px;
-
-    border-radius:30px;
-
+    inset:0;
+    background:linear-gradient(135deg, #050816, #0d1228, #000000);
     display:none;
-
+    justify-content:center;
     align-items:center;
-
-    gap:10px;
-
-    backdrop-filter:blur(10px);
+    flex-direction:column;
+    z-index:999999;
+    color:white;
+    text-align:center;
+    overflow:hidden;
 }
 
-#landscapeHint button{
+.rotate-box{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:25px;
+}
 
-    background:none;
-    border:none;
+/* PHONE ROTATION ANIMATION */
+.phone{
+    width:110px;
+    height:190px;
+    border:6px solid var(--cyan);
+    border-radius:28px;
+    position:relative;
+    animation:rotatePhone 2s infinite ease-in-out;
+    box-shadow:0 0 20px var(--cyan), 0 0 40px var(--violet);
+}
+
+.screen{
+    position:absolute;
+    top:12px; left:12px; right:12px; bottom:12px;
+    border-radius:18px;
+    background:linear-gradient(135deg, var(--cyan), var(--violet), var(--magenta));
+}
+
+@keyframes rotatePhone{
+    0%{ transform:rotate(0deg); }
+    25%{ transform:rotate(0deg); }
+    50%{ transform:rotate(90deg); }
+    75%{ transform:rotate(90deg); }
+    100%{ transform:rotate(0deg); }
+}
+
+#rotateOverlay h1{
+    font-size:32px;
     color:var(--cyan);
-    font-size:12px;
-    cursor:pointer;
-    font-weight:600;
+    font-family:'Orbitron',sans-serif;
+    text-shadow:0 0 10px var(--cyan), 0 0 25px var(--violet);
 }
 
-/* RESPONSIVE */
-
-@media (max-width:820px){
-
-    .main-container{ flex-direction:column; }
-
-    .sidebar{ width:100%; height:55vh; border-right:none; border-bottom:1px solid var(--panel-border); }
-
-    .map-container{ height:45vh; }
+#rotateOverlay p{
+    font-size:16px;
+    opacity:0.85;
+    width:80%;
+    max-width:360px;
+    line-height:1.8;
 }
 
 </style>
@@ -713,126 +542,128 @@ input{ font-family:inherit; }
 
 <body>
 
+<!-- MAIN INTERFACE -->
 <div class="main-container">
 
 <div class="sidebar">
 
 <div class="logo-row">
-<div class="logo-dot"></div>
-<div class="logo">MediPulse AI</div>
+    <div class="logo-dot"></div>
+    <div class="logo">MediPulse AI</div>
 </div>
 <div class="tagline">Smart Medical Navigation</div>
 
+<!-- LIVE GPS & ROUTE METRICS -->
 <div class="live-info">
 
-<div class="stat">
-<div class="stat-label"><i class="fa-solid fa-location-dot"></i> Location</div>
-<div class="stat-value" id="locationText">Not enabled</div>
-</div>
+    <div class="stat">
+        <div class="stat-label"><i class="fa-solid fa-location-dot"></i> Location</div>
+        <div class="stat-value" id="locationText">Waiting...</div>
+    </div>
 
-<div class="stat">
-<div class="stat-label"><i class="fa-solid fa-gauge-high"></i> Speed</div>
-<div class="stat-value" id="speedText">0 km/h</div>
-</div>
+    <div class="stat">
+        <div class="stat-label"><i class="fa-solid fa-gauge-high"></i> Speed</div>
+        <div class="stat-value" id="speedText">0 KM/H</div>
+    </div>
 
-<div class="stat">
-<div class="stat-label"><i class="fa-regular fa-clock"></i> Time</div>
-<div class="stat-value" id="currentTime">--</div>
-</div>
+    <div class="stat">
+        <div class="stat-label"><i class="fa-regular fa-clock"></i> Time</div>
+        <div class="stat-value" id="currentTime">--</div>
+    </div>
 
-<div class="stat">
-<div class="stat-label"><i class="fa-solid fa-route"></i> Distance</div>
-<div class="stat-value" id="distanceLeft">--</div>
-</div>
+    <div class="stat">
+        <div class="stat-label"><i class="fa-solid fa-route"></i> Distance</div>
+        <div class="stat-value" id="distanceLeft">--</div>
+    </div>
 
-<div class="stat" style="grid-column:1 / -1;">
-<div class="stat-label"><i class="fa-solid fa-hourglass-half"></i> Estimated arrival</div>
-<div class="stat-value" id="arrivalTime">--</div>
-</div>
+    <div class="stat" style="grid-column:1 / -1;">
+        <div class="stat-label"><i class="fa-solid fa-hourglass-half"></i> Estimated Arrival</div>
+        <div class="stat-value" id="arrivalTime">--</div>
+    </div>
 
 </div>
 
 <button class="gps-btn" onclick="enableLocation()">
-<i class="fa-solid fa-location-crosshairs"></i>
-<span id="gpsBtnLabel">Turn on GPS location</span>
+    <i class="fa-solid fa-location-crosshairs"></i>
+    <span id="gpsBtnLabel">Turn On GPS Location</span>
 </button>
 
 <div class="location-row">
-<input type="text" id="manualLocationInput" placeholder="Or type a city / address..." onkeydown="if(event.key==='Enter') searchManualLocation()">
-<button class="icon-btn" onclick="searchManualLocation()" title="Set location">
-<i class="fa-solid fa-magnifying-glass"></i>
-</button>
+    <input type="text" id="manualLocationInput" placeholder="Or type address / city..." onkeydown="if(event.key==='Enter') searchManualLocation()">
+    <button class="icon-btn" onclick="searchManualLocation()" title="Set Location">
+        <i class="fa-solid fa-magnifying-glass"></i>
+    </button>
 </div>
 
 <div class="action-row">
 
-<button class="action-btn" onclick="searchNearby('hospital')">
-<i class="fa-solid fa-hospital"></i>
-Hospitals
-</button>
+    <button class="action-btn" onclick="searchNearby('hospital')">
+        <i class="fa-solid fa-hospital"></i>
+        Hospitals
+    </button>
 
-<button class="action-btn" onclick="searchNearby('pharmacy')">
-<i class="fa-solid fa-prescription-bottle-medical"></i>
-Pharmacies
-</button>
+    <button class="action-btn" onclick="searchNearby('pharmacy')">
+        <i class="fa-solid fa-prescription-bottle-medical"></i>
+        Pharmacies
+    </button>
 
 </div>
 
 <div class="results" id="results">
-<div class="results-empty">Enable location, then search for hospitals or pharmacies nearby.</div>
+    <div class="results-empty">Enable location or search address to find medical services nearby.</div>
 </div>
 
-<!-- AI CHAT -->
-
+<!-- AI MEDICAL ASSISTANT CHATBOT -->
 <div class="ai-chat">
 
-<h3><i class="fa-solid fa-notes-medical"></i> AI Medical Assistant</h3>
+    <h3><i class="fa-solid fa-notes-medical"></i> AI Medical Assistant</h3>
 
-<div class="chat-messages" id="chatMessages">
-<div class="chat-bubble ai">Hi, I'm your navigation assistant. Ask me about your route, ETA, or general first-aid guidance while you're on the way.</div>
-</div>
+    <div class="chat-messages" id="chatMessages">
+        <div class="chat-bubble ai">Hello! I am your AI assistant. Ask me about routes, arrival estimates, or medical assistance while navigating.</div>
+    </div>
 
-<div class="chat-input">
+    <div class="chat-input">
+        <input type="text" id="chatInput" placeholder="Ask route or medical help..." onkeydown="if(event.key==='Enter') sendAIMessage()">
+        <button class="send-btn" onclick="sendAIMessage()" title="Send">
+            <i class="fa-solid fa-paper-plane"></i>
+        </button>
 
-<input type="text" id="chatInput" placeholder="Ask route or medical help..." onkeydown="if(event.key==='Enter') sendAIMessage()">
-
-<button class="send-btn" onclick="sendAIMessage()" title="Send">
-<i class="fa-solid fa-paper-plane"></i>
-</button>
-
-<button class="send-btn" onclick="startVoiceInput()" title="Voice input">
-<i class="fa-solid fa-microphone"></i>
-</button>
-
-</div>
+        <button class="send-btn" onclick="startVoiceInput()" title="Voice Input">
+            <i class="fa-solid fa-microphone"></i>
+        </button>
+    </div>
 
 </div>
 
 </div>
 
-<!-- MAP -->
-
+<!-- MAP DISPLAY -->
 <div class="map-container">
 
-<div id="map"></div>
+    <div id="map"></div>
 
-<button class="map-fab" onclick="repeatDirections()" title="Repeat last direction">
-<i class="fa-solid fa-volume-high"></i>
-</button>
+    <button class="voice-route-btn" onclick="repeatDirections()" title="Repeat Directions">
+        <i class="fa-solid fa-volume-high"></i>
+    </button>
 
-<div class="status-box">
-<div><span id="gpsStatusDot" class="gps-off">●</span> <span id="gpsStatusText">GPS inactive</span></div>
-<div><span id="liveClock"></span></div>
-</div>
-
-</div>
+    <div class="time-box">
+        <div>🕒 <span id="liveClock">--</span></div>
+        <div><span id="gpsStatusDot" class="gps-off">●</span> <span id="gpsStatusText">GPS Inactive</span></div>
+    </div>
 
 </div>
 
-<div id="landscapeHint">
-<i class="fa-solid fa-mobile-screen-button"></i>
-<span>Tip: rotate to landscape for a bigger map</span>
-<button onclick="document.getElementById('landscapeHint').style.display='none'">Dismiss</button>
+</div>
+
+<!-- PORTRAIT BLOCKER OVERLAY -->
+<div id="rotateOverlay">
+    <div class="rotate-box">
+        <div class="phone">
+            <div class="screen"></div>
+        </div>
+        <h1>Rotate Your Phone</h1>
+        <p>MediPulse AI Navigation is designed exclusively for landscape mode.</p>
+    </div>
 </div>
 
 <script>
@@ -855,119 +686,83 @@ let navigationInterval = null;
 
 let markers = [];
 
-// Chat history kept so the AI assistant has conversational context
-let chatHistory = [];
-
-/* MAP */
-
-map = L.map("map",{ zoomControl:true }).setView([20.5937,78.9629],5);
+/* MAP INITIALIZATION */
+map = L.map("map", { zoomControl: true }).setView([20.5937, 78.9629], 5);
 
 L.tileLayer(
-"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-{
-    attribution:"© OpenStreetMap contributors",
-    maxZoom:19
-}
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        attribution: "© OpenStreetMap contributors",
+        maxZoom: 19
+    }
 ).addTo(map);
 
-/* CLOCK */
-
-setInterval(()=>{
-
+/* LIVE CLOCK */
+setInterval(() => {
     const now = new Date();
-
     const timeStr = now.toLocaleTimeString();
-
     document.getElementById("liveClock").innerText = timeStr;
     document.getElementById("currentTime").innerText = timeStr;
+}, 1000);
 
-},1000);
-
-/* LOCATION */
-
-function enableLocation(){
-
-    if(!navigator.geolocation){
-
-        alert("Geolocation isn't supported in this browser. Use the search box to set your location manually.");
+/* GPS LOCATION WATCHER */
+function enableLocation() {
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser. Use the address search box instead.");
         return;
     }
 
     document.getElementById("gpsBtnLabel").innerText = "Requesting GPS...";
 
     navigator.geolocation.watchPosition(
-
-        position=>{
-
+        position => {
             userLat = position.coords.latitude;
             userLng = position.coords.longitude;
 
-            currentSpeed =
-            position.coords.speed
-            ? (position.coords.speed * 3.6).toFixed(1)
-            : 0;
+            currentSpeed = position.coords.speed
+                ? (position.coords.speed * 3.6).toFixed(1)
+                : 0;
 
-            document.getElementById("locationText").innerText =
-            `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
-
-            document.getElementById("speedText").innerText =
-            `${currentSpeed} km/h`;
-
-            document.getElementById("gpsBtnLabel").innerText = "GPS active";
+            document.getElementById("locationText").innerText = `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+            document.getElementById("speedText").innerText = `${currentSpeed} KM/H`;
+            document.getElementById("gpsBtnLabel").innerText = "GPS Active";
 
             document.getElementById("gpsStatusDot").className = "gps-live";
-            document.getElementById("gpsStatusText").innerText = "Live GPS active";
+            document.getElementById("gpsStatusText").innerText = "Live GPS Active";
 
-            setUserMarker(userLat,userLng,"You are here");
-
-            map.setView([userLat,userLng],15);
+            setUserMarker(userLat, userLng, "You are here");
+            map.setView([userLat, userLng], 15);
 
             updateLiveDistance();
-
         },
-
-        error=>{
-
+        error => {
             console.error(error);
-
-            document.getElementById("gpsBtnLabel").innerText = "Turn on GPS location";
-
-            alert(
-                "Location access failed or was blocked. You can still search by typing a city or address above."
-            );
-
+            document.getElementById("gpsBtnLabel").innerText = "Turn On GPS Location";
+            alert("GPS access failed or was denied. Please allow location permissions or type an address.");
         },
-
-        {
-            enableHighAccuracy:true
-        }
-
+        { enableHighAccuracy: true }
     );
 
+    speakText("GPS enabled");
 }
 
-/* MANUAL LOCATION (fallback when GPS is blocked, e.g. inside an embedded view) */
-
-async function searchManualLocation(){
-
+/* MANUAL LOCATION SEARCH */
+async function searchManualLocation() {
     const query = document.getElementById("manualLocationInput").value.trim();
 
-    if(query === ""){
-        alert("Type a city or address first.");
+    if (query === "") {
+        alert("Please enter a city or address first.");
         return;
     }
 
-    try{
-
+    try {
         const response = await fetch(
             `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`
         );
-
         const data = await response.json();
 
-        if(!data || data.length === 0){
-
-            alert("Couldn't find that place. Try a more specific address.");
+        if (!data || data.length === 0) {
+            alert("Could not find specified location.");
             return;
         }
 
@@ -975,51 +770,41 @@ async function searchManualLocation(){
         userLng = parseFloat(data[0].lon);
         currentSpeed = 0;
 
-        document.getElementById("locationText").innerText =
-        data[0].display_name.split(",").slice(0,2).join(",");
-
-        document.getElementById("speedText").innerText = "0 km/h";
+        document.getElementById("locationText").innerText = data[0].display_name.split(",").slice(0, 2).join(",");
+        document.getElementById("speedText").innerText = "0 KM/H";
 
         document.getElementById("gpsStatusDot").className = "gps-live";
-        document.getElementById("gpsStatusText").innerText = "Manual location set";
+        document.getElementById("gpsStatusText").innerText = "Manual Location Set";
 
-        setUserMarker(userLat,userLng,"Set location");
+        setUserMarker(userLat, userLng, "Set Location");
+        map.setView([userLat, userLng], 14);
 
-        map.setView([userLat,userLng],14);
-
-    }catch(err){
-
+    } catch (err) {
         console.error(err);
-        alert("Location search failed. Please try again.");
+        alert("Location search failed.");
     }
 }
 
-function setUserMarker(lat,lng,label){
-
-    if(userMarker){
+function setUserMarker(lat, lng, label) {
+    if (userMarker) {
         map.removeLayer(userMarker);
     }
-
-    userMarker = L.marker([lat,lng]).addTo(map).bindPopup(label);
+    userMarker = L.marker([lat, lng]).addTo(map).bindPopup(label);
 }
 
-/* SEARCH — tries multiple Overpass mirrors so one outage doesn't break search */
-
+/* OVERPASS API SEARCH WITH MIRROR FALLBACKS */
 const OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter"
 ];
 
-async function searchNearby(type){
-
-    if(!userLat || !userLng){
-
-        alert("Set your location first (GPS button or search box).");
+async function searchNearby(type) {
+    if (!userLat || !userLng) {
+        alert("Please turn on location or set an address first.");
         return;
     }
 
     const results = document.getElementById("results");
-
     results.innerHTML = `<div class="results-empty"><i class="fa-solid fa-spinner fa-spin"></i> Searching nearby ${type === "pharmacy" ? "pharmacies" : "hospitals"}...</div>`;
 
     markers.forEach(marker => map.removeLayer(marker));
@@ -1028,8 +813,7 @@ async function searchNearby(type){
     const radius = 10000;
     let query = "";
 
-    if(type === "pharmacy"){
-
+    if (type === "pharmacy") {
         query = `
         [out:json][timeout:25];
         (
@@ -1039,9 +823,7 @@ async function searchNearby(type){
         );
         out;
         `;
-
     } else {
-
         query = `
         [out:json][timeout:25];
         (
@@ -1055,360 +837,252 @@ async function searchNearby(type){
     let data = null;
     let lastError = null;
 
-    for(const endpoint of OVERPASS_ENDPOINTS){
-
-        try{
-
+    for (const endpoint of OVERPASS_ENDPOINTS) {
+        try {
             const response = await fetch(endpoint, {
-                method:"POST",
-                headers:{ "Content-Type":"application/x-www-form-urlencoded" },
-                body:`data=${encodeURIComponent(query)}`
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `data=${encodeURIComponent(query)}`
             });
 
-            if(!response.ok){
-                throw new Error(`HTTP ${response.status}`);
-            }
-
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             data = await response.json();
-
-            break; // success, stop trying further mirrors
-
-        }catch(err){
-
+            break; 
+        } catch (err) {
             console.warn(`Overpass endpoint failed (${endpoint}):`, err);
             lastError = err;
         }
     }
 
-    if(!data){
-
-        results.innerHTML =
-        `<div class="results-empty">Couldn't reach the places database right now.<br>${lastError ? lastError.message : ""}<br>Please try again in a moment.</div>`;
-
+    if (!data) {
+        results.innerHTML = `<div class="results-empty">Unable to search places right now.<br>${lastError ? lastError.message : ""}</div>`;
         return;
     }
 
-    if(!data.elements || data.elements.length === 0){
-
-        results.innerHTML = `<div class="results-empty">No ${type === "pharmacy" ? "pharmacies" : "hospitals"} found within 10 km.</div>`;
-        return;
-    }
-
-    displayPlaces(data.elements, type);
-
-}
-
-/* DISPLAY */
-
-function displayPlaces(places, type){
-
-    const results = document.getElementById("results");
-
-    results.innerHTML = "";
-
-    const valid = places.filter(p => p.lat && p.lon);
-
-    if(valid.length === 0){
-
+    if (!data.elements || data.elements.length === 0) {
         results.innerHTML = `<div class="results-empty">No ${type === "pharmacy" ? "pharmacies" : "hospitals"} found nearby.</div>`;
         return;
     }
 
-    valid
-    .map(place => ({
-        ...place,
-        _distance: parseFloat(calculateDistance(userLat,userLng,place.lat,place.lon))
-    }))
-    .sort((a,b) => a._distance - b._distance)
-    .forEach(place=>{
-
-        const lat = place.lat;
-        const lon = place.lon;
-
-        const name = place.tags?.name || (type === "pharmacy" ? "Pharmacy" : "Hospital");
-
-        const marker =
-        L.marker([lat,lon])
-        .addTo(map)
-        .bindPopup(name);
-
-        markers.push(marker);
-
-        const card = document.createElement("div");
-
-        card.className = "place-card";
-
-        card.innerHTML = `
-
-        <div class="place-name">${name}</div>
-
-        <div class="place-meta">
-        <span><i class="fa-solid fa-diamond-turn-right"></i> ${place._distance} km away</span>
-        </div>
-
-        <button class="route-btn" onclick="startRoute(${lat},${lon},'${name.replace(/'/g,"")}')">
-        <i class="fa-solid fa-car"></i> Start navigation
-        </button>
-
-        `;
-
-        results.appendChild(card);
-
-    });
-
+    displayPlaces(data.elements, type);
 }
 
-/* ROUTING */
+/* RENDER PLACES */
+function displayPlaces(places, type) {
+    const results = document.getElementById("results");
+    results.innerHTML = "";
 
-async function startRoute(lat,lng,name){
+    const validPlaces = places.filter(p => p.lat && p.lon);
 
-    if(!userLat || !userLng){
+    if (validPlaces.length === 0) {
+        results.innerHTML = `<div class="results-empty">No places found nearby.</div>`;
+        return;
+    }
 
-        alert("Set your location first.");
+    validPlaces
+        .map(place => ({
+            ...place,
+            _distance: parseFloat(calculateDistance(userLat, userLng, place.lat, place.lon))
+        }))
+        .sort((a, b) => a._distance - b._distance)
+        .forEach(place => {
+            const lat = place.lat;
+            const lon = place.lon;
+            const name = place.tags?.name || (type === "pharmacy" ? "Pharmacy" : "Medical Hospital");
+
+            const marker = L.marker([lat, lon]).addTo(map).bindPopup(name);
+            markers.push(marker);
+
+            const card = document.createElement("div");
+            card.className = "place-card";
+            card.innerHTML = `
+                <div class="place-name">${name}</div>
+                <div class="place-meta">
+                    <span><i class="fa-solid fa-diamond-turn-right"></i> ${place._distance} KM away</span>
+                </div>
+                <button class="route-btn" onclick="startRoute(${lat},${lon},'${name.replace(/'/g, "")}')">
+                    🚗 Start Navigation
+                </button>
+            `;
+            results.appendChild(card);
+        });
+}
+
+/* ROUTING CALCULATOR */
+async function startRoute(lat, lng, name) {
+    if (!userLat || !userLng) {
+        alert("Enable location first");
         return;
     }
 
     destinationLat = lat;
     destinationLng = lng;
     destinationName = name;
-
     currentStepIndex = 0;
 
-    if(routeLayer){
-        map.removeLayer(routeLayer);
-    }
+    if (routeLayer) map.removeLayer(routeLayer);
+    if (navigationInterval) clearInterval(navigationInterval);
 
-    if(navigationInterval){
-        clearInterval(navigationInterval);
-    }
-
-    try{
-
-        const url =
-        `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${lng},${lat}?overview=full&steps=true&geometries=geojson`;
-
+    try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${lng},${lat}?overview=full&steps=true&geometries=geojson`;
         const response = await fetch(url);
-
-        if(!response.ok){
-            throw new Error(`HTTP ${response.status}`);
-        }
-
         const data = await response.json();
 
-        if(!data.routes || data.routes.length === 0){
-
-            alert("No driving route could be found to this destination.");
+        if (!data.routes || data.routes.length === 0) {
+            alert("Route not found");
             return;
         }
 
         const route = data.routes[0];
+        const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
 
-        const coordinates =
-        route.geometry.coordinates.map(coord => [coord[1],coord[0]]);
-
-        routeLayer =
-        L.polyline(coordinates, { color:"#00e5ff", weight:6, opacity:0.85 }).addTo(map);
-
-        map.fitBounds(routeLayer.getBounds(), { padding:[40,40] });
+        routeLayer = L.polyline(coordinates, { color: "#00d9ff", weight: 6, opacity: 0.85 }).addTo(map);
+        map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
 
         currentSteps = route.legs[0].steps;
 
         speakText(`Navigation started to ${name}`);
-
         speakNextDirection();
 
-        navigationInterval = setInterval(()=>{
+        navigationInterval = setInterval(() => {
             speakNextDirection();
-        },20000);
+        }, 20000);
 
         updateLiveDistance();
 
-    }catch(err){
-
+    } catch (err) {
         console.error(err);
-        alert("Couldn't calculate a route. Please check your connection and try again.");
+        alert("Navigation failed to calculate route.");
     }
-
 }
 
-/* NEXT DIRECTION */
-
-function speakNextDirection(){
-
-    if(currentStepIndex >= currentSteps.length){
-
+/* TURN-BY-TURN VOICE DIRECTIONS */
+function speakNextDirection() {
+    if (currentStepIndex >= currentSteps.length) {
         speakText("Destination reached");
         clearInterval(navigationInterval);
         return;
     }
 
     const step = currentSteps[currentStepIndex];
-
-    if(step.maneuver && step.maneuver.instruction){
+    if (step.maneuver && step.maneuver.instruction) {
         speakText(step.maneuver.instruction);
     }
-
     currentStepIndex++;
-
 }
 
-/* DISTANCE */
+/* UPDATE LIVE DISTANCE & ETA */
+function updateLiveDistance() {
+    if (!destinationLat) return;
 
-function updateLiveDistance(){
+    const distance = calculateDistance(userLat, userLng, destinationLat, destinationLng);
+    document.getElementById("distanceLeft").innerText = `${distance} KM`;
 
-    if(!destinationLat) return;
-
-    const distance = calculateDistance(userLat,userLng,destinationLat,destinationLng);
-
-    document.getElementById("distanceLeft").innerText = `${distance} km`;
-
-    if(currentSpeed > 0){
-
+    if (currentSpeed > 0) {
         const hours = distance / currentSpeed;
         const mins = Math.round(hours * 60);
-
-        document.getElementById("arrivalTime").innerText = `${mins} min`;
-
+        document.getElementById("arrivalTime").innerText = `${mins} Minutes`;
     } else {
-
-        document.getElementById("arrivalTime").innerText = "-- (not moving)";
+        document.getElementById("arrivalTime").innerText = "--";
     }
-
 }
 
-/* CALCULATE */
-
-function calculateDistance(lat1,lon1,lat2,lon2){
-
+/* HAVERSINE DISTANCE CALCULATOR */
+function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371;
-
-    const dLat = (lat2-lat1) * Math.PI/180;
-    const dLon = (lon2-lon1) * Math.PI/180;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
 
     const a =
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2);
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
-    const c = 2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-
-    return (R*c).toFixed(2);
-
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return (R * c).toFixed(2);
 }
 
-/* SPEAK */
-
-function speakText(text){
-
-    if(!("speechSynthesis" in window)) return;
-
+/* TEXT TO SPEECH */
+function speakText(text) {
+    if (!("speechSynthesis" in window)) return;
     speechSynthesis.cancel();
 
     const speech = new SpeechSynthesisUtterance(text);
     speech.lang = "en-US";
     speech.rate = 0.95;
-
     speechSynthesis.speak(speech);
-
 }
 
-/* AI CHAT — calls the Claude API directly since this page has no backend server */
-
-async function sendAIMessage(){
-
+/* FLASK BACKEND AI CHAT FUNCTIONALITY */
+async function sendAIMessage() {
     const input = document.getElementById("chatInput");
     const msg = input.value.trim();
 
-    if(msg === "") return;
+    if (msg === "") return;
 
     addChat(msg, "user");
     input.value = "";
 
     const chatBox = document.getElementById("chatMessages");
-
     const thinkingDiv = document.createElement("div");
     thinkingDiv.id = "thinkingBubble";
-    thinkingDiv.classList.add("chat-bubble","ai","typing");
+    thinkingDiv.classList.add("chat-bubble", "ai");
     thinkingDiv.innerText = "Thinking...";
     chatBox.appendChild(thinkingDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    const contextSummary = `
-Current context:
-- User location: ${userLat && userLng ? `${userLat.toFixed(4)}, ${userLng.toFixed(4)}` : "not set"}
-- Destination: ${destinationName || "none selected"}
-- Distance remaining: ${document.getElementById("distanceLeft").innerText}
-- Estimated arrival: ${document.getElementById("arrivalTime").innerText}
-- Current speed: ${currentSpeed} km/h
-- Local time: ${new Date().toLocaleTimeString()}
-`;
-
-    chatHistory.push({ role:"user", content: msg });
-
-    try{
-
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-            method:"POST",
-            headers:{ "Content-Type":"application/json" },
+    try {
+        const response = await fetch("/map_ai", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify({
-                model:"claude-sonnet-4-6",
-                max_tokens:1000,
-                system:
-                `You are the in-app AI assistant for MediPulse, a medical navigation app. ` +
-                `Help with route/ETA questions using the context provided, and answer general, ` +
-                `non-diagnostic first-aid or health-navigation questions briefly and clearly. ` +
-                `For anything urgent, tell the user to call local emergency services. ` +
-                `Keep replies short (2-4 sentences) since they're also read aloud.\n\n${contextSummary}`,
-                messages: chatHistory
+                message: msg,
+                latitude: userLat,
+                longitude: userLng,
+                destination: destinationName,
+                distance: document.getElementById("distanceLeft").innerText,
+                duration: document.getElementById("arrivalTime").innerText,
+                speed: currentSpeed,
+                current_time: new Date().toLocaleTimeString()
             })
         });
 
         const data = await response.json();
 
-        const reply =
-        data?.content?.map(block => block.text || "").join(" ").trim()
-        || "I couldn't process that just now — please try again.";
+        const targetBubble = document.getElementById("thinkingBubble");
+        if (targetBubble) targetBubble.remove();
 
-        chatHistory.push({ role:"assistant", content: reply });
+        const replyText = data.reply || "I didn't receive a response.";
+        addChat(replyText, "ai");
+        speakText(replyText);
 
-        document.getElementById("thinkingBubble")?.remove();
-
-        addChat(reply, "ai");
-        speakText(reply);
-
-    }catch(err){
-
+    } catch (err) {
         console.error(err);
+        const targetBubble = document.getElementById("thinkingBubble");
+        if (targetBubble) targetBubble.remove();
 
-        document.getElementById("thinkingBubble")?.remove();
-
-        addChat("I couldn't connect just now. Please try again in a moment.", "ai");
+        addChat("AI connection failed. Ensure Flask server is running.", "ai");
     }
 }
 
-/* CHAT UI */
-
-function addChat(text,type){
-
+/* CHAT UI BUBBLE HELPER */
+function addChat(text, type) {
     const box = document.getElementById("chatMessages");
-
     const div = document.createElement("div");
     div.classList.add("chat-bubble", type);
     div.innerText = text;
-
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
-
 }
 
-/* VOICE INPUT */
-
-function startVoiceInput(){
-
+/* VOICE RECOGNITION INPUT */
+function startVoiceInput() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    if(!SpeechRecognition){
-        alert("Voice recognition isn't supported in this browser.");
+    if (!SpeechRecognition) {
+        alert("Voice recognition is not supported in this browser.");
         return;
     }
 
@@ -1416,44 +1090,40 @@ function startVoiceInput(){
     recognition.lang = "en-US";
     recognition.start();
 
-    recognition.onresult = function(event){
-
+    recognition.onresult = function (event) {
         const text = event.results[0][0].transcript;
         document.getElementById("chatInput").value = text;
         sendAIMessage();
-
     };
 
-    recognition.onerror = function(){
-        alert("Couldn't hear that. Please try again or type instead.");
+    recognition.onerror = function () {
+        alert("Speech recognition error. Please try again or type.");
     };
-
 }
 
-/* REPEAT */
-
-function repeatDirections(){
-
-    if(currentSteps.length > 0){
+/* REPEAT DIRECTIONS */
+function repeatDirections() {
+    if (currentSteps.length > 0) {
         speakNextDirection();
     } else {
         speakText("No active navigation");
     }
-
 }
 
-/* LANDSCAPE HINT — informational only, never blocks the UI */
+/* STRICT ORIENTATION CHECK (PORTRAIT BLOCKER) */
+function checkOrientation() {
+    const overlay = document.getElementById("rotateOverlay");
 
-function checkOrientation(){
-
-    const hint = document.getElementById("landscapeHint");
-
-    if(window.innerHeight > window.innerWidth && window.innerWidth < 820){
-        hint.style.display = "flex";
-    } else {
-        hint.style.display = "none";
+    /* PORTRAIT MODE -> SHOW ROTATION SCREEN & BLOCK UI */
+    if (window.innerHeight > window.innerWidth) {
+        overlay.style.display = "flex";
+        document.body.style.overflow = "hidden";
     }
-
+    /* LANDSCAPE MODE -> ALLOW INTERFACE ACCESS */
+    else {
+        overlay.style.display = "none";
+        document.body.style.overflow = "hidden";
+    }
 }
 
 checkOrientation();
