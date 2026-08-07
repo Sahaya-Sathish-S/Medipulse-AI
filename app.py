@@ -1,5 +1,6 @@
 import base64
 import io
+import json
 import os
 from datetime import datetime, timedelta
 
@@ -598,8 +599,66 @@ You are made by Sahaya Sathish S he is an aspiring first year computer Science E
 
 
 # =========================================================
-# MEDICINE AI
+# MEDICINE AI — GUIDED SYMPTOM CHECK (3-5 QUESTIONS -> CONFIRM -> FINAL)
 # =========================================================
+
+def count_questions_asked(history):
+    """Counts how many 'question' stage turns the AI has already asked."""
+    count = 0
+    for msg in history:
+        if msg.get("role") == "assistant":
+            try:
+                parsed = json.loads(msg.get("content", ""))
+                if parsed.get("stage") == "question":
+                    count += 1
+            except Exception:
+                pass
+    return count
+
+
+def build_medicine_ai_system_prompt(question_count):
+
+    return f"""
+You are MediPulse Emergency Medicine Finder AI, a careful pharmacy/triage assistant.
+
+Your job in this conversation:
+1. The user describes a health problem or symptom.
+2. Ask clarifying questions ONE AT A TIME to clearly understand the problem
+   (duration, severity, other symptoms, age, allergies, existing conditions, etc).
+   Ask a MINIMUM of 3 and a MAXIMUM of 5 questions total before moving on.
+3. Once you have asked enough questions (at least 3, no more than 5) and understand
+   the problem clearly, STOP asking questions. Instead, summarize the FULL problem
+   in your own words and ask the user to confirm it is correct.
+4. Once the user confirms, compile everything discussed into a final answer with
+   suggested OTC medicine name(s), dosage, general advice, and safety warnings.
+   Always include a disclaimer to see a doctor for anything serious or if symptoms
+   persist or worsen.
+
+You have already asked {question_count} clarifying question(s) so far in this conversation.
+
+CRITICAL: Respond with STRICT JSON ONLY. No markdown, no code fences, no text outside
+the JSON object. Use exactly one of these shapes:
+
+Clarifying question:
+{{"stage":"question","message":"<your single question>"}}
+
+Confirmation step:
+{{"stage":"confirm","message":"<summary of the problem you understood, ending by asking the user to confirm>"}}
+
+Final answer (ONLY after the user has confirmed):
+{{"stage":"final","message":"<short empathetic intro line>","medicines":[{{"name":"<medicine name>","dosage":"<dosage>","instructions":"<how/when to take>"}}],"advice":"<general advice>","warning":"<safety warning / when to seek emergency care>"}}
+
+Rules:
+- Never ask more than 5 questions total.
+- Never skip the confirm stage before giving the final answer.
+- If at any point the symptoms suggest a medical emergency (e.g. chest pain,
+  difficulty breathing, severe bleeding, loss of consciousness, stroke signs),
+  skip straight to stage "final" and urgently advise calling emergency services /
+  going to the ER, with the warning field emphasizing urgency instead of OTC medicine.
+- Keep each question short and directly useful for narrowing down the right medicine.
+- Only output the JSON object. Nothing else.
+"""
+
 
 @app.route("/medicine_ai", methods=["POST"])
 def medicine_ai():
@@ -608,56 +667,59 @@ def medicine_ai():
 
         data = request.get_json()
 
-        symptoms = data.get("message", "")
+        user_message = data.get("message", "")
+        history = data.get("history", [])
 
-        prompt = f"""
-User symptoms:
-
-{symptoms}
-
-Suggest:
-- OTC medicine
-- Dosage
-- Advice
-- Warning
-You can search the medicine from anywhere the medicine should be properly relate to the problem that user have.
-Keep response short.
-"""
+        question_count = count_questions_asked(history)
 
         messages = [
-
             {
-
                 "role": "system",
-
-                "content": "You are a pharmacy assistant."
-
-            },
-
-            {
-
-                "role": "user",
-
-                "content": prompt
-
+                "content": build_medicine_ai_system_prompt(question_count)
             }
-
         ]
 
-        reply = ask_ai(messages)
+        # carry forward prior turns (assistant turns are stored as JSON strings)
+        for msg in history:
+            messages.append({
+                "role": msg.get("role", "user"),
+                "content": msg.get("content", "")
+            })
 
-        return jsonify({
-
-            "reply": reply
-
+        messages.append({
+            "role": "user",
+            "content": user_message
         })
+
+        raw_reply = ask_ai(messages, temperature=0.3, max_tokens=700)
+
+        # clean up in case the model wraps JSON in code fences
+        cleaned = raw_reply.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.strip("`")
+            if cleaned.lower().startswith("json"):
+                cleaned = cleaned[4:]
+            cleaned = cleaned.strip()
+
+        try:
+            parsed = json.loads(cleaned)
+        except Exception:
+            # graceful fallback so the chat doesn't break if the model
+            # returns something that isn't valid JSON
+            parsed = {
+                "stage": "question",
+                "message": raw_reply.strip() or "Could you tell me a bit more about your symptoms?"
+            }
+
+        return jsonify(parsed)
 
     except Exception as e:
 
+        print("MEDICINE AI ERROR:", str(e))
+
         return jsonify({
-
-            "reply": str(e)
-
+            "stage": "question",
+            "message": "Sorry, something went wrong. Could you describe your symptom again?"
         })
 
 
