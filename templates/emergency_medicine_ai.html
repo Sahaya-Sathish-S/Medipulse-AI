@@ -1,6 +1,6 @@
 <!-- =========================================================
-FILE NAME: emergency_medicine_ai.html
-ONLY BLOCK SETUP PAGE
+FILE NAME: emergency.html
+AI EMERGENCY MEDICINE FINDER — GUIDED Q&A CHAT
 ========================================================= -->
 
 <!DOCTYPE html>
@@ -9,18 +9,15 @@ ONLY BLOCK SETUP PAGE
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>MediPulse Medicine Block Setup</title>
+<title>MediPulse Emergency Medicine Finder</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap"
 rel="stylesheet">
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 
@@ -31,7 +28,6 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
 }
 
 body{
-
     font-family:'Poppins',sans-serif;
 
     background:
@@ -47,227 +43,325 @@ body{
     background-attachment:fixed;
 
     color:white;
-
     overflow-x:hidden;
 }
 
-/* CONTAINER */
-
 .container{
-
     width:100%;
-
     min-height:100vh;
-
     padding:30px;
+    display:flex;
+    flex-direction:column;
 }
-
-/* HEADER */
 
 .logo{
-
-    font-size:38px;
-
+    font-size:34px;
     text-align:center;
-
     font-family:'Orbitron',sans-serif;
-
     color:#00d9ff;
-
-    margin-bottom:30px;
-
-    text-shadow:
-    0 0 15px #00d9ff,
-    0 0 30px #ff00ff;
+    margin-bottom:8px;
+    text-shadow:0 0 15px #00d9ff, 0 0 30px #ff00ff;
 }
 
-/* BOX */
-
-.setup-box{
-
-    max-width:850px;
-
-    margin:auto;
-
-    background:rgba(255,255,255,0.05);
-
-    border-radius:25px;
-
-    padding:30px;
-
-    border:1px solid rgba(255,255,255,0.08);
-}
-
-/* TITLE */
-
-.title{
-
-    font-size:28px;
-
+.subtitle{
+    text-align:center;
+    font-size:14px;
+    color:rgba(255,255,255,0.6);
     margin-bottom:25px;
-
-    color:#00d9ff;
 }
 
-/* INPUTS */
+/* PROGRESS */
 
-.input-group{
-
-    margin-bottom:22px;
-}
-
-.input-group label{
-
-    display:block;
-
-    margin-bottom:10px;
-
-    font-size:15px;
-}
-
-.input-group input,
-.input-group textarea{
-
+.progress-wrap{
+    max-width:850px;
+    margin:0 auto 20px auto;
     width:100%;
+}
 
-    border:none;
+.progress-label{
+    font-size:12px;
+    color:rgba(255,255,255,0.55);
+    margin-bottom:6px;
+    display:flex;
+    justify-content:space-between;
+}
 
-    outline:none;
-
-    padding:18px;
-
-    border-radius:18px;
-
+.progress-bar{
+    height:6px;
+    width:100%;
     background:rgba(255,255,255,0.08);
+    border-radius:10px;
+    overflow:hidden;
+}
 
-    color:white;
+.progress-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(135deg,#00d9ff,#7b2cff,#ff00ff);
+    transition:width 0.4s ease;
+}
 
+/* CHAT WINDOW */
+
+.chat-box{
+    max-width:850px;
+    margin:0 auto;
+    width:100%;
+    flex:1;
+    background:rgba(255,255,255,0.05);
+    border-radius:25px;
+    padding:25px;
+    border:1px solid rgba(255,255,255,0.08);
+    display:flex;
+    flex-direction:column;
+}
+
+.messages{
+    flex:1;
+    min-height:340px;
+    max-height:55vh;
+    overflow-y:auto;
+    padding-right:6px;
+    margin-bottom:18px;
+}
+
+.messages::-webkit-scrollbar{
+    width:6px;
+}
+.messages::-webkit-scrollbar-thumb{
+    background:rgba(0,217,255,0.4);
+    border-radius:10px;
+}
+
+.msg{
+    max-width:82%;
+    padding:14px 18px;
+    border-radius:18px;
+    margin-bottom:14px;
+    line-height:1.55;
+    font-size:15px;
+    animation:fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn{
+    from{opacity:0; transform:translateY(6px);}
+    to{opacity:1; transform:translateY(0);}
+}
+
+.msg.ai{
+    background:rgba(0,217,255,0.10);
+    border:1px solid rgba(0,217,255,0.25);
+    margin-right:auto;
+    border-bottom-left-radius:4px;
+}
+
+.msg.user{
+    background:rgba(123,44,255,0.20);
+    border:1px solid rgba(123,44,255,0.35);
+    margin-left:auto;
+    border-bottom-right-radius:4px;
+    text-align:right;
+}
+
+.msg.system-note{
+    text-align:center;
+    max-width:100%;
+    font-size:12px;
+    color:rgba(255,255,255,0.45);
+    background:none;
+    border:none;
+    padding:4px;
+}
+
+/* FINAL ANSWER CARD */
+
+.final-card{
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(0,217,255,0.3);
+    border-radius:20px;
+    padding:20px;
+    margin-right:auto;
+    max-width:92%;
+    margin-bottom:14px;
+}
+
+.final-card h3{
+    color:#00d9ff;
+    font-size:17px;
+    margin-bottom:12px;
+}
+
+.final-card .intro{
+    margin-bottom:14px;
     font-size:15px;
 }
 
-textarea{
-
-    resize:none;
-
-    height:120px;
+.med-item{
+    background:rgba(255,255,255,0.05);
+    border-left:4px solid #00d9ff;
+    border-radius:12px;
+    padding:12px 16px;
+    margin-bottom:10px;
 }
 
-/* BUTTON */
-
-.main-btn{
-
-    width:100%;
-
-    border:none;
-
-    padding:18px;
-
-    border-radius:18px;
-
-    cursor:pointer;
-
-    font-size:16px;
-
+.med-item .med-name{
     font-weight:600;
+    color:#00d9ff;
+    margin-bottom:4px;
+    font-size:15px;
+}
 
+.med-item .med-dosage{
+    font-size:14px;
+    color:rgba(255,255,255,0.85);
+    margin-bottom:2px;
+}
+
+.med-item .med-instructions{
+    font-size:13px;
+    color:rgba(255,255,255,0.65);
+}
+
+.final-card .advice-block,
+.final-card .warning-block{
+    margin-top:14px;
+    padding:12px 16px;
+    border-radius:12px;
+    font-size:14px;
+    line-height:1.5;
+}
+
+.advice-block{
+    background:rgba(123,44,255,0.12);
+    border-left:4px solid #7b2cff;
+}
+
+.warning-block{
+    background:rgba(255,0,80,0.10);
+    border-left:4px solid #ff3366;
+    color:#ffb3c1;
+}
+
+.disclaimer{
+    margin-top:12px;
+    font-size:11.5px;
+    color:rgba(255,255,255,0.4);
+    text-align:center;
+}
+
+/* CONFIRM BUTTONS */
+
+.confirm-actions{
+    display:flex;
+    gap:12px;
+    margin-top:6px;
+    margin-bottom:14px;
+    max-width:82%;
+}
+
+.confirm-btn{
+    flex:1;
+    border:none;
+    padding:12px;
+    border-radius:14px;
+    font-weight:600;
+    cursor:pointer;
+    font-size:14px;
     color:white;
+}
 
-    margin-top:10px;
+.confirm-btn.yes{
+    background:linear-gradient(135deg,#00d9ff,#7b2cff);
+}
 
-    background:
-    linear-gradient(
-        135deg,
-        #00d9ff,
-        #7b2cff,
-        #ff00ff
-    );
+.confirm-btn.no{
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.2);
+}
 
+/* TYPING INDICATOR */
+
+.typing{
+    display:flex;
+    gap:5px;
+    padding:14px 18px;
+    background:rgba(0,217,255,0.10);
+    border:1px solid rgba(0,217,255,0.25);
+    border-radius:18px;
+    width:60px;
+    margin-bottom:14px;
+}
+
+.typing span{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#00d9ff;
+    animation:bounce 1.2s infinite;
+}
+
+.typing span:nth-child(2){ animation-delay:0.2s; }
+.typing span:nth-child(3){ animation-delay:0.4s; }
+
+@keyframes bounce{
+    0%,60%,100%{ transform:translateY(0); opacity:0.5; }
+    30%{ transform:translateY(-5px); opacity:1; }
+}
+
+/* INPUT ROW */
+
+.input-row{
+    display:flex;
+    gap:12px;
+}
+
+.input-row input{
+    flex:1;
+    border:none;
+    outline:none;
+    padding:16px 18px;
+    border-radius:18px;
+    background:rgba(255,255,255,0.08);
+    color:white;
+    font-size:15px;
+}
+
+.send-btn{
+    border:none;
+    padding:0 24px;
+    border-radius:18px;
+    cursor:pointer;
+    font-weight:600;
+    color:white;
+    background:linear-gradient(135deg,#00d9ff,#7b2cff,#ff00ff);
     background-size:300% 300%;
-
     animation:gradientMove 5s ease infinite;
 }
 
 @keyframes gradientMove{
-
-    0%{
-        background-position:0% 50%;
-    }
-
-    50%{
-        background-position:100% 50%;
-    }
-
-    100%{
-        background-position:0% 50%;
-    }
-
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
 }
 
-/* BLOCK CARDS */
-
-.block-container{
-
-    margin-top:30px;
+.restart-btn{
+    margin-top:14px;
+    width:100%;
+    border:none;
+    padding:14px;
+    border-radius:16px;
+    cursor:pointer;
+    font-weight:600;
+    color:white;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.15);
 }
-
-.block-card{
-
-    background:rgba(255,255,255,0.06);
-
-    border-radius:22px;
-
-    padding:22px;
-
-    margin-bottom:20px;
-
-    border:1px solid rgba(255,255,255,0.08);
-}
-
-.block-card h2{
-
-    color:#00d9ff;
-
-    margin-bottom:20px;
-}
-
-/* SAVED */
-
-.saved-box{
-
-    margin-top:30px;
-}
-
-.saved-card{
-
-    background:rgba(255,255,255,0.05);
-
-    padding:20px;
-
-    border-radius:18px;
-
-    margin-bottom:18px;
-
-    border-left:5px solid #00d9ff;
-
-    line-height:2;
-}
-
-/* MOBILE */
 
 @media(max-width:768px){
-
-    .container{
-        padding:18px;
-    }
-
-    .setup-box{
-        padding:22px;
-    }
-
-    .logo{
-        font-size:30px;
-    }
-
+    .container{ padding:16px; }
+    .chat-box{ padding:16px; }
+    .logo{ font-size:26px; }
+    .msg, .final-card{ max-width:94%; }
 }
 
 </style>
@@ -278,57 +372,37 @@ textarea{
 
 <div class="container">
 
-    <div class="logo">
-        MediPulse AI
+    <div class="logo">MediPulse AI</div>
+    <div class="subtitle">Emergency Medicine Finder — guided symptom check</div>
+
+    <div class="progress-wrap">
+        <div class="progress-label">
+            <span id="progressText">Tell us what's wrong</span>
+            <span id="progressStage">Step 1</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
     </div>
 
-    <div class="setup-box">
+    <div class="chat-box">
 
-        <div class="title">
-            Worker Medicine Block Setup
+        <div class="messages" id="messages"></div>
+
+        <div class="input-row" id="inputRow">
+            <input type="text" id="userInput"
+            placeholder="Describe your symptom or problem..."
+            onkeydown="if(event.key==='Enter'){sendMessage();}">
+
+            <button class="send-btn" onclick="sendMessage()">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
         </div>
 
-        <!-- TOTAL BLOCK -->
-
-        <div class="input-group">
-
-            <label>
-                How Many Blocks Are Available?
-            </label>
-
-            <input type="number"
-            id="totalBlocks"
-            placeholder="Example : 4">
-
-        </div>
-
-        <button class="main-btn"
-        onclick="generateBlocks()">
-
-            Generate Block Setup
-
+        <button class="restart-btn" id="restartBtn"
+        style="display:none;" onclick="restartChat()">
+            Start a New Check
         </button>
-
-        <!-- GENERATED BLOCKS -->
-
-        <div class="block-container"
-        id="blockContainer"></div>
-
-        <!-- SAVE BUTTON -->
-
-        <button class="main-btn"
-        id="saveBtn"
-        style="display:none;"
-        onclick="saveAllBlocks()">
-
-            Save & Continue
-
-        </button>
-
-        <!-- SAVED DATA -->
-
-        <div class="saved-box"
-        id="savedBox"></div>
 
     </div>
 
@@ -336,242 +410,256 @@ textarea{
 
 <script>
 
-/* SUPABASE */
-
-const supabaseUrl =
-"https://covmgrilycetqtpwolfl.supabase.co";
-
-const supabaseKey =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc";
-
-const supabaseClient =
-supabase.createClient(
-    supabaseUrl,
-    supabaseKey
-);
-
-/* GENERATE BLOCKS */
-
-function generateBlocks(){
-
-    const total =
-    document.getElementById(
-        "totalBlocks"
-    ).value;
-
-    const container =
-    document.getElementById(
-        "blockContainer"
-    );
-
-    container.innerHTML = "";
-
-    if(total <= 0){
-
-        alert(
-            "Enter valid block count"
-        );
-
-        return;
-    }
-
-    for(let i=1;i<=total;i++){
-
-        container.innerHTML += `
-
-        <div class="block-card">
-
-            <h2>
-                Block ${i}
-            </h2>
-
-            <div class="input-group">
-
-                <label>
-                    Block Number
-                </label>
-
-                <input type="text"
-                id="blockNumber${i}"
-                placeholder="Example : Block ${i}">
-
-            </div>
-
-            <div class="input-group">
-
-                <label>
-                    Medicines Available
-                </label>
-
-                <textarea
-                id="medicineNames${i}"
-                placeholder="Example :
-Paracetamol
-Dolo 650
-Crocin"></textarea>
-
-            </div>
-
-        </div>
-
-        `;
-
-    }
-
-    document.getElementById(
-        "saveBtn"
-    ).style.display = "block";
-
-}
-
-/* SAVE */
-
-async function saveAllBlocks(){
-
-    const total =
-    document.getElementById(
-        "totalBlocks"
-    ).value;
-
-    if(total <= 0){
-
-        return;
-    }
-
-    for(let i=1;i<=total;i++){
-
-        const blockNumber =
-        document.getElementById(
-            `blockNumber${i}`
-        ).value;
-
-        const medicines =
-        document.getElementById(
-            `medicineNames${i}`
-        ).value;
-
-        if(
-            !blockNumber ||
-            !medicines
-        ){
-
-            alert(
-                `Fill Block ${i} completely`
-            );
-
-            return;
-        }
-
-        /* SPLIT MEDICINES */
-
-        const medicineList =
-        medicines
-        .split("\n")
-        .filter(
-            item => item.trim() !== ""
-        );
-
-        /* SAVE EACH MEDICINE */
-
-        for(let medicine of medicineList){
-
-            const {
-                error
-            } =
-            await supabaseClient
-            .from("medicines")
-            .insert([{
-
-                medicine_name:
-                medicine.trim(),
-
-                category:
-                "General",
-
-                block_number:
-                blockNumber,
-
-                dosage:"",
-                
-                stock:0
-
-            }]);
-
-            if(error){
-
-                console.log(error);
-
-            }
-
-        }
-
-    }
-
-    alert(
-        "All Blocks Saved Successfully"
-    );
-
-    loadSavedBlocks();
-
-    /* NEXT PAGE */
-
-    setTimeout(()=>{
-
-        window.location.href =
-        "/medicine-search";
-
-    },1500);
-
-}
-
-/* LOAD SAVED */
-
-async function loadSavedBlocks(){
-
-    const {
-        data,
-        error
-    } =
-    await supabaseClient
-    .from("medicines")
-    .select("*");
-
-    const savedBox =
-    document.getElementById(
-        "savedBox"
-    );
-
-    savedBox.innerHTML = "";
-
-    if(data){
-
-        data.forEach(item=>{
-
-            savedBox.innerHTML += `
-
-            <div class="saved-card">
-
-                <strong>
-                    ${item.block_number}
-                </strong>
-
-                <br>
-
-                💊 ${item.medicine_name}
-
-            </div>
-
-            `;
-
-        });
-
-    }
-
-}
+/* STATE */
+
+let history = [];        // full conversation sent to backend each turn
+let questionsAsked = 0;  // how many "question" stage turns have happened
+let awaitingConfirm = false;
+let finished = false;
+
+const messagesEl = document.getElementById("messages");
+const inputRow = document.getElementById("inputRow");
+const restartBtn = document.getElementById("restartBtn");
+const progressFill = document.getElementById("progressFill");
+const progressText = document.getElementById("progressText");
+const progressStage = document.getElementById("progressStage");
 
 /* INIT */
 
-loadSavedBlocks();
+addAIMessage(
+    "Hi, I'm here to help find the right medicine for you. " +
+    "Tell me what's bothering you — for example, \"I have a headache and mild fever since this morning.\""
+);
+
+/* HELPERS */
+
+function scrollToBottom(){
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function addUserMessage(text){
+    const div = document.createElement("div");
+    div.className = "msg user";
+    div.textContent = text;
+    messagesEl.appendChild(div);
+    scrollToBottom();
+}
+
+function addAIMessage(text){
+    const div = document.createElement("div");
+    div.className = "msg ai";
+    div.textContent = text;
+    messagesEl.appendChild(div);
+    scrollToBottom();
+}
+
+function addSystemNote(text){
+    const div = document.createElement("div");
+    div.className = "msg system-note";
+    div.textContent = text;
+    messagesEl.appendChild(div);
+    scrollToBottom();
+}
+
+function showTyping(){
+    const div = document.createElement("div");
+    div.className = "typing";
+    div.id = "typingIndicator";
+    div.innerHTML = "<span></span><span></span><span></span>";
+    messagesEl.appendChild(div);
+    scrollToBottom();
+}
+
+function hideTyping(){
+    const t = document.getElementById("typingIndicator");
+    if(t) t.remove();
+}
+
+function updateProgress(stage){
+
+    if(stage === "question"){
+        const pct = Math.min((questionsAsked / 5) * 70, 70);
+        progressFill.style.width = pct + "%";
+        progressText.textContent = "Understanding your problem...";
+        progressStage.textContent = `Question ${questionsAsked}`;
+    } else if(stage === "confirm"){
+        progressFill.style.width = "80%";
+        progressText.textContent = "Confirming your problem";
+        progressStage.textContent = "Almost there";
+    } else if(stage === "final"){
+        progressFill.style.width = "100%";
+        progressText.textContent = "Done";
+        progressStage.textContent = "Result ready";
+    }
+}
+
+function renderFinalCard(data){
+
+    const card = document.createElement("div");
+    card.className = "final-card";
+
+    let medsHtml = "";
+    (data.medicines || []).forEach(m => {
+        medsHtml += `
+        <div class="med-item">
+            <div class="med-name">💊 ${escapeHtml(m.name || "")}</div>
+            <div class="med-dosage">Dosage: ${escapeHtml(m.dosage || "As directed")}</div>
+            <div class="med-instructions">${escapeHtml(m.instructions || "")}</div>
+        </div>`;
+    });
+
+    card.innerHTML = `
+        <h3>Recommendation</h3>
+        <div class="intro">${escapeHtml(data.message || "")}</div>
+        ${medsHtml}
+        ${data.advice ? `<div class="advice-block"><strong>Advice:</strong> ${escapeHtml(data.advice)}</div>` : ""}
+        ${data.warning ? `<div class="warning-block"><strong>⚠ Warning:</strong> ${escapeHtml(data.warning)}</div>` : ""}
+        <div class="disclaimer">
+            This is AI-generated guidance and not a substitute for professional medical advice.
+            Please consult a doctor for anything serious or if symptoms persist or worsen.
+        </div>
+    `;
+
+    messagesEl.appendChild(card);
+    scrollToBottom();
+}
+
+function renderConfirmButtons(){
+
+    const wrap = document.createElement("div");
+    wrap.className = "confirm-actions";
+    wrap.id = "confirmActions";
+
+    wrap.innerHTML = `
+        <button class="confirm-btn yes" onclick="handleConfirm(true)">Yes, that's correct</button>
+        <button class="confirm-btn no" onclick="handleConfirm(false)">No, let me clarify</button>
+    `;
+
+    messagesEl.appendChild(wrap);
+    scrollToBottom();
+}
+
+function removeConfirmButtons(){
+    const el = document.getElementById("confirmActions");
+    if(el) el.remove();
+}
+
+function escapeHtml(str){
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+/* MAIN SEND */
+
+async function sendMessage(){
+
+    if(finished) return;
+
+    const input = document.getElementById("userInput");
+    const text = input.value.trim();
+
+    if(!text) return;
+
+    addUserMessage(text);
+    input.value = "";
+    input.disabled = true;
+    removeConfirmButtons();
+
+    await callBackend(text);
+
+    input.disabled = false;
+    input.focus();
+}
+
+async function handleConfirm(isYes){
+
+    removeConfirmButtons();
+
+    if(isYes){
+        addUserMessage("Yes, that's correct.");
+        await callBackend("Yes, that's correct, please give the solution now.");
+    } else {
+        addUserMessage("No, let me clarify.");
+        addAIMessage("No problem — please tell me what I got wrong or add more detail.");
+        history.push({ role: "assistant", content: JSON.stringify({stage:"question", message:"Please tell me what I got wrong or add more detail."}) });
+    }
+}
+
+async function callBackend(userText){
+
+    showTyping();
+
+    try{
+
+        const response = await fetch("/medicine_ai", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                message: userText,
+                history: history
+            })
+        });
+
+        const data = await response.json();
+
+        hideTyping();
+
+        // record turns for context on the next call
+        history.push({ role: "user", content: userText });
+        history.push({ role: "assistant", content: JSON.stringify(data) });
+
+        if(data.stage === "question"){
+
+            questionsAsked += 1;
+            addAIMessage(data.message);
+            updateProgress("question");
+
+        } else if(data.stage === "confirm"){
+
+            addAIMessage(data.message);
+            renderConfirmButtons();
+            updateProgress("confirm");
+
+        } else if(data.stage === "final"){
+
+            renderFinalCard(data);
+            updateProgress("final");
+            finished = true;
+            inputRow.style.display = "none";
+            restartBtn.style.display = "block";
+
+        } else {
+
+            // fallback if backend couldn't be parsed as expected
+            addAIMessage(data.message || "Sorry, something went wrong. Please try again.");
+        }
+
+    } catch(err){
+
+        hideTyping();
+        addSystemNote("Connection error. Please check your network and try again.");
+        console.error(err);
+    }
+}
+
+function restartChat(){
+
+    history = [];
+    questionsAsked = 0;
+    finished = false;
+    messagesEl.innerHTML = "";
+    inputRow.style.display = "flex";
+    restartBtn.style.display = "none";
+    progressFill.style.width = "0%";
+    progressText.textContent = "Tell us what's wrong";
+    progressStage.textContent = "Step 1";
+
+    addAIMessage(
+        "Hi, I'm here to help find the right medicine for you. " +
+        "Tell me what's bothering you — for example, \"I have a headache and mild fever since this morning.\""
+    );
+}
 
 </script>
 
