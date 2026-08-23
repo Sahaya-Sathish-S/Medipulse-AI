@@ -1673,6 +1673,10 @@ def medical_analytics(): return render_template("analytics.html")
 @app.route("/prescription-scanner")
 def prescription_scanner(): return render_template("prescription.html")
 
+
+@app.route("/fake-medicine")
+def fake_medicine(): return render_template("fake-medicine.html")
+
 @app.route("/view")
 def view(): return render_template("view.html")
 
