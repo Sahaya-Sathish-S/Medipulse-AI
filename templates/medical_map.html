@@ -793,10 +793,12 @@ function setUserMarker(lat, lng, label) {
 }
 
 /* OVERPASS API SEARCH WITH MIRROR FALLBACKS */
+/* Most reliable / best CORS support first. overpass-api.de is the official
+   instance and generally the most consistent, so it now goes first. */
 const OVERPASS_ENDPOINTS = [
+    "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
-    "https://overpass.private.coffee/api/interpreter",
-    "https://overpass-api.de/api/interpreter" // keep as last-resort only
+    "https://overpass.openstreetmap.ru/api/interpreter"
 ];
 
 async function searchNearby(type) {
@@ -836,36 +838,44 @@ async function searchNearby(type) {
     }
 
     let data = null;
-let lastError = null;
+    let lastError = null;
+    let lastEndpoint = null;
 
-for (const endpoint of OVERPASS_ENDPOINTS) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    // The Overpass query itself asks the server for [timeout:25] seconds.
+    // The client-side AbortController MUST allow at least that long, or it
+    // cancels the request before the server can ever respond - which was
+    // the main cause of "Failed to fetch" on every mirror.
+    const CLIENT_TIMEOUT_MS = 30000;
 
-    try {
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "*/*"
-            },
-            body: `data=${encodeURIComponent(query)}`,
-            signal: controller.signal
-        });
+    for (const endpoint of OVERPASS_ENDPOINTS) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
 
-        clearTimeout(timeoutId);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        data = await response.json();
-        break;
-    } catch (err) {
-        clearTimeout(timeoutId);
-        console.warn(`Overpass endpoint failed (${endpoint}):`, err);
-        lastError = err;
+        try {
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: `data=${encodeURIComponent(query)}`,
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            data = await response.json();
+            break;
+        } catch (err) {
+            clearTimeout(timeoutId);
+            const reason = err.name === "AbortError" ? "Timed out" : err.message;
+            console.warn(`Overpass endpoint failed (${endpoint}): ${reason}`);
+            lastError = new Error(reason);
+            lastEndpoint = endpoint;
+        }
     }
-}
 
     if (!data) {
-        results.innerHTML = `<div class="results-empty">Unable to search places right now.<br>${lastError ? lastError.message : ""}</div>`;
+        results.innerHTML = `<div class="results-empty">Unable to reach any map data server right now.<br>Last tried: ${lastEndpoint || "none"}<br>${lastError ? lastError.message : ""}<br><br>Check your internet connection, or try again in a moment - public Overpass mirrors occasionally rate-limit.</div>`;
         return;
     }
 
