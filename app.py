@@ -166,15 +166,13 @@ def ask_ai(messages, temperature=0.4, max_tokens=1000):
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 RESEND_URL = "https://api.resend.com/emails"
-# Note: On Resend's free tier without a custom domain, 
+# Note: On Resend's free tier without a custom domain,
 # your "From" email must be onboarding@resend.dev
 EMAIL_FROM_ADDRESS = "onboarding@resend.dev"
 
 
 # =========================================================
-# FAKE MEDICINE DETECTOR (paste into app.py, e.g. right after
-# the "AI EYE SCAN ANALYSIS" section — it reuses OPENROUTER_API_KEY,
-# OPENROUTER_URL and ask_ai()/requests that are already defined there)
+# FAKE MEDICINE DETECTOR
 # =========================================================
 
 FAKE_MEDICINE_SYSTEM_PROMPT = """
@@ -347,19 +345,6 @@ def detect_fake_medicine():
 
 
 # =========================================================
-# Also add this page route next to your other @app.route("/...")
-# page routes (e.g. near /scanner):
-# =========================================================
-#
-# @app.route("/fake-medicine-detector")
-# def fake_medicine_detector_page():
-#     return render_template("fake_medicine.html")
-#
-# And save the companion template as templates/fake_medicine.html
-
-
-
-# =========================================================
 # EMAIL FUNCTION (BYPASSES SMTP BLOCKS ON CLOUD HOSTS)
 # =========================================================
 
@@ -367,20 +352,20 @@ def send_email(to_email, subject, body):
     if not RESEND_API_KEY:
         print("EMAIL ERROR: RESEND_API_KEY missing in .env")
         return False
-        
+
     try:
         headers = {
             "Authorization": f"Bearer {RESEND_API_KEY}",
             "Content-Type": "application/json"
         }
-        
+
         payload = {
             "from": EMAIL_FROM_ADDRESS,
             "to": [to_email],
             "subject": subject,
             "text": body  # Sends clean plain text matching your setup
         }
-        
+
         print(f"\n===== SENDING EMAIL VIA HTTP TO: {to_email} =====")
         response = requests.post(
             RESEND_URL,
@@ -388,16 +373,16 @@ def send_email(to_email, subject, body):
             json=payload,
             timeout=15
         )
-        
+
         print("EMAIL STATUS:", response.status_code)
-        
+
         if response.status_code in [200, 201]:
             print("SUCCESS: Email delivered over HTTP successfully.")
             return True
         else:
             print("FAILED EMAIL REQUEST:", response.text)
             return False
-            
+
     except Exception as e:
         print("EMAIL CRITICAL ERROR:", str(e))
         return False
@@ -525,7 +510,7 @@ def medipulse_profile_deep_analyzer():
         data = request.get_json()
         # The JS frontend passes the object inside the 'profile' key
         profile = data.get("profile", {})
-        
+
         if not profile:
             return jsonify({
                 "status": "error",
@@ -1486,7 +1471,7 @@ You should not tell that you can't analyze this eye and all you should analyze t
             "reply": f"Diagnostic processing error: {str(e)}"
 
         })
-        
+
 # =========================================================
 # COMPLAINT ANALYZER AI
 # =========================================================
@@ -1525,7 +1510,7 @@ No explanation.
     ]
 
     return ask_ai(messages)
-    
+
 # =========================================================
 # COMPLAINT CHAT AI
 # =========================================================
@@ -1673,9 +1658,8 @@ def medical_analytics(): return render_template("analytics.html")
 @app.route("/prescription-scanner")
 def prescription_scanner(): return render_template("prescription.html")
 
-
 @app.route("/fake-medicine")
-def fake_medicine(): return render_template("fake-medicine.html")
+def fake_medicine(): return render_template("fake_medicine.html")
 
 @app.route("/view")
 def view(): return render_template("view.html")
@@ -1683,10 +1667,6 @@ def view(): return render_template("view.html")
 @app.route("/profile_analyzer_dashboard")
 def profile_analyzer_dashboard():
     return render_template("analyzer.html")
-
-@app.route("/fake_medicine")
-def fake_medicine():
-    return render_template("fake_medicine.html")
 
 
 if __name__ == "__main__":
