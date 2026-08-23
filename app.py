@@ -170,6 +170,195 @@ RESEND_URL = "https://api.resend.com/emails"
 # your "From" email must be onboarding@resend.dev
 EMAIL_FROM_ADDRESS = "onboarding@resend.dev"
 
+
+# =========================================================
+# FAKE MEDICINE DETECTOR (paste into app.py, e.g. right after
+# the "AI EYE SCAN ANALYSIS" section — it reuses OPENROUTER_API_KEY,
+# OPENROUTER_URL and ask_ai()/requests that are already defined there)
+# =========================================================
+
+FAKE_MEDICINE_SYSTEM_PROMPT = """
+You are MediPulse Fake Medicine Detector AI, a pharmaceutical packaging
+authenticity screening assistant. You are NOT a lab test and you know it —
+your job is a careful visual screen, biased toward caution.
+
+Analyze the uploaded image of a medicine strip, blister pack, bottle, or box.
+
+STEP 1 — Extract, if visible:
+- Medicine / brand name
+- Manufacturer name
+- Batch number
+- Manufacturing date
+- Expiry date
+- Manufacturing license / registration number
+
+STEP 2 — Check for common counterfeit packaging red flags:
+- Blurry, smudged, pixelated, or low-resolution printing
+- Spelling errors or inconsistent fonts/sizes in the drug or manufacturer name
+- Missing batch number, mfg date, or expiry date
+- Expiry date already passed (compare to today if a date is legible)
+- Missing or implausible manufacturing license / registration number
+- Poor-quality foil, seal, embossing, or packaging material
+- Packaging design, color scheme, or logo that looks inconsistent or crudely
+  reproduced
+
+STEP 3 — Decide a verdict:
+- "genuine"   -> no red flags, legible required details, consistent printing
+- "suspicious"-> some missing/unclear details or minor inconsistencies
+- "fake"      -> clear red flags (expired, missing critical details, obvious
+                 print/spelling defects, implausible packaging)
+- "unclear"   -> image too blurry/dark/cropped to make any real judgment
+
+CRITICAL SAFETY RULE: when evidence is ambiguous, choose "suspicious" rather
+than "genuine". A missed fake is far worse than an extra warning shown to a
+genuine medicine. Never output "genuine" unless the packaging is clearly
+legible AND shows no red flags.
+
+Respond with STRICT JSON ONLY — no markdown, no code fences, no text outside
+the JSON object — in exactly this shape:
+
+{
+  "verdict": "genuine" | "suspicious" | "fake" | "unclear",
+  "confidence": <integer 0-100, your confidence in the verdict itself>,
+  "medicine_name": "<string or empty>",
+  "manufacturer": "<string or empty>",
+  "batch_no": "<string or empty>",
+  "mfg_date": "<string or empty>",
+  "exp_date": "<string or empty>",
+  "red_flags": ["<short phrase>", ...],
+  "positive_signs": ["<short phrase>", ...],
+  "summary": "<2-3 sentence plain-language explanation of the verdict>",
+  "disclaimer": "<one sentence reminding the user this is a preliminary AI
+                  screening, not a lab or pharmacist verification, and to
+                  confirm suspicious/fake results before use>"
+}
+
+Only output the JSON object. Nothing else.
+"""
+
+
+@app.route("/api/detect_fake_medicine", methods=["POST"])
+def detect_fake_medicine():
+
+    try:
+
+        data = request.get_json()
+
+        file_content = data.get("file_content", "")
+        file_type = data.get("file_type", "image/jpeg")
+
+        if not file_content:
+            return jsonify({
+                "status": "error",
+                "message": "Please upload a photo of the medicine packaging."
+            })
+
+        base64_clean = (
+            file_content.split(",")[1]
+            if "," in file_content
+            else file_content
+        )
+
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost:5000",
+            "X-Title": "MediPulse AI"
+        }
+
+        payload = {
+            "model": "openai/gpt-4o-mini",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": FAKE_MEDICINE_SYSTEM_PROMPT},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{file_type};base64,{base64_clean}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "temperature": 0.2,
+            "max_tokens": 800
+        }
+
+        response = requests.post(
+            OPENROUTER_URL,
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
+
+        print("FAKE MEDICINE STATUS:", response.status_code)
+
+        if response.status_code != 200:
+            print(response.text)
+            return jsonify({
+                "status": "error",
+                "message": f"Detection AI Error: {response.status_code}"
+            })
+
+        result = response.json()
+        raw_reply = result["choices"][0]["message"]["content"]
+
+        # strip accidental code fences, just in case
+        cleaned = raw_reply.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.strip("`")
+            if cleaned.lower().startswith("json"):
+                cleaned = cleaned[4:]
+            cleaned = cleaned.strip()
+
+        try:
+            parsed = json.loads(cleaned)
+        except Exception:
+            # graceful fallback so the UI never breaks on a malformed reply —
+            # always err toward "suspicious", never silently pass a medicine
+            parsed = {
+                "verdict": "suspicious",
+                "confidence": 40,
+                "medicine_name": "",
+                "manufacturer": "",
+                "batch_no": "",
+                "mfg_date": "",
+                "exp_date": "",
+                "red_flags": ["Could not fully parse the packaging analysis."],
+                "positive_signs": [],
+                "summary": "The image could not be fully analyzed. Please retake the photo in good lighting with the label fully visible, and verify this medicine manually before use.",
+                "disclaimer": "This is an AI preliminary screening only, not a lab or pharmacist verification."
+            }
+
+        parsed["status"] = "success"
+
+        return jsonify(parsed)
+
+    except Exception as e:
+
+        print("FAKE MEDICINE DETECTOR ERROR:", str(e))
+
+        return jsonify({
+            "status": "error",
+            "message": f"Detection processing error: {str(e)}"
+        })
+
+
+# =========================================================
+# Also add this page route next to your other @app.route("/...")
+# page routes (e.g. near /scanner):
+# =========================================================
+#
+# @app.route("/fake-medicine-detector")
+# def fake_medicine_detector_page():
+#     return render_template("fake_medicine.html")
+#
+# And save the companion template as templates/fake_medicine.html
+
+
+
 # =========================================================
 # EMAIL FUNCTION (BYPASSES SMTP BLOCKS ON CLOUD HOSTS)
 # =========================================================
@@ -1490,6 +1679,11 @@ def view(): return render_template("view.html")
 @app.route("/profile_analyzer_dashboard")
 def profile_analyzer_dashboard():
     return render_template("analyzer.html")
+
+@app.route("/fake_medicine")
+def fake_medicine():
+    return render_template("fake_medicine.html")
+
 
 if __name__ == "__main__":
     app.run(debug=True)
