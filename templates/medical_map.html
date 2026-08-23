@@ -818,7 +818,7 @@ async function searchNearby(type) {
 
     if (type === "pharmacy") {
         query = `
-        [out:json][timeout:25];
+        [out:json][timeout:15];
         (
           node(around:${radius},${userLat},${userLng})["amenity"="pharmacy"];
           node(around:${radius},${userLat},${userLng})["shop"="chemist"];
@@ -828,7 +828,7 @@ async function searchNearby(type) {
         `;
     } else {
         query = `
-        [out:json][timeout:25];
+        [out:json][timeout:15];
         (
           node(around:${radius},${userLat},${userLng})["amenity"="hospital"];
           node(around:${radius},${userLat},${userLng})["healthcare"="hospital"];
@@ -838,16 +838,14 @@ async function searchNearby(type) {
     }
 
     let data = null;
-    let lastError = null;
-    let lastEndpoint = null;
+    let errorDetail = "";
 
-    // The Overpass query itself asks the server for [timeout:25] seconds.
-    // The client-side AbortController MUST allow at least that long, or it
-    // cancels the request before the server can ever respond - which was
-    // the main cause of "Failed to fetch" on every mirror.
-    const CLIENT_TIMEOUT_MS = 30000;
+    // Race every mirror at once instead of trying them one after another.
+    // Promise.any resolves as soon as ANY mirror succeeds, so worst case is
+    // one timeout period (15s), not three stacked timeouts (was up to 90s).
+    const CLIENT_TIMEOUT_MS = 15000;
 
-    for (const endpoint of OVERPASS_ENDPOINTS) {
+    async function fetchFromMirror(endpoint) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
 
@@ -862,20 +860,30 @@ async function searchNearby(type) {
             });
 
             clearTimeout(timeoutId);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            data = await response.json();
-            break;
+            if (!response.ok) throw new Error(`${endpoint} -> HTTP ${response.status}`);
+            const json = await response.json();
+            return json;
         } catch (err) {
             clearTimeout(timeoutId);
-            const reason = err.name === "AbortError" ? "Timed out" : err.message;
-            console.warn(`Overpass endpoint failed (${endpoint}): ${reason}`);
-            lastError = new Error(reason);
-            lastEndpoint = endpoint;
+            const reason = err.name === "AbortError" ? "timed out (no response)" : err.message;
+            throw new Error(`${endpoint} -> ${reason}`);
         }
     }
 
+    try {
+        data = await Promise.any(OVERPASS_ENDPOINTS.map(fetchFromMirror));
+    } catch (aggregateError) {
+        const reasons = (aggregateError.errors || [aggregateError]).map(e => e.message).join(" | ");
+        console.warn("All Overpass mirrors failed:", reasons);
+        errorDetail = reasons;
+    }
+
     if (!data) {
-        results.innerHTML = `<div class="results-empty">Unable to reach any map data server right now.<br>Last tried: ${lastEndpoint || "none"}<br>${lastError ? lastError.message : ""}<br><br>Check your internet connection, or try again in a moment - public Overpass mirrors occasionally rate-limit.</div>`;
+        const allTimedOut = errorDetail.includes("timed out") && !errorDetail.match(/HTTP \d/);
+        const hint = allTimedOut
+            ? "Every mirror timed out with no response at all - this usually means the connection is being blocked before it reaches the server (network/firewall/VPN, or a sandboxed preview that restricts outbound requests), not that the mirrors are actually down. Try opening this file directly in a regular browser instead of a preview, and check that no VPN/firewall is blocking these domains."
+            : "Public Overpass mirrors occasionally rate-limit - try again in a moment.";
+        results.innerHTML = `<div class="results-empty">Unable to reach any map data server right now.<br><span style="font-size:11px;opacity:0.75;">${errorDetail}</span><br><br>${hint}</div>`;
         return;
     }
 
