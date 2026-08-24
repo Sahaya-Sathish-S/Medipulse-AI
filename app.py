@@ -89,10 +89,14 @@ def nearby_search():
             out;
             """
 
+        headers = {
+            "User-Agent": "MediPulseAI/1.0 (nearby medical facility search; contact: sahayasathish60@gmail.com)"
+        }
+
         errors = []
         for endpoint in OVERPASS_ENDPOINTS:
             try:
-                resp = requests.post(endpoint, data={"data": query}, timeout=20)
+                resp = requests.post(endpoint, data={"data": query}, headers=headers, timeout=20)
                 resp.raise_for_status()
                 return jsonify(resp.json())
             except Exception as e:
