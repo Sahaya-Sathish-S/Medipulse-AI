@@ -18,6 +18,67 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from dotenv import load_dotenv
 
+"""
+Add this route to your existing Flask app (the one that already serves /map_ai).
+It proxies the Overpass request server-side, so it isn't subject to the
+browser-level network/DNS blocking you're hitting on the client.
+
+Requires: pip install requests
+"""
+
+OVERPASS_ENDPOINTS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.openstreetmap.ru/api/interpreter",
+]
+
+
+@app.route("/nearby_search", methods=["GET"])
+def nearby_search():
+    place_type = request.args.get("type")  # "hospital" or "pharmacy"
+    try:
+        lat = float(request.args.get("lat"))
+        lng = float(request.args.get("lng"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "lat and lng are required numeric query params"}), 400
+
+    if place_type not in ("hospital", "pharmacy"):
+        return jsonify({"error": "type must be 'hospital' or 'pharmacy'"}), 400
+
+    radius = 10000
+
+    if place_type == "pharmacy":
+        query = f"""
+        [out:json][timeout:20];
+        (
+          node(around:{radius},{lat},{lng})["amenity"="pharmacy"];
+          node(around:{radius},{lat},{lng})["shop"="chemist"];
+          node(around:{radius},{lat},{lng})["healthcare"="pharmacy"];
+        );
+        out;
+        """
+    else:
+        query = f"""
+        [out:json][timeout:20];
+        (
+          node(around:{radius},{lat},{lng})["amenity"="hospital"];
+          node(around:{radius},{lat},{lng})["healthcare"="hospital"];
+        );
+        out;
+        """
+
+    errors = []
+    for endpoint in OVERPASS_ENDPOINTS:
+        try:
+            resp = requests.post(endpoint, data={"data": query}, timeout=20)
+            resp.raise_for_status()
+            return jsonify(resp.json())
+        except Exception as e:
+            errors.append(f"{endpoint} -> {e}")
+
+    # All mirrors failed - even from the server. Return the details so the
+    # frontend can show something useful instead of a silent failure.
+    return jsonify({"error": "All Overpass mirrors failed", "details": errors}), 502
 
 # =========================================================
 # LOAD ENV
