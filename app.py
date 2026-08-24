@@ -1744,4 +1744,9 @@ def profile_analyzer_dashboard():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    # 0.0.0.0 (not 127.0.0.1) so Render/Railway's proxy can actually reach
+    # this process, and the platform-assigned PORT rather than a hardcoded
+    # 5000. debug=False for production - the Werkzeug debugger is a remote
+    # code execution risk if left reachable on a public URL.
+    app.run(host="0.0.0.0", port=port, debug=False)
