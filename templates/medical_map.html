@@ -816,7 +816,8 @@ async function searchNearby(type) {
         const response = await fetch(`/nearby_search?type=${encodeURIComponent(type)}&lat=${userLat}&lng=${userLng}`);
         if (!response.ok) {
             const errJson = await response.json().catch(() => ({}));
-            throw new Error(errJson.error || `HTTP ${response.status}`);
+            const detailLines = Array.isArray(errJson.details) ? errJson.details.join(" | ") : "";
+            throw new Error([errJson.error, detailLines].filter(Boolean).join(" — ") || `HTTP ${response.status}`);
         }
         data = await response.json();
     } catch (err) {
@@ -825,7 +826,7 @@ async function searchNearby(type) {
     }
 
     if (!data) {
-        results.innerHTML = `<div class="results-empty">Unable to reach the search service right now.<br><span style="font-size:11px;opacity:0.75;">${errorDetail}</span><br><br>Make sure your Flask server is running and the /nearby_search route has been added.</div>`;
+        results.innerHTML = `<div class="results-empty">Unable to reach the search service right now.<br><span style="font-size:11px;opacity:0.75;word-break:break-word;">${errorDetail}</span><br><br>Make sure your Flask server is running and the /nearby_search route has been added.</div>`;
         return;
     }
 
