@@ -843,7 +843,17 @@ function displayPlaces(places, type) {
     const results = document.getElementById("results");
     results.innerHTML = "";
 
-    const validPlaces = places.filter(p => p.lat && p.lon);
+    // Nodes have lat/lon directly. Ways and relations (from 'out center;')
+    // carry their computed centroid in a nested 'center' object instead.
+    function getCoords(p) {
+        if (p.lat != null && p.lon != null) return { lat: p.lat, lon: p.lon };
+        if (p.center && p.center.lat != null && p.center.lon != null) return { lat: p.center.lat, lon: p.center.lon };
+        return null;
+    }
+
+    const validPlaces = places
+        .map(p => ({ ...p, _coords: getCoords(p) }))
+        .filter(p => p._coords !== null);
 
     if (validPlaces.length === 0) {
         results.innerHTML = `<div class="results-empty">No places found nearby.</div>`;
@@ -853,12 +863,12 @@ function displayPlaces(places, type) {
     validPlaces
         .map(place => ({
             ...place,
-            _distance: parseFloat(calculateDistance(userLat, userLng, place.lat, place.lon))
+            _distance: parseFloat(calculateDistance(userLat, userLng, place._coords.lat, place._coords.lon))
         }))
         .sort((a, b) => a._distance - b._distance)
         .forEach(place => {
-            const lat = place.lat;
-            const lon = place.lon;
+            const lat = place._coords.lat;
+            const lon = place._coords.lon;
             const name = place.tags?.name || (type === "pharmacy" ? "Pharmacy" : "Medical Hospital");
 
             const marker = L.marker([lat, lon]).addTo(map).bindPopup(name);
