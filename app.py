@@ -50,50 +50,63 @@ OVERPASS_ENDPOINTS = [
 
 @app.route("/nearby_search", methods=["GET"])
 def nearby_search():
-    place_type = request.args.get("type")  # "hospital" or "pharmacy"
     try:
-        lat = float(request.args.get("lat"))
-        lng = float(request.args.get("lng"))
-    except (TypeError, ValueError):
-        return jsonify({"error": "lat and lng are required numeric query params"}), 400
+        place_type = request.args.get("type")
+        raw_lat = request.args.get("lat")
+        raw_lng = request.args.get("lng")
 
-    if place_type not in ("hospital", "pharmacy"):
-        return jsonify({"error": "type must be 'hospital' or 'pharmacy'"}), 400
+        if not raw_lat or not raw_lng:
+            return jsonify({"error": "lat and lng query params are required"}), 400
 
-    radius = 10000
-
-    if place_type == "pharmacy":
-        query = f"""
-        [out:json][timeout:20];
-        (
-          node(around:{radius},{lat},{lng})["amenity"="pharmacy"];
-          node(around:{radius},{lat},{lng})["shop"="chemist"];
-          node(around:{radius},{lat},{lng})["healthcare"="pharmacy"];
-        );
-        out;
-        """
-    else:
-        query = f"""
-        [out:json][timeout:20];
-        (
-          node(around:{radius},{lat},{lng})["amenity"="hospital"];
-          node(around:{radius},{lat},{lng})["healthcare"="hospital"];
-        );
-        out;
-        """
-
-    errors = []
-    for endpoint in OVERPASS_ENDPOINTS:
         try:
-            resp = requests.post(endpoint, data={"data": query}, timeout=20)
-            resp.raise_for_status()
-            return jsonify(resp.json())
-        except Exception as e:
-            errors.append(f"{endpoint} -> {e}")
+            lat = float(raw_lat)
+            lng = float(raw_lng)
+        except ValueError:
+            return jsonify({"error": f"lat/lng must be numeric, got lat={raw_lat!r} lng={raw_lng!r}"}), 400
 
-    # All mirrors failed - even from the server. Return the details so the
-    # frontend can show something useful instead of a silent failure.
-    return jsonify({"error": "All Overpass mirrors failed", "details": errors}), 502
+        if place_type not in ("hospital", "pharmacy"):
+            return jsonify({"error": f"type must be 'hospital' or 'pharmacy', got {place_type!r}"}), 400
+
+        radius = 10000
+
+        if place_type == "pharmacy":
+            query = f"""
+            [out:json][timeout:20];
+            (
+              node(around:{radius},{lat},{lng})["amenity"="pharmacy"];
+              node(around:{radius},{lat},{lng})["shop"="chemist"];
+              node(around:{radius},{lat},{lng})["healthcare"="pharmacy"];
+            );
+            out;
+            """
+        else:
+            query = f"""
+            [out:json][timeout:20];
+            (
+              node(around:{radius},{lat},{lng})["amenity"="hospital"];
+              node(around:{radius},{lat},{lng})["healthcare"="hospital"];
+            );
+            out;
+            """
+
+        errors = []
+        for endpoint in OVERPASS_ENDPOINTS:
+            try:
+                resp = requests.post(endpoint, data={"data": query}, timeout=20)
+                resp.raise_for_status()
+                return jsonify(resp.json())
+            except Exception as e:
+                errors.append(f"{endpoint} -> {type(e).__name__}: {e}")
+
+        # All mirrors failed. Return the details so the frontend can show
+        # something useful instead of a silent failure.
+        return jsonify({"error": "All Overpass mirrors failed", "details": errors}), 502
+
+    except Exception as e:
+        # Catch-all so a bug here never surfaces as a bare, undiagnosable 500.
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"nearby_search crashed: {type(e).__name__}: {e}"}), 500
 
 
 # =========================================================
