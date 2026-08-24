@@ -792,14 +792,10 @@ function setUserMarker(lat, lng, label) {
     userMarker = L.marker([lat, lng]).addTo(map).bindPopup(label);
 }
 
-/* OVERPASS API SEARCH WITH MIRROR FALLBACKS */
-/* Most reliable / best CORS support first. overpass-api.de is the official
-   instance and generally the most consistent, so it now goes first. */
-const OVERPASS_ENDPOINTS = [
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
-    "https://overpass.openstreetmap.ru/api/interpreter"
-];
+/* NEARBY SEARCH - proxied through the Flask backend (/nearby_search) so
+   the Overpass request happens server-side. This avoids browser-level
+   network/DNS/firewall blocking and CORS entirely. See
+   flask_nearby_search_snippet.py for the backend route this calls. */
 
 async function searchNearby(type) {
     if (!userLat || !userLng) {
@@ -813,77 +809,23 @@ async function searchNearby(type) {
     markers.forEach(marker => map.removeLayer(marker));
     markers = [];
 
-    const radius = 10000;
-    let query = "";
-
-    if (type === "pharmacy") {
-        query = `
-        [out:json][timeout:15];
-        (
-          node(around:${radius},${userLat},${userLng})["amenity"="pharmacy"];
-          node(around:${radius},${userLat},${userLng})["shop"="chemist"];
-          node(around:${radius},${userLat},${userLng})["healthcare"="pharmacy"];
-        );
-        out;
-        `;
-    } else {
-        query = `
-        [out:json][timeout:15];
-        (
-          node(around:${radius},${userLat},${userLng})["amenity"="hospital"];
-          node(around:${radius},${userLat},${userLng})["healthcare"="hospital"];
-        );
-        out;
-        `;
-    }
-
     let data = null;
     let errorDetail = "";
 
-    // Race every mirror at once instead of trying them one after another.
-    // Promise.any resolves as soon as ANY mirror succeeds, so worst case is
-    // one timeout period (15s), not three stacked timeouts (was up to 90s).
-    const CLIENT_TIMEOUT_MS = 15000;
-
-    async function fetchFromMirror(endpoint) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
-
-        try {
-            const response = await fetch(endpoint, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                },
-                body: `data=${encodeURIComponent(query)}`,
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-            if (!response.ok) throw new Error(`${endpoint} -> HTTP ${response.status}`);
-            const json = await response.json();
-            return json;
-        } catch (err) {
-            clearTimeout(timeoutId);
-            const reason = err.name === "AbortError" ? "timed out (no response)" : err.message;
-            throw new Error(`${endpoint} -> ${reason}`);
-        }
-    }
-
     try {
-        data = await Promise.any(OVERPASS_ENDPOINTS.map(fetchFromMirror));
-    } catch (aggregateError) {
-        const reasons = (aggregateError.errors || [aggregateError]).map(e => e.message).join(" | ");
-        console.warn("All Overpass mirrors failed:", reasons);
-        errorDetail = reasons;
+        const response = await fetch(`/nearby_search?type=${encodeURIComponent(type)}&lat=${userLat}&lng=${userLng}`);
+        if (!response.ok) {
+            const errJson = await response.json().catch(() => ({}));
+            throw new Error(errJson.error || `HTTP ${response.status}`);
+        }
+        data = await response.json();
+    } catch (err) {
+        console.warn("Backend nearby_search failed:", err);
+        errorDetail = err.message;
     }
 
     if (!data) {
-        const allTimedOut = errorDetail.includes("timed out") && !errorDetail.match(/HTTP \d/);
-        const hint = allTimedOut
-            ? "Every mirror timed out with no response at all - this usually means the connection is being blocked before it reaches the server (network/firewall/VPN, or a sandboxed preview that restricts outbound requests), not that the mirrors are actually down. Try opening this file directly in a regular browser instead of a preview, and check that no VPN/firewall is blocking these domains."
-            : "Public Overpass mirrors occasionally rate-limit - try again in a moment.";
-        results.innerHTML = `<div class="results-empty">Unable to reach any map data server right now.<br><span style="font-size:11px;opacity:0.75;">${errorDetail}</span><br><br>${hint}</div>`;
+        results.innerHTML = `<div class="results-empty">Unable to reach the search service right now.<br><span style="font-size:11px;opacity:0.75;">${errorDetail}</span><br><br>Make sure your Flask server is running and the /nearby_search route has been added.</div>`;
         return;
     }
 
