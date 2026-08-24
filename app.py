@@ -2,12 +2,14 @@ import base64
 import io
 import json
 import os
+import socket
 from datetime import datetime, timedelta
 
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 
 import requests
+import urllib3.util.connection as urllib3_cn
 
 from pypdf import PdfReader
 
@@ -17,6 +19,25 @@ import smtplib
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from dotenv import load_dotenv
+
+# =========================================================
+# FORCE IPv4 FOR ALL OUTBOUND REQUESTS
+# =========================================================
+# Some hosts (Render/Railway free tiers, etc.) advertise IPv6 support in
+# DNS resolution but don't actually have a working IPv6 route out of the
+# container. Python/urllib3 tries IPv6 first by default, which then fails
+# instantly with "Network is unreachable" (errno 101) before ever trying
+# the IPv4 address that would have worked. Forcing IPv4-only here fixes
+# that for every outbound request this app makes (Overpass, OpenRouter,
+# Resend, etc.) - not just the Overpass proxy below.
+
+
+def _allowed_gai_family():
+    return socket.AF_INET
+
+
+urllib3_cn.allowed_gai_family = _allowed_gai_family
+
 
 # =========================================================
 # LOAD ENV
@@ -44,7 +65,7 @@ CORS(app)
 OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
-    "https://overpass.openstreetmap.ru/api/interpreter",
+    "https://overpass.osm.ch/api/interpreter",
 ]
 
 
