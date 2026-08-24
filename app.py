@@ -18,13 +18,28 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from dotenv import load_dotenv
 
-"""
-Add this route to your existing Flask app (the one that already serves /map_ai).
-It proxies the Overpass request server-side, so it isn't subject to the
-browser-level network/DNS blocking you're hitting on the client.
+# =========================================================
+# LOAD ENV
+# =========================================================
 
-Requires: pip install requests
-"""
+load_dotenv()
+
+
+# =========================================================
+# FLASK APP
+# =========================================================
+
+app = Flask(__name__)
+
+CORS(app)
+
+
+# =========================================================
+# NEARBY SEARCH (Overpass proxy)
+# =========================================================
+# Proxies the Overpass request server-side, so it isn't subject to
+# browser-level network/DNS blocking on the client.
+# Requires: pip install requests
 
 OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
@@ -79,21 +94,6 @@ def nearby_search():
     # All mirrors failed - even from the server. Return the details so the
     # frontend can show something useful instead of a silent failure.
     return jsonify({"error": "All Overpass mirrors failed", "details": errors}), 502
-
-# =========================================================
-# LOAD ENV
-# =========================================================
-
-load_dotenv()
-
-
-# =========================================================
-# FLASK APP
-# =========================================================
-
-app = Flask(__name__)
-
-CORS(app)
 
 
 # =========================================================
