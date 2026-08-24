@@ -94,20 +94,20 @@ def nearby_search():
             query = f"""
             [out:json][timeout:20];
             (
-              node(around:{radius},{lat},{lng})["amenity"="pharmacy"];
-              node(around:{radius},{lat},{lng})["shop"="chemist"];
-              node(around:{radius},{lat},{lng})["healthcare"="pharmacy"];
+              nwr(around:{radius},{lat},{lng})["amenity"="pharmacy"];
+              nwr(around:{radius},{lat},{lng})["shop"="chemist"];
+              nwr(around:{radius},{lat},{lng})["healthcare"="pharmacy"];
             );
-            out;
+            out center;
             """
         else:
             query = f"""
             [out:json][timeout:20];
             (
-              node(around:{radius},{lat},{lng})["amenity"="hospital"];
-              node(around:{radius},{lat},{lng})["healthcare"="hospital"];
+              nwr(around:{radius},{lat},{lng})["amenity"="hospital"];
+              nwr(around:{radius},{lat},{lng})["healthcare"="hospital"];
             );
-            out;
+            out center;
             """
 
         headers = {
