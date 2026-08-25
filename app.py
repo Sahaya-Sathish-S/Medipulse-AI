@@ -90,38 +90,71 @@ def nearby_search():
 
         radius = 10000
 
-        if place_type == "pharmacy":
-            query = f"""
-            [out:json][timeout:20];
-            (
-              nwr(around:{radius},{lat},{lng})["amenity"="pharmacy"];
-              nwr(around:{radius},{lat},{lng})["shop"="chemist"];
-              nwr(around:{radius},{lat},{lng})["healthcare"="pharmacy"];
-            );
-            out center;
-            """
-        else:
-            query = f"""
-            [out:json][timeout:20];
-            (
-              nwr(around:{radius},{lat},{lng})["amenity"="hospital"];
-              nwr(around:{radius},{lat},{lng})["healthcare"="hospital"];
-            );
-            out center;
-            """
+        def build_query(r):
+            if place_type == "pharmacy":
+                return f"""
+                [out:json][timeout:20];
+                (
+                  nwr(around:{r},{lat},{lng})["amenity"="pharmacy"];
+                  nwr(around:{r},{lat},{lng})["shop"="chemist"];
+                  nwr(around:{r},{lat},{lng})["healthcare"="pharmacy"];
+                );
+                out center;
+                """
+            else:
+                # Broadened beyond strict amenity=hospital - many real facilities,
+                # especially outside major cities, are only tagged as clinics,
+                # doctors' offices, or generic healthcare centres in OSM.
+                return f"""
+                [out:json][timeout:20];
+                (
+                  nwr(around:{r},{lat},{lng})["amenity"="hospital"];
+                  nwr(around:{r},{lat},{lng})["amenity"="clinic"];
+                  nwr(around:{r},{lat},{lng})["amenity"="doctors"];
+                  nwr(around:{r},{lat},{lng})["healthcare"="hospital"];
+                  nwr(around:{r},{lat},{lng})["healthcare"="clinic"];
+                  nwr(around:{r},{lat},{lng})["healthcare"="centre"];
+                  nwr(around:{r},{lat},{lng})["healthcare"="doctor"];
+                  nwr(around:{r},{lat},{lng})["building"="hospital"];
+                );
+                out center;
+                """
 
         headers = {
             "User-Agent": "MediPulseAI/1.0 (nearby medical facility search; contact: sahayasathish60@gmail.com)"
         }
 
+        # Try a tight radius first; if genuinely nothing is tagged nearby
+        # (common in under-mapped areas), automatically widen the search
+        # instead of giving up.
+        radii_to_try = [radius, 25000, 50000]
+
         errors = []
-        for endpoint in OVERPASS_ENDPOINTS:
-            try:
-                resp = requests.post(endpoint, data={"data": query}, headers=headers, timeout=20)
-                resp.raise_for_status()
-                return jsonify(resp.json())
-            except Exception as e:
-                errors.append(f"{endpoint} -> {type(e).__name__}: {e}")
+        last_empty_response = None
+        for r in radii_to_try:
+            query = build_query(r)
+            mirror_had_success = False
+            for endpoint in OVERPASS_ENDPOINTS:
+                try:
+                    resp = requests.post(endpoint, data={"data": query}, headers=headers, timeout=20)
+                    resp.raise_for_status()
+                    result = resp.json()
+                    mirror_had_success = True
+                    if result.get("elements"):
+                        result["_radius_used_meters"] = r
+                        return jsonify(result)
+                    last_empty_response = result
+                    break  # this mirror worked (just empty) - no need to try other mirrors at this radius
+                except Exception as e:
+                    errors.append(f"{endpoint} (r={r}) -> {type(e).__name__}: {e}")
+            if not mirror_had_success:
+                # every mirror failed outright at this radius - no point widening further
+                break
+
+        if last_empty_response is not None:
+            last_empty_response["_radius_used_meters"] = radii_to_try[-1]
+            last_empty_response["_note"] = "No matching facilities found in OpenStreetMap data even after widening the search radius. This usually means the area is under-mapped in OSM rather than a search bug."
+            return jsonify(last_empty_response)
 
         # All mirrors failed. Return the details so the frontend can show
         # something useful instead of a silent failure.
