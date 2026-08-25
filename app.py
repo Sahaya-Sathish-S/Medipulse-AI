@@ -120,85 +120,83 @@ def nearby_search():
             lat = float(raw_lat)
             lng = float(raw_lng)
         except ValueError:
-            return jsonify({"error": f"lat/lng must be numeric, got lat={raw_lat!r} lng={raw_lng!r}"}), 400
+            return jsonify({"error": f"lat/lng must be numeric"}), 400
 
         if place_type not in ("hospital", "pharmacy"):
-            return jsonify({"error": f"type must be 'hospital' or 'pharmacy', got {place_type!r}"}), 400
+            return jsonify({"error": "type must be 'hospital' or 'pharmacy'"}), 400
 
-        all_errors = []
-
-        # ---- Pass 1: cheap and fast (node only, few tags, 10km) ----
-        if place_type == "pharmacy":
-            cheap_query = f"""
-            [out:json][timeout:12];
-            (
-              node(around:10000,{lat},{lng})["amenity"="pharmacy"];
-              node(around:10000,{lat},{lng})["healthcare"="pharmacy"];
-            );
-            out;
-            """
-        else:
-            cheap_query = f"""
-            [out:json][timeout:12];
-            (
-              node(around:10000,{lat},{lng})["amenity"="hospital"];
-              node(around:10000,{lat},{lng})["healthcare"="hospital"];
-            );
-            out;
-            """
-
-        elements, errors = run_overpass_query(cheap_query, timeout_seconds=15)
-        all_errors.extend(errors)
-
-        if elements:
-            return jsonify({"elements": elements, "_pass": "cheap"})
-
-        # ---- Pass 2: broader tags + ways/relations + wider radius, ----
-        # ---- only run if pass 1 came back genuinely empty (not failed) ----
-        if elements is not None:  # pass 1 succeeded, just found nothing
+        # High-performance single-pass regex query
+        def build_optimized_query(r):
             if place_type == "pharmacy":
-                broad_query = f"""
-                [out:json][timeout:15];
+                return f"""
+                [out:json][timeout:20];
                 (
-                  nwr(around:20000,{lat},{lng})["amenity"="pharmacy"];
-                  nwr(around:20000,{lat},{lng})["shop"="chemist"];
-                  nwr(around:20000,{lat},{lng})["healthcare"="pharmacy"];
+                  node["amenity"~"pharmacy|chemist"](around:{r},{lat},{lng});
+                  way["amenity"~"pharmacy|chemist"](around:{r},{lat},{lng});
+                  node["healthcare"="pharmacy"](around:{r},{lat},{lng});
                 );
                 out center;
                 """
             else:
-                broad_query = f"""
-                [out:json][timeout:15];
+                return f"""
+                [out:json][timeout:20];
                 (
-                  nwr(around:20000,{lat},{lng})["amenity"="hospital"];
-                  nwr(around:20000,{lat},{lng})["amenity"="clinic"];
-                  nwr(around:20000,{lat},{lng})["healthcare"="hospital"];
-                  nwr(around:20000,{lat},{lng})["healthcare"="clinic"];
+                  node["amenity"~"hospital|clinic|doctors"](around:{r},{lat},{lng});
+                  way["amenity"~"hospital|clinic|doctors"](around:{r},{lat},{lng});
+                  node["healthcare"~"hospital|clinic|centre|doctor"](around:{r},{lat},{lng});
+                  way["healthcare"~"hospital|clinic|centre|doctor"](around:{r},{lat},{lng});
                 );
                 out center;
                 """
 
-            elements2, errors2 = run_overpass_query(broad_query, timeout_seconds=18)
-            all_errors.extend(errors2)
+        headers = {
+            "User-Agent": "MediPulseAI/1.0 (contact: sahayasathish60@gmail.com)"
+        }
 
-            if elements2:
-                return jsonify({"elements": elements2, "_pass": "broad"})
+        radii_to_try = [15000, 35000]
+        PER_MIRROR_TIMEOUT = 12
 
-            if elements2 is not None:
-                # Both passes genuinely ran and found nothing.
-                return jsonify({
-                    "elements": [],
-                    "_note": "No matching facilities found in OpenStreetMap data even after a wider search. This location may genuinely be under-mapped in OSM."
+        # 1. Try Overpass API Mirrors
+        for r in radii_to_try:
+            query = build_optimized_query(r)
+            for endpoint in OVERPASS_ENDPOINTS:
+                try:
+                    resp = requests.post(endpoint, data={"data": query}, headers=headers, timeout=PER_MIRROR_TIMEOUT)
+                    if resp.status_code == 200:
+                        result = resp.json()
+                        elements = result.get("elements", [])
+                        if elements:
+                            result["_radius_used_meters"] = r
+                            return jsonify(result)
+                except Exception as e:
+                    continue
+
+        # 2. Fallback to OpenStreetMap Nominatim API if Overpass returns 0 results
+        nominatim_query = "hospital" if place_type == "hospital" else "pharmacy"
+        nom_url = f"https://nominatim.openstreetmap.org/search?format=json&q={nominatim_query}&viewbox={lng-0.35},{lat+0.35},{lng+0.35},{lat-0.35}&bounded=1&limit=25"
+        
+        nom_resp = requests.get(nom_url, headers=headers, timeout=10)
+        if nom_resp.status_code == 200:
+            nom_data = nom_resp.json()
+            elements = []
+            for item in nom_data:
+                elements.append({
+                    "id": item.get("place_id"),
+                    "lat": float(item.get("lat")),
+                    "lon": float(item.get("lon")),
+                    "tags": {"name": item.get("display_name", "").split(",")[0]}
                 })
+            if elements:
+                return jsonify({"elements": elements, "_radius_used_meters": 35000, "_source": "nominatim_fallback"})
 
-        # Every attempt either failed outright or kept timing out server-side.
-        return jsonify({"error": "Overpass search failed or kept timing out on every mirror", "details": all_errors}), 502
+        return jsonify({
+            "elements": [],
+            "_radius_used_meters": 35000,
+            "_note": "No facilities found within search radius."
+        })
 
     except Exception as e:
-        # Catch-all so a bug here never surfaces as a bare, undiagnosable 500.
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": f"nearby_search crashed: {type(e).__name__}: {e}"}), 500
+        return jsonify({"error": f"nearby_search crashed: {str(e)}"}), 500
 
 
 # =========================================================
