@@ -831,7 +831,7 @@ async function searchNearby(type) {
     }
 
     if (!data.elements || data.elements.length === 0) {
-        results.innerHTML = `<div class="results-empty">No ${type === "pharmacy" ? "pharmacies" : "hospitals"} found nearby.</div>`;
+        results.innerHTML = `<div class="results-empty">No ${type === "pharmacy" ? "pharmacies" : "hospitals"} found nearby.<br><span style="font-size:11px;opacity:0.7;">Searched around: ${userLat}, ${userLng} (10km radius)<br>Raw elements returned: ${data.elements ? data.elements.length : 0}</span></div>`;
         return;
     }
 
