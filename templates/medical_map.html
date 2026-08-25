@@ -831,7 +831,9 @@ async function searchNearby(type) {
     }
 
     if (!data.elements || data.elements.length === 0) {
-        results.innerHTML = `<div class="results-empty">No ${type === "pharmacy" ? "pharmacies" : "hospitals"} found nearby.<br><span style="font-size:11px;opacity:0.7;">Searched around: ${userLat}, ${userLng} (10km radius)<br>Raw elements returned: ${data.elements ? data.elements.length : 0}</span></div>`;
+        const radiusKm = data._radius_used_meters ? (data._radius_used_meters / 1000) : 10;
+        const note = data._note ? `<br><br>${data._note}` : "";
+        results.innerHTML = `<div class="results-empty">No ${type === "pharmacy" ? "pharmacies" : "hospitals"} found nearby.<br><span style="font-size:11px;opacity:0.7;">Searched around: ${userLat}, ${userLng} (up to ${radiusKm}km radius)<br>Raw elements returned: ${data.elements ? data.elements.length : 0}</span>${note}</div>`;
         return;
     }
 
