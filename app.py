@@ -56,17 +56,54 @@ CORS(app)
 
 
 # =========================================================
-# NEARBY SEARCH (Overpass proxy)
+# NEARBY SEARCH (Overpass / OpenStreetMap - free, no signup)
 # =========================================================
-# Proxies the Overpass request server-side, so it isn't subject to
-# browser-level network/DNS blocking on the client.
-# Requires: pip install requests
+# Back to free OSM/Overpass, since a signup-required provider isn't what
+# was wanted. The real bug here (not a data gap): when the query was
+# broadened to nwr + 8 tag filters + 30km radius with only a 9s server-side
+# timeout, Overpass was very likely running out of time mid-query. When
+# that happens, Overpass returns HTTP 200 with a "remark" field (e.g.
+# "runtime error: Query timed out") and no/partial "elements" - which the
+# old code silently treated as "genuinely found nothing," when it had
+# actually failed to finish. Fixed here by:
+#   1. Checking for "remark" and treating it as a real failure, not a
+#      valid empty result.
+#   2. A cheap, fast first pass (fewer tags, "node" only, short timeout)
+#      that mirrors what worked originally.
+#   3. A heavier "nwr" pass only as a fallback if the cheap pass is truly
+#      empty (not timed out), to still catch way/relation-tagged places
+#      without paying that cost on every single search.
 
 OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
     "https://overpass.osm.ch/api/interpreter",
 ]
+
+OVERPASS_HEADERS = {
+    "User-Agent": "MediPulseAI/1.0 (nearby medical facility search; contact: sahayasathish60@gmail.com)"
+}
+
+
+def run_overpass_query(query, timeout_seconds):
+    """Try each mirror in turn. Returns (elements, errors).
+    elements is None if every mirror failed or timed out server-side -
+    that's the signal to try the next fallback step, not 'zero results'."""
+    errors = []
+    for endpoint in OVERPASS_ENDPOINTS:
+        try:
+            resp = requests.post(endpoint, data={"data": query}, headers=OVERPASS_HEADERS, timeout=timeout_seconds)
+            resp.raise_for_status()
+            result = resp.json()
+            if result.get("remark"):
+                # Overpass ran but hit an internal error/timeout - NOT a
+                # valid "nothing found" result. Try the next mirror.
+                errors.append(f"{endpoint} -> Overpass remark: {result['remark']}")
+                continue
+            return result.get("elements", []), errors
+        except Exception as e:
+            errors.append(f"{endpoint} -> {type(e).__name__}: {e}")
+    return None, errors
 
 
 @app.route("/nearby_search", methods=["GET"])
@@ -88,80 +125,74 @@ def nearby_search():
         if place_type not in ("hospital", "pharmacy"):
             return jsonify({"error": f"type must be 'hospital' or 'pharmacy', got {place_type!r}"}), 400
 
-        radius = 10000
+        all_errors = []
 
-        def build_query(r):
+        # ---- Pass 1: cheap and fast (node only, few tags, 10km) ----
+        if place_type == "pharmacy":
+            cheap_query = f"""
+            [out:json][timeout:12];
+            (
+              node(around:10000,{lat},{lng})["amenity"="pharmacy"];
+              node(around:10000,{lat},{lng})["healthcare"="pharmacy"];
+            );
+            out;
+            """
+        else:
+            cheap_query = f"""
+            [out:json][timeout:12];
+            (
+              node(around:10000,{lat},{lng})["amenity"="hospital"];
+              node(around:10000,{lat},{lng})["healthcare"="hospital"];
+            );
+            out;
+            """
+
+        elements, errors = run_overpass_query(cheap_query, timeout_seconds=15)
+        all_errors.extend(errors)
+
+        if elements:
+            return jsonify({"elements": elements, "_pass": "cheap"})
+
+        # ---- Pass 2: broader tags + ways/relations + wider radius, ----
+        # ---- only run if pass 1 came back genuinely empty (not failed) ----
+        if elements is not None:  # pass 1 succeeded, just found nothing
             if place_type == "pharmacy":
-                return f"""
-                [out:json][timeout:9];
+                broad_query = f"""
+                [out:json][timeout:15];
                 (
-                  nwr(around:{r},{lat},{lng})["amenity"="pharmacy"];
-                  nwr(around:{r},{lat},{lng})["shop"="chemist"];
-                  nwr(around:{r},{lat},{lng})["healthcare"="pharmacy"];
+                  nwr(around:20000,{lat},{lng})["amenity"="pharmacy"];
+                  nwr(around:20000,{lat},{lng})["shop"="chemist"];
+                  nwr(around:20000,{lat},{lng})["healthcare"="pharmacy"];
                 );
                 out center;
                 """
             else:
-                # Broadened beyond strict amenity=hospital - many real facilities,
-                # especially outside major cities, are only tagged as clinics,
-                # doctors' offices, or generic healthcare centres in OSM.
-                return f"""
-                [out:json][timeout:9];
+                broad_query = f"""
+                [out:json][timeout:15];
                 (
-                  nwr(around:{r},{lat},{lng})["amenity"="hospital"];
-                  nwr(around:{r},{lat},{lng})["amenity"="clinic"];
-                  nwr(around:{r},{lat},{lng})["amenity"="doctors"];
-                  nwr(around:{r},{lat},{lng})["healthcare"="hospital"];
-                  nwr(around:{r},{lat},{lng})["healthcare"="clinic"];
-                  nwr(around:{r},{lat},{lng})["healthcare"="centre"];
-                  nwr(around:{r},{lat},{lng})["healthcare"="doctor"];
-                  nwr(around:{r},{lat},{lng})["building"="hospital"];
+                  nwr(around:20000,{lat},{lng})["amenity"="hospital"];
+                  nwr(around:20000,{lat},{lng})["amenity"="clinic"];
+                  nwr(around:20000,{lat},{lng})["healthcare"="hospital"];
+                  nwr(around:20000,{lat},{lng})["healthcare"="clinic"];
                 );
                 out center;
                 """
 
-        headers = {
-            "User-Agent": "MediPulseAI/1.0 (nearby medical facility search; contact: sahayasathish60@gmail.com)"
-        }
+            elements2, errors2 = run_overpass_query(broad_query, timeout_seconds=18)
+            all_errors.extend(errors2)
 
-        # Try a tight radius first; if genuinely nothing is tagged nearby
-        # (common in under-mapped areas), widen once. Kept to 2 steps with a
-        # short per-mirror timeout so worst case (~60s) stays under the
-        # host's request timeout - 3 steps at 20s each risked ~180s worst
-        # case, which the platform was killing before Flask could respond.
-        radii_to_try = [radius, 30000]
-        PER_MIRROR_TIMEOUT = 10
+            if elements2:
+                return jsonify({"elements": elements2, "_pass": "broad"})
 
-        errors = []
-        last_empty_response = None
-        for r in radii_to_try:
-            query = build_query(r)
-            mirror_had_success = False
-            for endpoint in OVERPASS_ENDPOINTS:
-                try:
-                    resp = requests.post(endpoint, data={"data": query}, headers=headers, timeout=PER_MIRROR_TIMEOUT)
-                    resp.raise_for_status()
-                    result = resp.json()
-                    mirror_had_success = True
-                    if result.get("elements"):
-                        result["_radius_used_meters"] = r
-                        return jsonify(result)
-                    last_empty_response = result
-                    break  # this mirror worked (just empty) - no need to try other mirrors at this radius
-                except Exception as e:
-                    errors.append(f"{endpoint} (r={r}) -> {type(e).__name__}: {e}")
-            if not mirror_had_success:
-                # every mirror failed outright at this radius - no point widening further
-                break
+            if elements2 is not None:
+                # Both passes genuinely ran and found nothing.
+                return jsonify({
+                    "elements": [],
+                    "_note": "No matching facilities found in OpenStreetMap data even after a wider search. This location may genuinely be under-mapped in OSM."
+                })
 
-        if last_empty_response is not None:
-            last_empty_response["_radius_used_meters"] = radii_to_try[-1]
-            last_empty_response["_note"] = "No matching facilities found in OpenStreetMap data even after widening the search radius. This usually means the area is under-mapped in OSM rather than a search bug."
-            return jsonify(last_empty_response)
-
-        # All mirrors failed. Return the details so the frontend can show
-        # something useful instead of a silent failure.
-        return jsonify({"error": "All Overpass mirrors failed", "details": errors}), 502
+        # Every attempt either failed outright or kept timing out server-side.
+        return jsonify({"error": "Overpass search failed or kept timing out on every mirror", "details": all_errors}), 502
 
     except Exception as e:
         # Catch-all so a bug here never surfaces as a bare, undiagnosable 500.
