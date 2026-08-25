@@ -93,7 +93,7 @@ def nearby_search():
         def build_query(r):
             if place_type == "pharmacy":
                 return f"""
-                [out:json][timeout:20];
+                [out:json][timeout:9];
                 (
                   nwr(around:{r},{lat},{lng})["amenity"="pharmacy"];
                   nwr(around:{r},{lat},{lng})["shop"="chemist"];
@@ -106,7 +106,7 @@ def nearby_search():
                 # especially outside major cities, are only tagged as clinics,
                 # doctors' offices, or generic healthcare centres in OSM.
                 return f"""
-                [out:json][timeout:20];
+                [out:json][timeout:9];
                 (
                   nwr(around:{r},{lat},{lng})["amenity"="hospital"];
                   nwr(around:{r},{lat},{lng})["amenity"="clinic"];
@@ -125,9 +125,12 @@ def nearby_search():
         }
 
         # Try a tight radius first; if genuinely nothing is tagged nearby
-        # (common in under-mapped areas), automatically widen the search
-        # instead of giving up.
-        radii_to_try = [radius, 25000, 50000]
+        # (common in under-mapped areas), widen once. Kept to 2 steps with a
+        # short per-mirror timeout so worst case (~60s) stays under the
+        # host's request timeout - 3 steps at 20s each risked ~180s worst
+        # case, which the platform was killing before Flask could respond.
+        radii_to_try = [radius, 30000]
+        PER_MIRROR_TIMEOUT = 10
 
         errors = []
         last_empty_response = None
@@ -136,7 +139,7 @@ def nearby_search():
             mirror_had_success = False
             for endpoint in OVERPASS_ENDPOINTS:
                 try:
-                    resp = requests.post(endpoint, data={"data": query}, headers=headers, timeout=20)
+                    resp = requests.post(endpoint, data={"data": query}, headers=headers, timeout=PER_MIRROR_TIMEOUT)
                     resp.raise_for_status()
                     result = resp.json()
                     mirror_had_success = True
