@@ -1,712 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MediPulse AI · Smart Medical Navigation</title>
-  
-  <!-- Fonts & Icons -->
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <style>
-    :root {
-      --bg: #050814;
-      --panel: #0b1026;
-      --panel-soft: rgba(11, 16, 38, 0.85);
-      --panel-border: rgba(0, 240, 255, 0.18);
-      --line: rgba(255, 255, 255, 0.08);
-
-      --cyan: #00f0ff;
-      --violet: #7000ff;
-      --magenta: #ff007f;
-      --green: #00ff88;
-      --amber: #ffb020;
-      --red: #ff3355;
-
-      --text: #f4f7ff;
-      --muted: #8e9bbd;
-
-      --radius-lg: 20px;
-      --radius-md: 14px;
-      --radius-sm: 10px;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      font-family: 'Poppins', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-
-    /* BACKGROUND GRID ANIMATION */
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(circle, rgba(0, 240, 255, 0.08) 1px, transparent 1px),
-        radial-gradient(circle, rgba(255, 0, 127, 0.05) 1px, transparent 1px);
-      background-size: 80px 80px, 60px 60px;
-      background-position: 0 0, 30px 30px;
-      animation: bgMove 30s linear infinite;
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    @keyframes bgMove {
-      from { transform: translateY(0); }
-      to { transform: translateY(-80px); }
-    }
-
-    /* MAIN CONTAINER */
-    .main-container {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      width: 100vw;
-      height: 100vh;
-    }
-
-    /* SIDEBAR */
-    .sidebar {
-      width: 440px;
-      min-width: 360px;
-      max-width: 500px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      overflow-y: auto;
-      border-right: 1px solid var(--panel-border);
-      background: rgba(5, 8, 20, 0.92);
-      backdrop-filter: blur(24px);
-    }
-
-    .sidebar::-webkit-scrollbar {
-      width: 5px;
-    }
-
-    .sidebar::-webkit-scrollbar-thumb {
-      background: rgba(0, 240, 255, 0.3);
-      border-radius: 10px;
-    }
-
-    /* BRAND */
-    .brand {
-      text-align: center;
-      padding-bottom: 5px;
-    }
-
-    .logo {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 26px;
-      font-weight: 800;
-      letter-spacing: 1.5px;
-      background: linear-gradient(135deg, var(--cyan), var(--violet) 60%, var(--magenta));
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.4));
-    }
-
-    .tagline {
-      font-size: 10px;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    /* ECG PULSE ANIMATION */
-    .pulse-line {
-      width: 100%;
-      height: 28px;
-      margin-top: 6px;
-      overflow: hidden;
-    }
-
-    .pulse-line svg {
-      width: 200%;
-      height: 100%;
-      animation: pulseScroll 3s linear infinite;
-    }
-
-    .pulse-line path {
-      fill: none;
-      stroke: var(--cyan);
-      stroke-width: 2;
-      filter: drop-shadow(0 0 6px var(--cyan));
-    }
-
-    @keyframes pulseScroll {
-      from { transform: translateX(0); }
-      to { transform: translateX(-50%); }
-    }
-
-    /* STATUS PILL */
-    .status-pill {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: max-content;
-      margin: 0 auto;
-      padding: 4px 14px;
-      border-radius: 999px;
-      background: rgba(0, 255, 136, 0.12);
-      border: 1px solid rgba(0, 255, 136, 0.35);
-      color: var(--green);
-      font-size: 11px;
-      font-weight: 500;
-    }
-
-    .status-pill.off {
-      background: rgba(255, 176, 32, 0.12);
-      border-color: rgba(255, 176, 32, 0.35);
-      color: var(--amber);
-    }
-
-    .status-pill .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 8px var(--green);
-      animation: blink 1.5s infinite;
-    }
-
-    .status-pill.off .dot {
-      background: var(--amber);
-      box-shadow: 0 0 8px var(--amber);
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    /* VITAL STATS DASHBOARD */
-    .live-info {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      padding: 14px;
-      border-radius: var(--radius-lg);
-      background: var(--panel-soft);
-      border: 1px solid var(--panel-border);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    }
-
-    .vital {
-      padding: 10px;
-      border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .vital.wide {
-      grid-column: 1 / -1;
-    }
-
-    .vital-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 4px;
-      color: var(--muted);
-      font-size: 10px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    .vital-value {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      word-break: break-all;
-    }
-
-    /* MANUAL LOCATION SEARCH */
-    .location-search {
-      display: flex;
-      gap: 8px;
-    }
-
-    .location-search input {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      padding: 10px 12px;
-      color: white;
-      font-family: inherit;
-      font-size: 12px;
-      outline: none;
-    }
-
-    .location-search input:focus {
-      border-color: var(--cyan);
-    }
-
-    /* BUTTONS */
-    .action-btn {
-      border: none;
-      padding: 12px 16px;
-      border-radius: var(--radius-md);
-      color: white;
-      cursor: pointer;
-      font-family: 'Poppins', sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: linear-gradient(135deg, var(--cyan), var(--violet), var(--magenta));
-      background-size: 200% 200%;
-      transition: all 0.25s ease;
-      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2);
-    }
-
-    .action-btn.full {
-      width: 100%;
-    }
-
-    .action-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(112, 0, 255, 0.4);
-      background-position: right center;
-    }
-
-    .action-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .btn-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    /* SEARCH STATUS */
-    .search-status {
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      background: rgba(0, 240, 255, 0.08);
-      border: 1px solid rgba(0, 240, 255, 0.2);
-      color: var(--cyan);
-      font-size: 12px;
-    }
-
-    .search-status.show {
-      display: flex;
-    }
-
-    .cancel-search {
-      border: 1px solid rgba(255, 51, 85, 0.4);
-      background: rgba(255, 51, 85, 0.15);
-      color: var(--red);
-      padding: 4px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    /* RESULTS SECTION */
-    .results {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      max-height: 280px;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-
-    .results::-webkit-scrollbar {
-      width: 4px;
-    }
-    .results::-webkit-scrollbar-thumb {
-      background: rgba(0, 240, 255, 0.3);
-      border-radius: 4px;
-    }
-
-    .results-empty {
-      text-align: center;
-      color: var(--muted);
-      font-size: 12px;
-      padding: 20px 10px;
-      border: 1px dashed var(--line);
-      border-radius: var(--radius-md);
-    }
-
-    .loader {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      color: var(--muted);
-      font-size: 12px;
-      padding: 16px;
-    }
-
-    .spinner {
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(0, 240, 255, 0.2);
-      border-top-color: var(--cyan);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* PLACE CARDS */
-    .place-card {
-      padding: 14px;
-      border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--line);
-      transition: all 0.2s ease;
-      cursor: pointer;
-    }
-
-    .place-card:hover {
-      border-color: var(--cyan);
-      background: rgba(0, 240, 255, 0.05);
-      transform: translateY(-2px);
-    }
-
-    .place-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .place-name {
-      color: var(--cyan);
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .place-type {
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 9px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .place-type.hospital {
-      color: var(--magenta);
-      background: rgba(255, 0, 127, 0.15);
-      border: 1px solid rgba(255, 0, 127, 0.35);
-    }
-
-    .place-type.pharmacy {
-      color: var(--green);
-      background: rgba(0, 255, 136, 0.15);
-      border: 1px solid rgba(0, 255, 136, 0.35);
-    }
-
-    .place-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 12px;
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 11px;
-    }
-
-    .route-btn {
-      width: 100%;
-      border: none;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      color: white;
-      font-size: 12px;
-      font-weight: 600;
-      background: linear-gradient(135deg, var(--cyan), #0066ff);
-      transition: 0.2s;
-    }
-
-    .route-btn:hover {
-      box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
-    }
-
-    /* AI CHAT */
-    .ai-chat {
-      padding: 14px;
-      border-radius: var(--radius-lg);
-      background: var(--panel-soft);
-      border: 1px solid var(--panel-border);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .ai-chat h3 {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--cyan);
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .chat-messages {
-      height: 150px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding-right: 4px;
-    }
-
-    .chat-messages::-webkit-scrollbar {
-      width: 4px;
-    }
-    .chat-messages::-webkit-scrollbar-thumb {
-      background: rgba(0, 240, 255, 0.2);
-    }
-
-    .chat-bubble {
-      max-width: 88%;
-      padding: 10px 12px;
-      border-radius: 12px;
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .chat-bubble.user {
-      align-self: flex-end;
-      background: linear-gradient(135deg, #0066ff, #0044cc);
-      color: white;
-      border-bottom-right-radius: 2px;
-    }
-
-    .chat-bubble.ai {
-      align-self: flex-start;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--line);
-      color: var(--text);
-      border-bottom-left-radius: 2px;
-    }
-
-    .chat-input {
-      display: flex;
-      gap: 6px;
-    }
-
-    .chat-input input {
-      flex: 1;
-      min-width: 0;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      padding: 10px 12px;
-      outline: none;
-      background: rgba(255, 255, 255, 0.05);
-      color: white;
-      font-family: inherit;
-      font-size: 12px;
-    }
-
-    .chat-input input:focus {
-      border-color: var(--cyan);
-    }
-
-    .icon-btn {
-      width: 38px;
-      height: 38px;
-      flex-shrink: 0;
-      border: none;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      color: white;
-      background: linear-gradient(135deg, var(--magenta), var(--violet));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-    }
-
-    .icon-btn.listening {
-      animation: micPulse 1s infinite;
-    }
-
-    @keyframes micPulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 127, 0.6); }
-      50% { box-shadow: 0 0 0 8px rgba(255, 0, 127, 0); }
-    }
-
-    /* MAP CONTAINER */
-    .map-container {
-      flex: 1;
-      position: relative;
-    }
-
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* MAP OVERLAY BUTTONS */
-    .voice-route-btn {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      width: 50px;
-      height: 50px;
-      z-index: 900;
-      border: none;
-      border-radius: 50%;
-      cursor: pointer;
-      color: white;
-      font-size: 18px;
-      background: linear-gradient(135deg, var(--magenta), var(--violet));
-      box-shadow: 0 6px 20px rgba(112, 0, 255, 0.5);
-      transition: transform 0.2s;
-    }
-
-    .voice-route-btn:hover {
-      transform: scale(1.08);
-    }
-
-    .time-box {
-      position: absolute;
-      right: 20px;
-      bottom: 20px;
-      z-index: 900;
-      padding: 10px 14px;
-      border-radius: var(--radius-md);
-      background: rgba(5, 8, 20, 0.88);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--panel-border);
-      font-size: 11px;
-      line-height: 1.6;
-    }
-
-    .time-box .row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-    }
-
-    .time-box .row span {
-      color: var(--text);
-      font-family: 'Orbitron', sans-serif;
-    }
-
-    /* TOAST NOTIFICATIONS */
-    .toast-stack {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-width: 320px;
-    }
-
-    .toast {
-      padding: 12px 14px;
-      border-radius: var(--radius-sm);
-      background: rgba(5, 8, 20, 0.95);
-      border: 1px solid var(--line);
-      border-left: 4px solid var(--amber);
-      font-size: 12px;
-      color: white;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-      animation: toastIn 0.25s ease;
-    }
-
-    .toast.success { border-left-color: var(--green); }
-    .toast.error { border-left-color: var(--red); }
-
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* LEAFLET OVERRIDES */
-    .leaflet-popup-content-wrapper {
-      background: #0b1026;
-      color: white;
-      border-radius: 12px;
-      border: 1px solid var(--panel-border);
-    }
-
-    .leaflet-popup-tip {
-      background: #0b1026;
-    }
-
-    /* RESPONSIVE DESIGN */
-    @media (max-width: 900px) {
-      .main-container {
-        flex-direction: column;
-      }
-
-      .sidebar {
-        width: 100%;
-        max-width: none;
-        height: 55vh;
-        border-right: none;
-        border-bottom: 1px solid var(--panel-border);
-      }
-
-      .map-container {
-        height: 45vh;
-      }
-
-      .voice-route-btn {
-        width: 44px;
-        height: 44px;
-        top: 12px;
-        right: 12px;
-        font-size: 15px;
-      }
-
-      .time-box {
-        right: 12px;
-        bottom: 12px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediPulse AI · Smart Medical Navigation</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js" defer></script>
+
+<style>
+:root{
+  --bg:#060918;
+  --panel:#0b1130;
+  --panel-soft:rgba(14,19,48,0.72);
+  --line:rgba(255,255,255,0.08);
+  --cyan:#00e5ff;
+  --violet:#7b2cff;
+  --magenta:#ff2ee6;
+  --green:#2bd576;
+  --amber:#ffb020;
+  --red:#ff4d6d;
+  --text:#f4f7ff;
+  --muted:#93a1c9;
+  --radius-lg:22px;
+  --radius-md:16px;
+  --radius-sm:12px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+html,body{height:100%;}
+
+body{
+  font-family:'Poppins',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow:hidden;
+}
+
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:
+    radial-gradient(circle,#00e5ff22 1px,transparent 1px),
+    radial-gradient(circle,#ff2ee615 1px,transparent 1px);
+  background-size:120px 120px, 90px 90px;
+  background-position:0 0, 45px 45px;
+  animation:bgMove 24s linear infinite;
+  z-index:0;
+  pointer-events:none;
+}
+@media (prefers-reduced-motion: reduce){
+  body::before{animation:none;}
+  .action-btn{animation:none;}
+}
+@keyframes bgMove{ from{transform:translateY(0);} to{transform:translateY(-120px);} }
+
+.main-container{
+  position:relative;
+  z-index:1;
+  display:flex;
+  height:100vh;
+  width:100vw;
+}
+
+.sidebar{
+  width:42%;
+  min-width:380px;
+  max-width:520px;
+  position:relative;
+  padding:24px 22px 22px;
+  overflow-y:auto;
+  border-right:1px solid var(--line);
+  background:linear-gradient(rgba(4,6,18,0.86),rgba(4,6,18,0.93));
+}
+.sidebar::-webkit-scrollbar{width:6px;}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.35);border-radius:10px;}
+
+.brand{text-align:center;margin-bottom:18px;}
+.logo{
+  font-family:'Orbitron',sans-serif;
+  font-size:30px;
+  font-weight:700;
+  letter-spacing:1px;
+  background:linear-gradient(90deg,var(--cyan),var(--violet) 55%,var(--magenta));
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  filter:drop-shadow(0 0 14px rgba(0,229,255,0.35));
+}
+.tagline{
+  font-size:11px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-top:2px;
+}
+.pulse-line{width:100%;height:34px;margin-top:10px;overflow:hidden;}
+.pulse-line svg{width:200%;height:100%;animation:pulseScroll 3.2s linear infinite;}
+.pulse-line path{
+  fill:none;stroke:var(--cyan);stroke-width:2;
+  filter:drop-shadow(0 0 6px var(--cyan));
+}
+@keyframes pulseScroll{ from{transform:translateX(0);} to{transform:translateX(-50%);} }
+
+.status-pill{
+  display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:5px 12px;
+  border-radius:999px;background:rgba(43,213,118,0.12);border:1px solid rgba(43,213,118,0.4);
+  color:var(--green);margin:0 auto 16px;width:fit-content;
+}
+.status-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 1.6s infinite;}
+.status-pill.off{background:rgba(255,176,32,0.12);border-color:rgba(255,176,32,0.4);color:var(--amber);}
+.status-pill.off .dot{background:var(--amber);box-shadow:0 0 8px var(--amber);}
+.status-pill.error{background:rgba(255,77,109,0.12);border-color:rgba(255,77,109,0.4);color:var(--red);}
+.status-pill.error .dot{background:var(--red);box-shadow:0 0 8px var(--red);animation:none;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+.live-info{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  background:var(--panel-soft);border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:16px;margin-bottom:16px;backdrop-filter:blur(20px);
+}
+.vital{background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;}
+.vital-label{
+  font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:center;gap:6px;margin-bottom:4px;
+}
+.vital-value{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:600;color:var(--text);}
+.vital.wide{grid-column:1 / -1;}
+
+.btn-row{display:flex;gap:10px;margin-bottom:10px;}
+.action-btn{
+  flex:1;border:none;padding:15px 14px;border-radius:var(--radius-md);color:#fff;cursor:pointer;
+  font-size:13.5px;font-weight:600;font-family:'Poppins',sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:transform 0.2s ease, box-shadow 0.2s ease;
+  background:linear-gradient(135deg,var(--cyan),var(--violet),var(--magenta));
+  background-size:220% 220%;animation:gradientMove 6s ease infinite;
+}
+.action-btn.full{width:100%;flex:none;}
+.action-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 22px rgba(123,44,255,0.35);}
+.action-btn:active:not(:disabled){transform:translateY(0);}
+.action-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;animation:none;}
+.action-btn:focus-visible, .route-btn:focus-visible, .icon-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+@keyframes gradientMove{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
+
+.results{margin-top:18px;display:flex;flex-direction:column;gap:12px;}
+.results-empty{
+  text-align:center;color:var(--muted);font-size:13px;padding:18px 10px;
+  border:1px dashed var(--line);border-radius:var(--radius-md);
+}
+.loader{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:14px;}
+.spinner{
+  width:16px;height:16px;border:2px solid rgba(0,229,255,0.25);
+  border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.place-card{
+  background:rgba(255,255,255,0.05);border-radius:var(--radius-lg);padding:16px;
+  border:1px solid var(--line);transition:border-color 0.2s;
+}
+.place-card:hover{border-color:rgba(0,229,255,0.4);}
+.place-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.place-name{color:var(--cyan);font-size:16px;font-weight:600;}
+.place-type{
+  font-size:10px;text-transform:uppercase;letter-spacing:0.5px;padding:3px 8px;
+  border-radius:999px;white-space:nowrap;
+}
+.place-type.hospital{background:rgba(255,46,230,0.15);color:var(--magenta);border:1px solid rgba(255,46,230,0.35);}
+.place-type.pharmacy{background:rgba(43,213,118,0.15);color:var(--green);border:1px solid rgba(43,213,118,0.35);}
+.place-meta{margin-top:8px;font-size:12.5px;color:var(--muted);display:flex;gap:14px;}
+.route-btn{
+  width:100%;border:none;padding:12px;border-radius:var(--radius-sm);cursor:pointer;margin-top:12px;
+  color:#fff;font-weight:600;font-size:13px;background:linear-gradient(135deg,var(--cyan),#0066ff);
+  transition:transform 0.2s;
+}
+.route-btn:hover:not(:disabled){transform:translateY(-2px);}
+.route-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+
+.ai-chat{
+  margin-top:20px;background:var(--panel-soft);border-radius:var(--radius-lg);padding:16px;
+  border:1px solid var(--line);backdrop-filter:blur(20px);
+}
+.ai-chat h3{font-size:14px;color:var(--cyan);display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.chat-messages{height:170px;overflow-y:auto;margin-bottom:12px;padding-right:4px;display:flex;flex-direction:column;gap:8px;}
+.chat-messages::-webkit-scrollbar{width:5px;}
+.chat-messages::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.3);border-radius:10px;}
+.chat-bubble{padding:11px 13px;border-radius:14px;font-size:13.5px;line-height:1.45;max-width:90%;white-space:pre-wrap;}
+.chat-bubble.user{background:linear-gradient(135deg,#0066ff,#0044cc);align-self:flex-end;border-bottom-right-radius:4px;}
+.chat-bubble.ai{background:rgba(255,255,255,0.07);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px;}
+.chat-input{display:flex;gap:8px;}
+.chat-input input{
+  flex:1;border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:12px 14px;outline:none;background:rgba(255,255,255,0.06);color:var(--text);font-family:'Poppins',sans-serif;font-size:13.5px;
+}
+.chat-input input:focus{border-color:var(--cyan);}
+.chat-input input:disabled{opacity:0.6;}
+.icon-btn{
+  width:46px;flex-shrink:0;border:none;border-radius:var(--radius-sm);cursor:pointer;color:#fff;
+  background:linear-gradient(135deg,var(--magenta),var(--violet));transition:transform 0.2s;
+}
+.icon-btn:hover:not(:disabled){transform:translateY(-2px);}
+.icon-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.icon-btn.listening{animation:micPulse 1s infinite;}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,46,230,0.5);}50%{box-shadow:0 0 0 8px rgba(255,46,230,0);}}
+
+.map-container{flex:1;position:relative;min-width:0;}
+#map{width:100%;height:100%;filter:saturate(1.05);background:#0b1130;}
+
+.voice-route-btn{
+  position:absolute;top:20px;right:20px;width:58px;height:58px;border:none;border-radius:50%;
+  cursor:pointer;color:#fff;font-size:20px;z-index:900;
+  background:linear-gradient(135deg,var(--magenta),var(--violet));
+  box-shadow:0 6px 20px rgba(123,44,255,0.45);transition:transform 0.2s;
+}
+.voice-route-btn:hover{transform:scale(1.08);}
+
+.time-box{
+  position:absolute;bottom:20px;right:20px;z-index:900;
+  background:rgba(6,9,24,0.75);padding:12px 16px;border-radius:var(--radius-md);
+  backdrop-filter:blur(16px);border:1px solid var(--line);line-height:1.7;font-size:12.5px;
+}
+.time-box .row{display:flex;align-items:center;gap:8px;}
+
+.toast-stack{position:absolute;top:20px;left:20px;z-index:1000;display:flex;flex-direction:column;gap:8px;max-width:320px;}
+.toast{
+  background:rgba(6,9,24,0.92);border:1px solid var(--line);border-left:3px solid var(--amber);
+  padding:12px 14px;border-radius:var(--radius-sm);font-size:13px;animation:toastIn 0.25s ease;
+}
+.toast.error{border-left-color:var(--red);}
+.toast.success{border-left-color:var(--green);}
+@keyframes toastIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+
+.leaflet-popup-content-wrapper{background:#0b1130;color:var(--text);border-radius:12px;}
+.leaflet-popup-tip{background:#0b1130;}
+
+@media (max-width:900px){
+  .main-container{flex-direction:column;height:100vh;}
+  .sidebar{width:100%;max-width:none;min-width:0;height:56vh;border-right:none;border-bottom:1px solid var(--line);}
+  .map-container{height:44vh;}
+  .voice-route-btn{width:50px;height:50px;font-size:17px;top:12px;right:12px;}
+  .time-box{bottom:12px;right:12px;padding:10px 12px;}
+}
+@media (max-width:480px){
+  .btn-row{flex-direction:column;}
+  .logo{font-size:24px;}
+}
+</style>
 </head>
+
 <body>
 
 <div class="main-container">
-  
-  <!-- SIDEBAR PANEL -->
+
   <div class="sidebar">
-    
-    <!-- BRANDING -->
+
     <div class="brand">
       <div class="logo">MediPulse AI</div>
       <div class="tagline">Smart Medical Navigation</div>
@@ -717,24 +269,22 @@
       </div>
     </div>
 
-    <!-- GPS STATUS -->
     <div class="status-pill off" id="gpsStatusPill">
       <span class="dot"></span>
-      <span id="gpsStatusText">GPS Standby</span>
+      <span id="gpsStatusText">GPS Offline</span>
     </div>
 
-    <!-- LIVE VITAL METRICS -->
     <div class="live-info">
       <div class="vital wide">
-        <div class="vital-label"><i class="fa-solid fa-location-dot"></i> Location</div>
-        <div class="vital-value" id="locationText" style="font-size:12px">Tap "Turn On Location" or Search</div>
+        <div class="vital-label"><i class="fa-solid fa-location-dot"></i> Current Location</div>
+        <div class="vital-value" id="locationText" style="font-size:13px;">Waiting for GPS…</div>
       </div>
       <div class="vital">
         <div class="vital-label"><i class="fa-solid fa-gauge-high"></i> Speed</div>
         <div class="vital-value" id="speedText">0 km/h</div>
       </div>
       <div class="vital">
-        <div class="vital-label"><i class="fa-solid fa-clock"></i> Local Time</div>
+        <div class="vital-label"><i class="fa-solid fa-clock"></i> Time</div>
         <div class="vital-value" id="currentTime">--:--:--</div>
       </div>
       <div class="vital">
@@ -747,18 +297,11 @@
       </div>
     </div>
 
-    <!-- LOCATION ACTIONS -->
     <button class="action-btn full" id="locationBtn" onclick="enableLocation()">
-      <i class="fa-solid fa-location-crosshairs"></i> Turn On Location
+      <i class="fa-solid fa-location-crosshairs"></i> <span id="locationBtnLabel">Turn On Location</span>
     </button>
 
-    <div class="location-search">
-      <input type="text" id="manualLocationInput" placeholder="Or enter City / Address..." onkeydown="if(event.key==='Enter')searchManualLocation()">
-      <button class="icon-btn" onclick="searchManualLocation()" title="Search location"><i class="fa-solid fa-magnifying-glass"></i></button>
-    </div>
-
-    <!-- SEARCH TYPE BUTTONS -->
-    <div class="btn-row">
+    <div class="btn-row" style="margin-top:10px;">
       <button class="action-btn" id="hospitalBtn" onclick="searchNearby('hospital')">
         <i class="fa-solid fa-hospital"></i> Hospitals
       </button>
@@ -767,45 +310,28 @@
       </button>
     </div>
 
-    <!-- SEARCH PROGRESS STATUS -->
-    <div class="search-status" id="searchStatus">
-      <span id="searchStatusText">Searching nearby...</span>
-      <button class="cancel-search" onclick="cancelNearbySearch()">
-        <i class="fa-solid fa-xmark"></i> Cancel
-      </button>
-    </div>
-
-    <!-- RESULTS LIST -->
     <div class="results" id="results">
-      <div class="results-empty">
-        <i class="fa-solid fa-map-location-dot" style="font-size:24px; margin-bottom:8px;"></i><br>
-        Set location first, then search for nearby Hospitals or Pharmacies.
-      </div>
+      <div class="results-empty">Turn on location, then search to see nearby hospitals or pharmacies here.</div>
     </div>
 
-    <!-- AI ASSISTANT CHAT -->
     <div class="ai-chat">
-      <h3><i class="fa-solid fa-robot"></i> Medical AI Assistant</h3>
-      <div class="chat-messages" id="chatMessages">
-        <div class="chat-bubble ai">
-          Hello! I can guide you to nearby emergency care, calculate ETA, or assist with basic medical navigation.
-        </div>
-      </div>
+      <h3><i class="fa-solid fa-robot"></i> AI Medical Assistant</h3>
+      <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-input">
-        <input type="text" id="chatInput" placeholder="Ask about routes or health navigation..." onkeydown="if(event.key==='Enter')sendAIMessage()">
-        <button class="icon-btn" onclick="sendAIMessage()" title="Send message"><i class="fa-solid fa-paper-plane"></i></button>
-        <button class="icon-btn" id="micBtn" onclick="startVoiceInput()" title="Voice input"><i class="fa-solid fa-microphone"></i></button>
+        <input type="text" id="chatInput" placeholder="Ask about your route or a symptom…" onkeydown="if(event.key==='Enter')sendAIMessage()">
+        <button class="icon-btn" id="sendBtn" onclick="sendAIMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+        <button class="icon-btn" id="micBtn" onclick="startVoiceInput()"><i class="fa-solid fa-microphone"></i></button>
       </div>
     </div>
 
   </div>
 
-  <!-- MAP PANEL -->
   <div class="map-container">
     <div id="map"></div>
+
     <div class="toast-stack" id="toastStack"></div>
-    
-    <button class="voice-route-btn" onclick="repeatDirections()" title="Repeat Navigation Voice Guidance">
+
+    <button class="voice-route-btn" onclick="repeatDirections()" title="Repeat directions">
       <i class="fa-solid fa-volume-high"></i>
     </button>
 
@@ -818,76 +344,87 @@
 </div>
 
 <script>
-/* =========================================================
-   GLOBAL APPLICATION STATE
-========================================================= */
-let map;
-let userMarker = null;
-let routeLayer = null;
-let userLat = null;
-let userLng = null;
-let currentSpeed = 0;
-let destinationLat = null;
-let destinationLng = null;
-let destinationName = "";
-let currentSteps = [];
-let currentStepIndex = 0;
-let navigationInterval = null;
+/* ============================================================
+   STATE & CONSTANTS
+============================================================ */
+let map, userMarker, routeLayer;
+let userLat = null, userLng = null, currentSpeed = 0;
+let destinationLat = null, destinationLng = null, destinationName = "";
+let currentSteps = [], currentStepIndex = 0, navigationInterval = null;
 let markers = [];
-let locationWatcher = null;
-let nearbyController = null;
+let watchId = null;
+let locationEnabled = false;
 
-/* OVERPASS MIRRORS FOR HIGH RELIABILITY */
-const OVERPASS_SERVERS = [
+// Guards against race conditions when a user fires off several
+// searches/routes in quick succession — only the latest request's
+// response is ever applied to the UI.
+let searchRequestId = 0;
+let routeRequestId = 0;
+
+const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
-  "https://overpass.private.coffee/api/interpreter"
+  "https://overpass.openstreetmap.ru/api/interpreter"
 ];
 
-const SEARCH_RADII = [5000, 10000];
-const SEARCH_TIMEOUT = 9000;
+const FETCH_TIMEOUT_MS = 9000;
 
-/* =========================================================
-   LEAFLET MAP INITIALIZATION (CARTO DARK MATTER TILESET)
-========================================================= */
-map = L.map("map", { zoomControl: true }).setView([20.5937, 78.9629], 5);
+/* ============================================================
+   FETCH HELPERS (timeout + abort support)
+============================================================ */
+function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
 
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-  subdomains: 'abcd',
-  maxZoom: 19
-}).addTo(map);
+let mapReady = false;
+function initMap() {
+  if (mapReady) return;
+  mapReady = true;
 
-/* CUSTOM MARKER ICONS */
-const hospitalIcon = L.divIcon({
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
+  });
+
+  map = L.map("map", { zoomControl: true }).setView([20.5937, 78.9629], 5);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors",
+    maxZoom: 19
+  }).addTo(map);
+}
+
+// Leaflet's script tag is deferred, so wait for it to actually be
+// available rather than assuming it has loaded by the time this
+// inline script runs.
+if (window.L) {
+  initMap();
+} else {
+  window.addEventListener("load", initMap);
+}
+
+const hospitalIcon = () => L.divIcon({
   className: "",
-  html: `<div style="background:#ff007f; width:18px; height:18px; border-radius:50%; border:2px solid white; box-shadow:0 0 12px #ff007f;"></div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9]
+  html: '<div style="background:#ff2ee6;width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #ff2ee6;"></div>',
+  iconSize: [16,16], iconAnchor: [8,8]
+});
+const pharmacyIcon = () => L.divIcon({
+  className: "",
+  html: '<div style="background:#2bd576;width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #2bd576;"></div>',
+  iconSize: [16,16], iconAnchor: [8,8]
 });
 
-const pharmacyIcon = L.divIcon({
-  className: "",
-  html: `<div style="background:#00ff88; width:18px; height:18px; border-radius:50%; border:2px solid white; box-shadow:0 0 12px #00ff88;"></div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9]
-});
-
-const userIcon = L.divIcon({
-  className: "",
-  html: `<div style="background:#00f0ff; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 0 16px #00f0ff;"></div>`,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10]
-});
-
-/* =========================================================
-   UTILITIES & TOASTS
-========================================================= */
-function showToast(message, type = "info", duration = 3500) {
+/* ============================================================
+   TOASTS & CLOCK
+============================================================ */
+function showToast(message, type = "info", duration = 4000) {
   const stack = document.getElementById("toastStack");
   const el = document.createElement("div");
   el.className = `toast ${type}`;
-  el.innerText = message;
+  el.innerText = message; // textContent-equivalent, safe from injection
   stack.appendChild(el);
   setTimeout(() => el.remove(), duration);
 }
@@ -898,272 +435,261 @@ setInterval(() => {
   document.getElementById("currentTime").innerText = now;
 }, 1000);
 
-/* =========================================================
-   GEOLOCATION & MANUAL SEARCH
-========================================================= */
+/* ============================================================
+   LOCATION
+============================================================ */
 function enableLocation() {
+  if (locationEnabled) return; // prevent stacking duplicate watchers
+
   if (!navigator.geolocation) {
-    showToast("GPS is not supported by your browser.", "error");
+    showToast("Geolocation is not supported on this device.", "error");
     return;
   }
-
-  if (locationWatcher) navigator.geolocation.clearWatch(locationWatcher);
 
   const btn = document.getElementById("locationBtn");
   btn.disabled = true;
-  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Locating...`;
+  document.getElementById("locationBtnLabel").innerText = "Requesting…";
 
-  locationWatcher = navigator.geolocation.watchPosition(
-    position => {
+  watchId = navigator.geolocation.watchPosition(
+    (position) => {
+      locationEnabled = true;
+      btn.disabled = false;
+      document.getElementById("locationBtnLabel").innerText = "Location Active";
+
       userLat = position.coords.latitude;
       userLng = position.coords.longitude;
-      currentSpeed = position.coords.speed ? (position.coords.speed * 3.6).toFixed(1) : 0;
+      currentSpeed = position.coords.speed ? parseFloat((position.coords.speed * 3.6).toFixed(1)) : 0;
 
-      updateUserPositionOnMap();
-      
-      btn.disabled = false;
-      btn.innerHTML = `<i class="fa-solid fa-location-crosshairs"></i> Update Location`;
+      document.getElementById("locationText").innerText = `${userLat.toFixed(5)}, ${userLng.toFixed(5)}`;
+      document.getElementById("speedText").innerText = `${currentSpeed} km/h`;
 
       const pill = document.getElementById("gpsStatusPill");
-      pill.classList.remove("off");
+      pill.classList.remove("off", "error");
       document.getElementById("gpsStatusText").innerText = "GPS Active";
       document.getElementById("gpsLiveLabel").innerText = "GPS Active";
 
+      if (userMarker) {
+        userMarker.setLatLng([userLat, userLng]);
+      } else if (mapReady) {
+        userMarker = L.marker([userLat, userLng]).addTo(map).bindPopup("You are here");
+      }
+
+      if (!window.__gpsCentered && mapReady) {
+        map.setView([userLat, userLng], 15);
+        window.__gpsCentered = true;
+      }
+
       updateLiveDistance();
     },
-    error => {
+    (error) => {
       btn.disabled = false;
-      btn.innerHTML = `<i class="fa-solid fa-location-crosshairs"></i> Turn On Location`;
-      showToast("GPS access failed. Try searching manually below.", "error");
-    },
-    { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-  );
-
-  speakText("Locating position");
-}
-
-function updateUserPositionOnMap() {
-  document.getElementById("locationText").innerText = `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
-  document.getElementById("speedText").innerText = `${currentSpeed} km/h`;
-
-  if (userMarker) {
-    userMarker.setLatLng([userLat, userLng]);
-  } else {
-    userMarker = L.marker([userLat, userLng], { icon: userIcon }).addTo(map).bindPopup("<b>Your Location</b>");
-  }
-
-  if (!window.__gpsCentered) {
-    map.setView([userLat, userLng], 14);
-    window.__gpsCentered = true;
-  }
-}
-
-async function searchManualLocation() {
-  const query = document.getElementById("manualLocationInput").value.trim();
-  if (!query) return;
-
-  showToast(`Searching for "${query}"...`, "info");
-  try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-    const data = await res.json();
-
-    if (data && data.length > 0) {
-      userLat = parseFloat(data[0].lat);
-      userLng = parseFloat(data[0].lon);
-      updateUserPositionOnMap();
-      map.setView([userLat, userLng], 14);
-      
+      document.getElementById("locationBtnLabel").innerText = "Turn On Location";
       const pill = document.getElementById("gpsStatusPill");
       pill.classList.remove("off");
-      document.getElementById("gpsStatusText").innerText = "Manual Location";
-      document.getElementById("gpsLiveLabel").innerText = "Manual Location";
+      pill.classList.add("error");
+      document.getElementById("gpsStatusText").innerText = "GPS Error";
 
-      showToast(`Location set to ${data[0].display_name.split(',')[0]}`, "success");
-    } else {
-      showToast("Location not found.", "error");
-    }
-  } catch (err) {
-    showToast("Error searching location.", "error");
-  }
-}
-
-/* =========================================================
-   OVERPASS API NEARBY SEARCH WITH FAILOVER
-========================================================= */
-function buildOverpassQuery(type, lat, lng, radius) {
-  const filter = type === "hospital"
-    ? `nwr(around:${radius},${lat},${lng})["amenity"="hospital"];
-       nwr(around:${radius},${lat},${lng})["healthcare"="hospital"];
-       nwr(around:${radius},${lat},${lng})["amenity"="clinic"];`
-    : `nwr(around:${radius},${lat},${lng})["amenity"="pharmacy"];
-       nwr(around:${radius},${lat},${lng})["shop"="chemist"];`;
-
-  return `[out:json][timeout:8];(${filter});out center tags;`;
-}
-
-async function fetchOverpassWithFailover(type, lat, lng, radius, signal) {
-  const query = buildOverpassQuery(type, lat, lng, radius);
-  
-  for (const serverUrl of OVERPASS_SERVERS) {
-    try {
-      const url = `${serverUrl}?data=${encodeURIComponent(query)}`;
-      const res = await fetch(url, { method: "GET", signal });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.elements) return data;
+      let message = "Location is unavailable right now.";
+      if (error.code === error.PERMISSION_DENIED) {
+        message = "Location permission was denied. Enable it in your browser/device settings.";
+      } else if (error.code === error.POSITION_UNAVAILABLE) {
+        message = "Your position could not be determined. Try moving to an open area.";
+      } else if (error.code === error.TIMEOUT) {
+        message = "Location request timed out. Please try again.";
       }
-    } catch (e) {
-      console.warn(`Server ${serverUrl} failed, trying mirror...`);
+      console.error(error);
+      showToast(message, "error");
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+  );
+
+  speakText("GPS enabled");
+}
+
+/* ============================================================
+   NEARBY SEARCH
+============================================================ */
+function buildOverpassQuery(type, lat, lng, radius) {
+  const filters =
+    type === "pharmacy"
+      ? `node(around:${radius},${lat},${lng})["amenity"="pharmacy"];
+         node(around:${radius},${lat},${lng})["shop"="chemist"];
+         node(around:${radius},${lat},${lng})["healthcare"="pharmacy"];`
+      : `node(around:${radius},${lat},${lng})["amenity"="hospital"];
+         node(around:${radius},${lat},${lng})["healthcare"="hospital"];
+         node(around:${radius},${lat},${lng})["amenity"="clinic"];`;
+
+  return `[out:json][timeout:25];(${filters});out center;`;
+}
+
+// Races all Overpass mirrors in parallel instead of trying them one
+// at a time, so a single slow/dead mirror can't stall the search.
+async function fetchOverpassDirect(type, lat, lng) {
+  const radiiToTry = [10000, 25000];
+
+  for (const radius of radiiToTry) {
+    const query = buildOverpassQuery(type, lat, lng, radius);
+
+    const attempts = OVERPASS_ENDPOINTS.map(async (endpoint) => {
+      const response = await fetchWithTimeout(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `data=${encodeURIComponent(query)}`
+      }, 8000);
+      if (!response.ok) throw new Error(`${endpoint} returned ${response.status}`);
+      const data = await response.json();
+      if (!data || !Array.isArray(data.elements) || data.elements.length === 0) {
+        throw new Error("No elements in response");
+      }
+      return data.elements;
+    });
+
+    try {
+      const elements = await Promise.any(attempts);
+      return elements;
+    } catch (aggregateErr) {
+      // every mirror failed at this radius — try the next, larger radius
+      continue;
     }
   }
-  throw new Error("All Overpass mirrors failed.");
+  return [];
 }
 
 async function searchNearby(type) {
-  if (userLat === null || userLng === null) {
-    showToast("Turn on location or search a location first.", "error");
+  if (!userLat || !userLng) {
+    showToast("Turn on location first so I know where to search from.", "error");
     return;
   }
 
-  cancelNearbySearch(false);
-  nearbyController = new AbortController();
-  const signal = nearbyController.signal;
+  const myRequestId = ++searchRequestId;
+  const hospitalBtn = document.getElementById("hospitalBtn");
+  const pharmacyBtn = document.getElementById("pharmacyBtn");
+  hospitalBtn.disabled = true;
+  pharmacyBtn.disabled = true;
 
   const results = document.getElementById("results");
-  const searchStatus = document.getElementById("searchStatus");
-  const searchStatusText = document.getElementById("searchStatusText");
-
-  searchStatus.classList.add("show");
-  results.innerHTML = `
-    <div class="loader">
-      <div class="spinner"></div>
-      <span>Locating nearby ${type === "hospital" ? "hospitals" : "pharmacies"}...</span>
-    </div>`;
-
-  clearNearbyMarkers();
-  setSearchButtons(true);
+  results.innerHTML = `<div class="loader"><div class="spinner"></div> Searching nearby ${type === "hospital" ? "hospitals" : "pharmacies"}…</div>`;
 
   let elements = [];
-
   try {
-    for (const radius of SEARCH_RADII) {
-      if (signal.aborted) break;
-      searchStatusText.innerText = `Searching within ${radius / 1000} km...`;
-
-      try {
-        const data = await fetchOverpassWithFailover(type, userLat, userLng, radius, signal);
-        if (data && data.elements && data.elements.length > 0) {
+    let usedBackend = false;
+    try {
+      const response = await fetchWithTimeout("/api/nearby", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, lat: userLat, lng: userLng })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data && Array.isArray(data.elements) && data.elements.length > 0) {
           elements = data.elements;
-          break;
+          usedBackend = true;
         }
-      } catch (err) {
-        console.warn("Radius attempt failed", err);
       }
+    } catch (backendErr) {
+      console.warn("Backend proxy unavailable, failing over to direct fetch:", backendErr.message);
     }
 
-    if (signal.aborted) return;
-
-    if (elements.length === 0) {
-      results.innerHTML = `<div class="results-empty">No ${type}s found nearby. Try expanding your search area.</div>`;
-      showToast(`No nearby ${type}s found.`, "info");
-      return;
+    if (!usedBackend) {
+      elements = await fetchOverpassDirect(type, userLat, userLng);
     }
-
-    displayPlaces(elements, type);
-    showToast(`Found ${elements.length} nearby facilities.`, "success");
-
-  } catch (error) {
-    if (error.name === "AbortError") return;
-    results.innerHTML = `<div class="results-empty">Search unavailable right now. Try again.</div>`;
-    showToast("Could not retrieve places.", "error");
-  } finally {
-    searchStatus.classList.remove("show");
-    setSearchButtons(false);
+  } catch (err) {
+    console.error("Nearby search failed completely:", err);
+    if (myRequestId === searchRequestId) {
+      results.innerHTML = `<div class="results-empty">Couldn't reach the map data service right now.<br><span style="color:var(--muted);font-size:11px;">${escapeHtml(err.message || "Unknown error")}</span></div>`;
+      showToast("Nearby search failed — check your network connection.", "error");
+    }
+    hospitalBtn.disabled = false;
+    pharmacyBtn.disabled = false;
+    return;
   }
-}
 
-function cancelNearbySearch(showMessage = true) {
-  if (nearbyController) {
-    nearbyController.abort();
-    nearbyController = null;
+  hospitalBtn.disabled = false;
+  pharmacyBtn.disabled = false;
+
+  // A newer search has since started — discard this stale result.
+  if (myRequestId !== searchRequestId) return;
+
+  if (elements.length === 0) {
+    results.innerHTML = `<div class="results-empty">No ${type === "hospital" ? "hospitals" : "pharmacies"} found within 25 km. Try again from another location.</div>`;
+    return;
   }
-  document.getElementById("searchStatus").classList.remove("show");
-  setSearchButtons(false);
-  if (showMessage) showToast("Search cancelled.", "info");
+
+  displayPlaces(elements, type);
 }
 
-function setSearchButtons(disabled) {
-  document.getElementById("hospitalBtn").disabled = disabled;
-  document.getElementById("pharmacyBtn").disabled = disabled;
-}
-
-function clearNearbyMarkers() {
-  markers.forEach(m => map.hasLayer(m) && map.removeLayer(m));
-  markers = [];
-}
-
-/* =========================================================
-   DISPLAY FACILITY CARDS & MARKERS
-========================================================= */
+/* ============================================================
+   DISPLAY RESULTS
+============================================================ */
 function displayPlaces(places, type) {
   const results = document.getElementById("results");
   results.innerHTML = "";
 
-  const validPlaces = places.map(p => {
-    const lat = p.lat || p.center?.lat;
-    const lon = p.lon || p.center?.lon;
-    if (!lat || !lon) return null;
-    return {
-      ...p,
-      lat, lon,
-      _distance: parseFloat(calculateDistance(userLat, userLng, lat, lon))
-    };
-  }).filter(Boolean);
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
 
-  validPlaces.sort((a, b) => a._distance - b._distance);
+  const valid = places.filter(p => typeof p.lat === "number" && typeof p.lon === "number");
+  if (valid.length === 0) {
+    results.innerHTML = `<div class="results-empty">No results with usable coordinates were returned.</div>`;
+    return;
+  }
 
-  validPlaces.slice(0, 15).forEach(place => {
-    const tags = place.tags || {};
-    const name = tags.name || tags["name:en"] || (type === "pharmacy" ? "Local Pharmacy" : "Medical Center");
-    const address = [tags["addr:street"], tags["addr:city"]].filter(Boolean).join(", ");
-    const icon = type === "pharmacy" ? pharmacyIcon : hospitalIcon;
+  valid
+    .map(place => ({
+      ...place,
+      _distance: parseFloat(calculateDistance(userLat, userLng, place.lat, place.lon))
+    }))
+    .sort((a, b) => a._distance - b._distance)
+    .forEach(place => {
+      const lat = place.lat, lon = place.lon;
+      const name = place.tags?.name || (type === "pharmacy" ? "Pharmacy" : "Medical Center");
+      const icon = type === "pharmacy" ? pharmacyIcon() : hospitalIcon();
 
-    /* MAP MARKER */
-    const marker = L.marker([place.lat, place.lon], { icon }).addTo(map);
-    marker.bindPopup(`<b>${escapeHtml(name)}</b><br>${place._distance} km away`);
-    markers.push(marker);
+      if (mapReady) {
+        const marker = L.marker([lat, lon], { icon }).addTo(map);
+        // bindPopup treats string content as HTML — build a text-only
+        // element instead so a place name from OSM data can never be
+        // interpreted as markup.
+        const popupEl = document.createElement("div");
+        popupEl.innerText = name;
+        marker.bindPopup(popupEl);
+        markers.push(marker);
+      }
 
-    /* UI CARD */
-    const card = document.createElement("div");
-    card.className = "place-card";
-    card.innerHTML = `
-      <div class="place-head">
-        <div class="place-name">${escapeHtml(name)}</div>
-        <div class="place-type ${type}">${type}</div>
-      </div>
-      <div class="place-meta">
-        <span><i class="fa-solid fa-route"></i> ${place._distance} km away</span>
-        ${address ? `<span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(address)}</span>` : ""}
-      </div>
-      <button class="route-btn"><i class="fa-solid fa-diamond-turn-right"></i> Start Route</button>
-    `;
+      const card = document.createElement("div");
+      card.className = "place-card";
 
-    card.querySelector(".route-btn").addEventListener("click", (e) => {
-      e.stopPropagation();
-      startRoute(place.lat, place.lon, name);
+      const head = document.createElement("div");
+      head.className = "place-head";
+      const nameEl = document.createElement("div");
+      nameEl.className = "place-name";
+      nameEl.innerText = name;
+      const typeEl = document.createElement("div");
+      typeEl.className = `place-type ${type}`;
+      typeEl.innerText = type;
+      head.appendChild(nameEl);
+      head.appendChild(typeEl);
+
+      const meta = document.createElement("div");
+      meta.className = "place-meta";
+      meta.innerHTML = `<span><i class="fa-solid fa-route"></i> ${place._distance} km away</span>`;
+
+      const btn = document.createElement("button");
+      btn.className = "route-btn";
+      btn.innerHTML = `<i class="fa-solid fa-diamond-turn-right"></i> Start Navigation`;
+      // Store raw values as properties (not HTML attributes) so no
+      // escaping/injection concerns arise regardless of place name content.
+      btn.addEventListener("click", () => startRoute(lat, lon, name, btn));
+
+      card.appendChild(head);
+      card.appendChild(meta);
+      card.appendChild(btn);
+      results.appendChild(card);
     });
 
-    card.addEventListener("click", () => {
-      map.setView([place.lat, place.lon], 16);
-      marker.openPopup();
-    });
-
-    results.appendChild(card);
-  });
-
-  if (markers.length > 0) {
+  if (mapReady && markers.length > 0) {
     const group = L.featureGroup(markers);
-    map.fitBounds(group.getBounds(), { padding: [40, 40], maxZoom: 15 });
+    map.fitBounds(group.getBounds().pad(0.3));
   }
 }
 
@@ -1173,12 +699,70 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-/* =========================================================
-   OSRM ROUTING ENGINE
-========================================================= */
-async function startRoute(lat, lng, name) {
-  if (userLat === null || userLng === null) {
+/* ============================================================
+   ROUTING
+============================================================ */
+async function fetchRouteDirect(fromLat, fromLng, toLat, toLng) {
+  const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&steps=true&geometries=geojson`;
+  const res = await fetchWithTimeout(url, {}, 9000);
+  if (!res.ok) throw new Error(`OSRM HTTP ${res.status}`);
+  return await res.json();
+}
+
+async function startRoute(lat, lng, name, triggerBtn) {
+  if (!userLat || !userLng) {
     showToast("Turn on location first.", "error");
+    return;
+  }
+
+  const myRequestId = ++routeRequestId;
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Calculating route…`;
+  }
+
+  let data;
+  try {
+    try {
+      const response = await fetchWithTimeout("/api/route", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromLat: userLat, fromLng: userLng, toLat: lat, toLng: lng })
+      });
+      if (response.ok) {
+        data = await response.json();
+        if (!data || !Array.isArray(data.routes) || data.routes.length === 0) {
+          throw new Error("Empty route from backend");
+        }
+      } else {
+        throw new Error(`Proxy status ${response.status}`);
+      }
+    } catch (proxyErr) {
+      console.warn("Backend route proxy unavailable, falling back directly:", proxyErr.message);
+      data = await fetchRouteDirect(userLat, userLng, lat, lng);
+    }
+  } catch (err) {
+    console.error(err);
+    if (myRequestId === routeRequestId) {
+      showToast("Couldn't calculate a route — service unavailable.", "error");
+    }
+    if (triggerBtn) {
+      triggerBtn.disabled = false;
+      triggerBtn.innerHTML = `<i class="fa-solid fa-diamond-turn-right"></i> Start Navigation`;
+    }
+    return;
+  }
+
+  if (triggerBtn) {
+    triggerBtn.disabled = false;
+    triggerBtn.innerHTML = `<i class="fa-solid fa-diamond-turn-right"></i> Start Navigation`;
+  }
+
+  // A newer route request has since started — discard this stale result.
+  if (myRequestId !== routeRequestId) return;
+
+  if (!data || !data.routes || data.routes.length === 0) {
+    showToast("No drivable route could be found.", "error");
     return;
   }
 
@@ -1187,168 +771,214 @@ async function startRoute(lat, lng, name) {
   destinationName = name;
   currentStepIndex = 0;
 
-  if (routeLayer) map.removeLayer(routeLayer);
+  if (routeLayer && mapReady) map.removeLayer(routeLayer);
   if (navigationInterval) clearInterval(navigationInterval);
 
-  showToast(`Calculating route to ${name}...`, "info");
+  const route = data.routes[0];
+  const coordinates = route.geometry.coordinates.map(c => [c[1], c[0]]);
 
-  try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${lng},${lat}?overview=full&steps=true&geometries=geojson`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (!data || !data.routes || data.routes.length === 0) {
-      showToast("No drivable route found.", "error");
-      return;
-    }
-
-    const route = data.routes[0];
-    const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-
-    routeLayer = L.polyline(coords, { color: "#00f0ff", weight: 5, opacity: 0.9 }).addTo(map);
+  if (mapReady) {
+    routeLayer = L.polyline(coordinates, { color: "#00e5ff", weight: 6, opacity: 0.9 }).addTo(map);
     map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
-
-    currentSteps = route.legs[0]?.steps || [];
-    showToast(`Navigation started to ${name}`, "success");
-    speakText(`Navigation started to ${name}`);
-
-    speakNextDirection();
-    updateLiveDistance();
-
-  } catch (err) {
-    showToast("Error calculating route.", "error");
   }
+
+  currentSteps = route.legs?.[0]?.steps || [];
+
+  showToast(`Navigation started to ${name}`, "success");
+  speakText(`Navigation started to ${name}`);
+  speakNextDirection();
+
+  navigationInterval = setInterval(speakNextDirection, 20000);
+  updateLiveDistance();
 }
 
 function speakNextDirection() {
   if (currentStepIndex >= currentSteps.length) {
-    speakText("You have arrived at your destination.");
+    speakText("Destination reached");
+    clearInterval(navigationInterval);
+    navigationInterval = null;
     return;
   }
-
   const step = currentSteps[currentStepIndex];
-  let instruction = step.maneuver?.instruction || `${step.maneuver?.type || 'Proceed'} ${step.maneuver?.modifier || ''}`;
-  
-  speakText(instruction);
+  if (step.maneuver && step.maneuver.instruction) speakText(step.maneuver.instruction);
   currentStepIndex++;
-}
-
-function repeatDirections() {
-  if (currentSteps.length > 0) {
-    currentStepIndex = Math.max(0, currentStepIndex - 1);
-    speakNextDirection();
-  } else {
-    speakText("No active navigation.");
-    showToast("No active navigation route.", "info");
-  }
 }
 
 function updateLiveDistance() {
   if (!destinationLat || !userLat) return;
-  const dist = calculateDistance(userLat, userLng, destinationLat, destinationLng);
-  document.getElementById("distanceLeft").innerText = `${dist} km`;
-
-  const speed = Number(currentSpeed) > 0 ? Number(currentSpeed) : 35; // Default estimation 35 km/h
-  const mins = Math.round((Number(dist) / speed) * 60);
-  document.getElementById("arrivalTime").innerText = `${mins} min`;
+  const distance = calculateDistance(userLat, userLng, destinationLat, destinationLng);
+  document.getElementById("distanceLeft").innerText = `${distance} km`;
+  if (currentSpeed > 0.5) {
+    const mins = Math.round((distance / currentSpeed) * 60);
+    document.getElementById("arrivalTime").innerText = `${mins} min`;
+  } else {
+    document.getElementById("arrivalTime").innerText = "Stationary";
+  }
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return (R * c).toFixed(2);
 }
 
-/* =========================================================
-   TEXT TO SPEECH & VOICE INPUT
-========================================================= */
+/* ============================================================
+   VOICE OUTPUT & INPUT
+============================================================ */
 function speakText(text) {
   if (!window.speechSynthesis) return;
   speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.95;
-  speechSynthesis.speak(utterance);
+  const speech = new SpeechSynthesisUtterance(text);
+  speech.lang = "en-US";
+  speech.rate = 0.95;
+  speechSynthesis.speak(speech);
 }
 
 function startVoiceInput() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    showToast("Voice input not supported in this browser.", "error");
+    showToast("Voice recognition isn't supported in this browser.", "error");
     return;
   }
 
   const micBtn = document.getElementById("micBtn");
-  const rec = new SpeechRecognition();
-  rec.lang = "en-US";
+  if (micBtn.classList.contains("listening")) return; // already listening
 
-  rec.onstart = () => micBtn.classList.add("listening");
-  rec.onend = () => micBtn.classList.remove("listening");
-  rec.onerror = () => micBtn.classList.remove("listening");
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
 
-  rec.onresult = (e) => {
-    document.getElementById("chatInput").value = e.results[0][0].transcript;
+  recognition.onstart = () => micBtn.classList.add("listening");
+  recognition.onend = () => micBtn.classList.remove("listening");
+  recognition.onerror = (e) => {
+    micBtn.classList.remove("listening");
+    if (e.error !== "aborted" && e.error !== "no-speech") {
+      showToast("Voice input failed — please try again.", "error");
+    }
+  };
+
+  recognition.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    document.getElementById("chatInput").value = text;
     sendAIMessage();
   };
 
-  rec.start();
+  try {
+    recognition.start();
+  } catch (err) {
+    console.error(err);
+    micBtn.classList.remove("listening");
+  }
 }
 
-/* =========================================================
-   INTELLIGENT CLIENT-SIDE AI ASSISTANT
-========================================================= */
-function processAIResponse(msg) {
-  const lower = msg.toLowerCase();
-  const dist = document.getElementById("distanceLeft").innerText;
-  const eta = document.getElementById("arrivalTime").innerText;
-
-  /* EMERGENCY CHECK */
-  if (/chest pain|cannot breathe|can't breathe|unconscious|heavy bleeding|stroke|heart attack/i.test(lower)) {
-    return "🚨 EMERGENCY ALERT: If someone is experiencing severe chest pain, breathing difficulty, or loss of consciousness, please contact emergency services immediately or head to the nearest Emergency Room!";
+function repeatDirections() {
+  if (currentSteps.length > 0 && currentStepIndex > 0) {
+    const step = currentSteps[Math.max(0, currentStepIndex - 1)];
+    if (step?.maneuver?.instruction) speakText(step.maneuver.instruction);
+    else speakText("No instruction available for this step.");
+  } else if (currentSteps.length > 0) {
+    speakNextDirection();
+  } else {
+    speakText("No active navigation");
+    showToast("No active navigation to repeat.", "info");
   }
-
-  /* ETA / DISTANCE QUERIES */
-  if (lower.includes("eta") || lower.includes("how long") || lower.includes("time")) {
-    return eta !== "--" 
-      ? `Estimated time of arrival at ${destinationName || 'destination'} is ${eta} (Distance: ${dist}).`
-      : "No destination active. Select a nearby hospital or pharmacy and click 'Start Route' to calculate ETA.";
-  }
-
-  if (lower.includes("distance") || lower.includes("how far")) {
-    return dist !== "--"
-      ? `Remaining distance to ${destinationName || 'destination'} is ${dist}.`
-      : "Please select a facility and start navigation to track distance.";
-  }
-
-  if (lower.includes("hospital") || lower.includes("doctor") || lower.includes("clinic")) {
-    return "Click the 'Hospitals' button above to automatically scan for nearby hospitals, clinics, and emergency rooms.";
-  }
-
-  if (lower.includes("pharmacy") || lower.includes("medicine") || lower.includes("chemist")) {
-    return "Click the 'Pharmacies' button above to discover local drugstores and pharmacies within your range.";
-  }
-
-  return "I'm your MediPulse AI Assistant. I can help navigate to healthcare centers, calculate travel ETA, or locate pharmacies. For urgent health crises, always reach out directly to emergency services.";
 }
 
-function sendAIMessage() {
+/* ============================================================
+   AI CHAT & FALLBACK
+============================================================ */
+function fallbackReply(message, context) {
+  const lower = message.toLowerCase();
+  const emergencyWords = [
+    "chest pain", "can't breathe", "cannot breathe", "unconscious",
+    "severe bleeding", "stroke", "heart attack", "suicidal", "overdose"
+  ];
+  if (emergencyWords.some((w) => lower.includes(w))) {
+    return "If this is an emergency, call your local emergency number right now — don't wait for directions from this app. Once you're safe, I can help you find the nearest hospital.";
+  }
+
+  if (lower.includes("eta") || lower.includes("how long") || lower.includes("time left")) {
+    return context.duration && context.duration !== "--"
+      ? `You're about ${context.duration} away from ${context.destination || "your destination"}, roughly ${context.distance || "an unknown distance"}.`
+      : "Start navigation to a location first and I can tell you your ETA.";
+  }
+
+  if (lower.includes("distance") || lower.includes("far")) {
+    return context.distance && context.distance !== "--"
+      ? `You have about ${context.distance} left to ${context.destination || "your destination"}.`
+      : "Start navigation to a location and I'll track the remaining distance for you.";
+  }
+
+  return "I can help with directions, ETA, or general non-emergency health questions, but for anything specific to your symptoms please check with a licensed medical professional.";
+}
+
+let chatInFlight = false;
+async function sendAIMessage() {
+  if (chatInFlight) return; // prevent overlapping submissions
+
   const input = document.getElementById("chatInput");
   const msg = input.value.trim();
-  if (!msg) return;
+  if (msg === "") return;
 
-  addChatBubble(msg, "user");
+  chatInFlight = true;
+  const sendBtn = document.getElementById("sendBtn");
+  sendBtn.disabled = true;
+  input.disabled = true;
+
+  addChat(msg, "user");
   input.value = "";
 
-  const reply = processAIResponse(msg);
+  const chatBox = document.getElementById("chatMessages");
+  const thinkingDiv = document.createElement("div");
+  thinkingDiv.id = "thinkingBubble";
+  thinkingDiv.className = "chat-bubble ai";
+  thinkingDiv.innerHTML = `<div class="loader" style="padding:0;"><div class="spinner"></div> Thinking…</div>`;
+  chatBox.appendChild(thinkingDiv);
+  chatBox.scrollTop = chatBox.scrollHeight;
 
-  setTimeout(() => {
-    addChatBubble(reply, "ai");
-    speakText(reply);
-  }, 400);
+  const context = {
+    latitude: userLat,
+    longitude: userLng,
+    destination: destinationName,
+    distance: document.getElementById("distanceLeft").innerText,
+    duration: document.getElementById("arrivalTime").innerText,
+    speed: currentSpeed,
+    current_time: new Date().toLocaleTimeString()
+  };
+
+  let replyText = "";
+  try {
+    const response = await fetchWithTimeout("/map_ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: msg, ...context })
+    }, 12000);
+    if (response.ok) {
+      const data = await response.json();
+      replyText = data.reply || fallbackReply(msg, context);
+    } else {
+      replyText = fallbackReply(msg, context);
+    }
+  } catch (err) {
+    replyText = fallbackReply(msg, context);
+  }
+
+  document.getElementById("thinkingBubble")?.remove();
+  addChat(replyText, "ai");
+  speakText(replyText);
+
+  chatInFlight = false;
+  sendBtn.disabled = false;
+  input.disabled = false;
+  input.focus();
 }
 
-function addChatBubble(text, type) {
+function addChat(text, type) {
   const box = document.getElementById("chatMessages");
   const div = document.createElement("div");
   div.className = `chat-bubble ${type}`;
