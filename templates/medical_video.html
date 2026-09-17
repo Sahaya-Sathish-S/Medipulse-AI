@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>MediPulse AI — Medical Video Studio</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+:root{
+    --pink:#ff4fa3;
+    --violet:#a855f7;
+    --blue:#00cfff;
+    --cyan:#00f5ff;
+    --green:#00ffaa;
+    --gold:#ffd166;
+    --dark:#070313;
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    min-height:100vh;
+    font-family:'Poppins',sans-serif;
+    color:white;
+    overflow-x:hidden;
+
+    background:
+        linear-gradient(
+            rgba(7,3,19,.82),
+            rgba(7,3,19,.90)
+        ),
+        url("{{ url_for('static', filename='images/background.png') }}");
+
+    background-size:cover;
+    background-position:center;
+    background-attachment:fixed;
+}
+
+/* =========================================================
+   BACKGROUND ANIMATION
+========================================================= */
+
+.background-glow{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    overflow:hidden;
+    z-index:-1;
+}
+
+.orb{
+    position:absolute;
+    width:300px;
+    height:300px;
+    border-radius:50%;
+    filter:blur(90px);
+    opacity:.20;
+    animation:floatOrb 9s ease-in-out infinite alternate;
+}
+
+.orb.one{
+    background:#ff2fa3;
+    top:10%;
+    left:-80px;
+}
+
+.orb.two{
+    background:#7c3aed;
+    top:45%;
+    right:-100px;
+    animation-delay:2s;
+}
+
+.orb.three{
+    background:#00d9ff;
+    bottom:-120px;
+    left:35%;
+    animation-delay:4s;
+}
+
+@keyframes floatOrb{
+
+    from{
+        transform:translate(0,0) scale(1);
+    }
+
+    to{
+        transform:translate(70px,-50px) scale(1.25);
+    }
+}
+
+/* =========================================================
+   NAVBAR
+========================================================= */
+
+nav{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+
+    z-index:1000;
+
+    height:72px;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    padding:0 5%;
+
+    background:rgba(5,2,15,.75);
+    backdrop-filter:blur(20px);
+
+    border-bottom:1px solid rgba(168,85,247,.25);
+
+    box-shadow:
+        0 0 30px rgba(168,85,247,.10);
+}
+
+.logo{
+    font-family:'Orbitron',sans-serif;
+    font-weight:900;
+    font-size:1.35rem;
+
+    text-decoration:none;
+
+    background:
+        linear-gradient(
+            90deg,
+            #ff4fa3,
+            #a855f7,
+            #00cfff
+        );
+
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+
+    letter-spacing:2px;
+}
+
+.back-btn{
+    color:#fff;
+    text-decoration:none;
+
+    padding:10px 18px;
+
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:20px;
+
+    background:rgba(255,255,255,.05);
+
+    transition:.3s;
+}
+
+.back-btn:hover{
+    background:rgba(168,85,247,.2);
+    transform:translateY(-2px);
+}
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+.main{
+    min-height:100vh;
+    padding:
+        110px
+        20px
+        50px;
+
+    display:flex;
+    justify-content:center;
+}
+
+.container{
+    width:min(1150px,100%);
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.header{
+    text-align:center;
+    margin-bottom:35px;
+}
+
+.ai-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+
+    padding:8px 16px;
+
+    border-radius:30px;
+
+    font-size:12px;
+    font-weight:600;
+
+    color:#fff;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,79,163,.20),
+            rgba(0,207,255,.15)
+        );
+
+    border:1px solid rgba(255,255,255,.12);
+
+    box-shadow:
+        0 0 20px rgba(168,85,247,.18);
+}
+
+.pulse-dot{
+    width:8px;
+    height:8px;
+
+    border-radius:50%;
+
+    background:#00ffaa;
+
+    box-shadow:
+        0 0 10px #00ffaa;
+
+    animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+
+    0%,100%{
+        transform:scale(1);
+        opacity:1;
+    }
+
+    50%{
+        transform:scale(1.5);
+        opacity:.5;
+    }
+}
+
+.header h1{
+    margin-top:18px;
+
+    font-family:'Orbitron',sans-serif;
+
+    font-size:clamp(2rem,5vw,4rem);
+
+    line-height:1.1;
+
+    background:
+        linear-gradient(
+            90deg,
+            #ff4fa3,
+            #c084fc,
+            #00cfff
+        );
+
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+
+    filter:
+        drop-shadow(
+            0 0 20px rgba(168,85,247,.25)
+        );
+}
+
+.header p{
+    margin-top:12px;
+
+    color:#aaa;
+
+    max-width:650px;
+    margin-left:auto;
+    margin-right:auto;
+
+    line-height:1.7;
+}
+
+/* =========================================================
+   GENERATOR CARD
+========================================================= */
+
+.generator-card{
+
+    position:relative;
+
+    padding:30px;
+
+    border-radius:28px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(25,10,50,.88),
+            rgba(8,5,20,.92)
+        );
+
+    border:
+        1px solid rgba(255,255,255,.10);
+
+    box-shadow:
+        0 25px 80px rgba(0,0,0,.45),
+        0 0 50px rgba(168,85,247,.08);
+
+    overflow:hidden;
+}
+
+.generator-card::before{
+
+    content:"";
+
+    position:absolute;
+
+    top:0;
+    left:0;
+    right:0;
+
+    height:2px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            #ff4fa3,
+            #a855f7,
+            #00cfff,
+            transparent
+        );
+
+    animation:scanLine 4s linear infinite;
+}
+
+@keyframes scanLine{
+
+    from{
+        transform:translateX(-100%);
+    }
+
+    to{
+        transform:translateX(100%);
+    }
+}
+
+/* =========================================================
+   INPUT
+========================================================= */
+
+.input-title{
+    font-size:15px;
+    font-weight:600;
+
+    margin-bottom:10px;
+
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.input-title i{
+    color:#00cfff;
+}
+
+.topic-box{
+
+    width:100%;
+    min-height:135px;
+
+    resize:vertical;
+
+    padding:18px;
+
+    color:#fff;
+
+    font-family:'Poppins',sans-serif;
+    font-size:15px;
+
+    outline:none;
+
+    border-radius:18px;
+
+    border:
+        1px solid rgba(255,255,255,.12);
+
+    background:
+        rgba(0,0,0,.35);
+
+    transition:.3s;
+}
+
+.topic-box::placeholder{
+    color:#777;
+}
+
+.topic-box:focus{
+
+    border-color:#a855f7;
+
+    box-shadow:
+        0 0 25px rgba(168,85,247,.15);
+}
+
+/* =========================================================
+   EXAMPLE TOPICS
+========================================================= */
+
+.examples{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+
+    margin-top:12px;
+}
+
+.example{
+
+    padding:7px 12px;
+
+    border-radius:20px;
+
+    background:rgba(255,255,255,.05);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    color:#aaa;
+
+    font-size:11px;
+
+    cursor:pointer;
+
+    transition:.3s;
+}
+
+.example:hover{
+
+    color:#fff;
+
+    border-color:#a855f7;
+
+    background:
+        rgba(168,85,247,.12);
+
+    transform:translateY(-2px);
+}
+
+/* =========================================================
+   OPTIONS
+========================================================= */
+
+.options{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(2,1fr);
+
+    gap:15px;
+
+    margin-top:20px;
+}
+
+.option{
+    padding:14px;
+
+    border-radius:16px;
+
+    background:rgba(255,255,255,.04);
+
+    border:
+        1px solid rgba(255,255,255,.08);
+}
+
+.option label{
+
+    display:block;
+
+    color:#888;
+
+    font-size:11px;
+
+    margin-bottom:7px;
+}
+
+.option select{
+
+    width:100%;
+
+    border:none;
+    outline:none;
+
+    background:transparent;
+
+    color:white;
+
+    font-family:'Poppins',sans-serif;
+}
+
+.option select option{
+    background:#140827;
+}
+
+/* =========================================================
+   GENERATE BUTTON
+========================================================= */
+
+.generate-btn{
+
+    position:relative;
+
+    width:100%;
+
+    margin-top:25px;
+
+    padding:17px;
+
+    border:none;
+
+    border-radius:17px;
+
+    color:#fff;
+
+    font-family:'Poppins',sans-serif;
+
+    font-size:15px;
+    font-weight:700;
+
+    cursor:pointer;
+
+    overflow:hidden;
+
+    background:
+        linear-gradient(
+            90deg,
+            #ff3d91,
+            #9b4dff,
+            #00bfff,
+            #9b4dff,
+            #ff3d91
+        );
+
+    background-size:300% 100%;
+
+    animation:
+        gradientButton 5s linear infinite;
+
+    box-shadow:
+        0 0 25px rgba(168,85,247,.25);
+
+    transition:.3s;
+}
+
+@keyframes gradientButton{
+
+    0%{
+        background-position:0% 50%;
+    }
+
+    100%{
+        background-position:300% 50%;
+    }
+}
+
+.generate-btn:hover{
+
+    transform:
+        translateY(-3px)
+        scale(1.01);
+
+    box-shadow:
+        0 0 30px rgba(255,79,163,.30),
+        0 0 60px rgba(0,207,255,.15);
+}
+
+.generate-btn:disabled{
+    cursor:not-allowed;
+    opacity:.7;
+}
+
+/* shine */
+
+.generate-btn::after{
+
+    content:"";
+
+    position:absolute;
+
+    top:0;
+    left:-100%;
+
+    width:60%;
+    height:100%;
+
+    background:
+        linear-gradient(
+            100deg,
+            transparent,
+            rgba(255,255,255,.35),
+            transparent
+        );
+
+    transform:skewX(-20deg);
+
+    animation:shine 3s infinite;
+}
+
+@keyframes shine{
+
+    0%{
+        left:-100%;
+    }
+
+    45%,100%{
+        left:150%;
+    }
+}
+
+/* =========================================================
+   GENERATION SCREEN
+========================================================= */
+
+.generation{
+    display:none;
+
+    text-align:center;
+
+    padding:45px 20px;
+
+    margin-top:25px;
+
+    border-radius:22px;
+
+    background:
+        rgba(0,0,0,.25);
+
+    border:
+        1px solid rgba(168,85,247,.18);
+}
+
+.ai-loader{
+
+    width:90px;
+    height:90px;
+
+    margin:0 auto 25px;
+
+    border-radius:50%;
+
+    position:relative;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(168,85,247,.30),
+            rgba(0,0,0,.05)
+        );
+
+    box-shadow:
+        0 0 35px rgba(168,85,247,.25);
+}
+
+.ai-loader::before,
+.ai-loader::after{
+
+    content:"";
+
+    position:absolute;
+
+    border-radius:50%;
+
+    border:2px solid transparent;
+}
+
+.ai-loader::before{
+
+    inset:-5px;
+
+    border-top-color:#ff4fa3;
+    border-right-color:#a855f7;
+
+    animation:spin 1s linear infinite;
+}
+
+.ai-loader::after{
+
+    inset:5px;
+
+    border-bottom-color:#00cfff;
+    border-left-color:#00ffaa;
+
+    animation:spinReverse 1.5s linear infinite;
+}
+
+.ai-loader i{
+    font-size:28px;
+    color:#fff;
+
+    animation:brainPulse 1.3s infinite;
+}
+
+@keyframes spin{
+    to{transform:rotate(360deg)}
+}
+
+@keyframes spinReverse{
+    to{transform:rotate(-360deg)}
+}
+
+@keyframes brainPulse{
+
+    0%,100%{
+        transform:scale(1);
+    }
+
+    50%{
+        transform:scale(1.2);
+    }
+}
+
+.generation h2{
+
+    font-family:'Orbitron',sans-serif;
+
+    font-size:20px;
+
+    margin-bottom:8px;
+}
+
+.generation p{
+    color:#888;
+    font-size:13px;
+}
+
+.progress{
+
+    max-width:500px;
+
+    height:5px;
+
+    margin:25px auto 0;
+
+    border-radius:10px;
+
+    background:#222;
+
+    overflow:hidden;
+}
+
+.progress-bar{
+
+    width:0%;
+    height:100%;
+
+    background:
+        linear-gradient(
+            90deg,
+            #ff4fa3,
+            #a855f7,
+            #00cfff
+        );
+
+    transition:
+        width .5s ease;
+}
+
+/* =========================================================
+   RESULT
+========================================================= */
+
+.result{
+
+    display:none;
+
+    margin-top:25px;
+}
+
+.result-card{
+
+    padding:25px;
+
+    border-radius:24px;
+
+    background:
+        rgba(8,5,20,.85);
+
+    border:
+        1px solid rgba(0,207,255,.15);
+
+    box-shadow:
+        0 0 50px rgba(0,207,255,.06);
+}
+
+.result-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:15px;
+
+    margin-bottom:18px;
+}
+
+.result-title{
+
+    font-family:'Orbitron',sans-serif;
+
+    font-size:18px;
+
+    color:#fff;
+}
+
+.status{
+
+    padding:6px 12px;
+
+    border-radius:20px;
+
+    font-size:10px;
+
+    background:
+        rgba(0,255,170,.10);
+
+    color:#00ffaa;
+
+    border:
+        1px solid rgba(0,255,170,.2);
+}
+
+/* VIDEO */
+
+.video-container{
+
+    position:relative;
+
+    width:100%;
+
+    aspect-ratio:16/9;
+
+    border-radius:18px;
+
+    overflow:hidden;
+
+    background:#000;
+
+    box-shadow:
+        0 0 40px rgba(0,0,0,.6);
+}
+
+.video-container video{
+
+    width:100%;
+    height:100%;
+
+    object-fit:cover;
+
+    display:block;
+}
+
+.video-overlay{
+
+    position:absolute;
+
+    inset:0;
+
+    pointer-events:none;
+
+    border:
+        1px solid rgba(255,255,255,.08);
+
+    border-radius:18px;
+}
+
+/* =========================================================
+   RESULT ACTIONS
+========================================================= */
+
+.actions{
+
+    display:flex;
+
+    gap:10px;
+
+    margin-top:18px;
+}
+
+.action-btn{
+
+    flex:1;
+
+    padding:12px;
+
+    border-radius:13px;
+
+    border:1px solid rgba(255,255,255,.1);
+
+    background:rgba(255,255,255,.05);
+
+    color:#fff;
+
+    text-decoration:none;
+
+    text-align:center;
+
+    cursor:pointer;
+
+    font-family:'Poppins',sans-serif;
+
+    transition:.3s;
+}
+
+.action-btn:hover{
+
+    background:
+        rgba(168,85,247,.15);
+
+    border-color:
+        rgba(168,85,247,.4);
+
+    transform:translateY(-2px);
+}
+
+.action-btn.primary{
+
+    background:
+        linear-gradient(
+            135deg,
+            #ff4fa3,
+            #8b5cf6
+        );
+
+    border:none;
+}
+
+/* =========================================================
+   INFO
+========================================================= */
+
+.info{
+
+    margin-top:18px;
+
+    padding:15px;
+
+    border-radius:15px;
+
+    background:
+        rgba(255,255,255,.03);
+
+    border:
+        1px solid rgba(255,255,255,.06);
+
+    color:#777;
+
+    font-size:11px;
+
+    line-height:1.7;
+}
+
+.info strong{
+    color:#aaa;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media(max-width:700px){
+
+    nav{
+        padding:0 18px;
+    }
+
+    .logo{
+        font-size:1rem;
+    }
+
+    .back-btn{
+        padding:8px 12px;
+        font-size:12px;
+    }
+
+    .main{
+        padding:
+            95px
+            12px
+            35px;
+    }
+
+    .generator-card{
+        padding:18px;
+        border-radius:22px;
+    }
+
+    .options{
+        grid-template-columns:1fr;
+    }
+
+    .actions{
+        flex-direction:column;
+    }
+
+    .header h1{
+        font-size:2rem;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- BACKGROUND -->
+
+<div class="background-glow">
+    <div class="orb one"></div>
+    <div class="orb two"></div>
+    <div class="orb three"></div>
+</div>
+
+<!-- NAVBAR -->
+
+<nav>
+
+    <a href="/home" class="logo">
+        MEDIPULSE AI
+    </a>
+
+    <a href="/home" class="back-btn">
+        <i class="fa-solid fa-arrow-left"></i>
+        Back
+    </a>
+
+</nav>
+
+
+<main class="main">
+
+<div class="container">
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <span class="ai-badge">
+            <span class="pulse-dot"></span>
+            AI MEDICAL EDUCATION STUDIO
+        </span>
+
+        <h1>
+            Medical Video Studio
+        </h1>
+
+        <p>
+            Turn any medical topic into a short,
+            visually engaging educational video
+            using AI-generated content, medical
+            imagery and voice narration.
+        </p>
+
+    </div>
+
+
+    <!-- GENERATOR -->
+
+    <section class="generator-card">
+
+        <div class="input-title">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            Enter your medical topic
+        </div>
+
+        <textarea
+            id="topic"
+            class="topic-box"
+            placeholder="Example: Explain diabetes, its symptoms and how it can be prevented..."
+        ></textarea>
+
+
+        <div class="examples">
+
+            <span
+                class="example"
+                onclick="setTopic('What is diabetes and what are its common symptoms?')">
+                Diabetes
+            </span>
+
+            <span
+                class="example"
+                onclick="setTopic('Explain the warning signs of a heart attack.')">
+                Heart Attack
+            </span>
+
+            <span
+                class="example"
+                onclick="setTopic('What are the symptoms and prevention methods of dengue?')">
+                Dengue
+            </span>
+
+            <span
+                class="example"
+                onclick="setTopic('Explain the importance of drinking enough water.')">
+                Hydration
+            </span>
+
+            <span
+                class="example"
+                onclick="setTopic('Explain how the human lungs work.')">
+                Lungs
+            </span>
+
+        </div>
+
+
+        <div class="options">
+
+            <div class="option">
+
+                <label>
+                    LANGUAGE
+                </label>
+
+                <select id="language">
+                    <option value="English">
+                        English
+                    </option>
+                </select>
+
+            </div>
+
+
+            <div class="option">
+
+                <label>
+                    VIDEO LENGTH
+                </label>
+
+                <select id="duration">
+                    <option value="18">
+                        18 Seconds
+                    </option>
+
+                    <option value="15">
+                        15 Seconds
+                    </option>
+
+                    <option value="20">
+                        20 Seconds
+                    </option>
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <button
+            id="generateBtn"
+            class="generate-btn"
+            onclick="generateVideo()">
+
+            <i class="fa-solid fa-sparkles"></i>
+
+            &nbsp; GENERATE MEDICAL VIDEO
+
+        </button>
+
+
+        <!-- GENERATION -->
+
+        <div
+            id="generation"
+            class="generation">
+
+            <div class="ai-loader">
+
+                <i class="fa-solid fa-brain"></i>
+
+            </div>
+
+            <h2 id="generationTitle">
+                AI is creating your video
+            </h2>
+
+            <p id="generationText">
+                Creating medical content...
+            </p>
+
+            <div class="progress">
+
+                <div
+                    id="progressBar"
+                    class="progress-bar">
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- RESULT -->
+
+        <div
+            id="result"
+            class="result">
+
+            <div class="result-card">
+
+                <div class="result-header">
+
+                    <div
+                        id="resultTitle"
+                        class="result-title">
+                        Medical Educational Video
+                    </div>
+
+                    <span class="status">
+                        READY
+                    </span>
+
+                </div>
+
+
+                <div class="video-container">
+
+                    <video
+                        id="videoPlayer"
+                        controls
+                        playsinline>
+
+                    </video>
+
+                    <div class="video-overlay"></div>
+
+                </div>
+
+
+                <div class="actions">
+
+                    <a
+                        id="downloadBtn"
+                        class="action-btn primary"
+                        href="#"
+                        download>
+
+                        <i class="fa-solid fa-download"></i>
+                        Download Video
+
+                    </a>
+
+                    <button
+                        class="action-btn"
+                        onclick="generateAnother()">
+
+                        <i class="fa-solid fa-rotate"></i>
+                        Generate Another
+
+                    </button>
+
+                </div>
+
+
+                <div class="info">
+
+                    <strong>Medical awareness notice:</strong>
+
+                    This video is generated for
+                    educational and awareness purposes.
+                    It should not be used as a substitute
+                    for diagnosis, treatment or professional
+                    medical advice.
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+</main>
+
+
+<script>
+
+/* =========================================================
+   TOPIC EXAMPLES
+========================================================= */
+
+function setTopic(text){
+
+    document.getElementById("topic").value = text;
+
+    document
+        .getElementById("topic")
+        .focus();
+}
+
+
+/* =========================================================
+   GENERATE VIDEO
+========================================================= */
+
+async function generateVideo(){
+
+    const topic =
+        document
+        .getElementById("topic")
+        .value
+        .trim();
+
+    const language =
+        document
+        .getElementById("language")
+        .value;
+
+    const duration =
+        document
+        .getElementById("duration")
+        .value;
+
+
+    if(!topic){
+
+        alert(
+            "Please enter a medical topic first."
+        );
+
+        return;
+    }
+
+
+    const btn =
+        document.getElementById(
+            "generateBtn"
+        );
+
+    const generation =
+        document.getElementById(
+            "generation"
+        );
+
+    const result =
+        document.getElementById(
+            "result"
+        );
+
+    const progress =
+        document.getElementById(
+            "progressBar"
+        );
+
+    const generationText =
+        document.getElementById(
+            "generationText"
+        );
+
+
+    btn.disabled = true;
+
+    btn.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin"></i> GENERATING...';
+
+
+    result.style.display = "none";
+
+    generation.style.display = "block";
+
+    progress.style.width = "5%";
+
+
+    const messages = [
+
+        "Understanding your medical topic...",
+
+        "Creating educational content...",
+
+        "Breaking content into scenes...",
+
+        "Finding suitable medical images...",
+
+        "Preparing English narration...",
+
+        "Creating landscape video...",
+
+        "Adding transitions and subtitles..."
+
+    ];
+
+
+    let step = 0;
+
+
+    const animation =
+        setInterval(() => {
+
+            if(step < messages.length){
+
+                generationText.innerText =
+                    messages[step];
+
+                progress.style.width =
+                    ((step + 1) /
+                    messages.length * 85) + "%";
+
+                step++;
+
+            }
+
+        }, 1300);
+
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/generate_medical_video",
+                {
+                    method:"POST",
+
+                    headers:{
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:JSON.stringify({
+
+                        topic:topic,
+
+                        language:language,
+
+                        duration:duration
+
+                    })
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        clearInterval(animation);
+
+
+        if(!response.ok){
+
+            throw new Error(
+                data.error ||
+                "Video generation failed."
+            );
+
+        }
+
+
+        progress.style.width = "100%";
+
+        generationText.innerText =
+            "Your medical video is ready!";
+
+
+        setTimeout(() => {
+
+            generation.style.display =
+                "none";
+
+            result.style.display =
+                "block";
+
+
+            document
+                .getElementById("resultTitle")
+                .innerText =
+                data.title ||
+                "Medical Educational Video";
+
+
+            const video =
+                document
+                .getElementById(
+                    "videoPlayer"
+                );
+
+            video.src =
+                data.video_url;
+
+            video.load();
+
+
+            document
+                .getElementById(
+                    "downloadBtn"
+                )
+                .href =
+                data.video_url;
+
+
+            btn.disabled = false;
+
+            btn.innerHTML =
+                '<i class="fa-solid fa-sparkles"></i> &nbsp; GENERATE MEDICAL VIDEO';
+
+
+            result.scrollIntoView({
+                behavior:"smooth",
+                block:"center"
+            });
+
+        },700);
+
+
+    }catch(error){
+
+        clearInterval(animation);
+
+        generation.style.display =
+            "none";
+
+        btn.disabled = false;
+
+        btn.innerHTML =
+            '<i class="fa-solid fa-sparkles"></i> &nbsp; GENERATE MEDICAL VIDEO';
+
+
+        alert(
+            "Video generation error:\n\n" +
+            error.message
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   GENERATE ANOTHER
+========================================================= */
+
+function generateAnother(){
+
+    document
+        .getElementById("result")
+        .style.display = "none";
+
+    document
+        .getElementById("topic")
+        .focus();
+
+    window.scrollTo({
+        top:0,
+        behavior:"smooth"
+    });
+}
+
+</script>
+
+</body>
+</html>
