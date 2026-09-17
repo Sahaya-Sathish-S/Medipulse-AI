@@ -1,17 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
 <title>MediPulse AI — Medical Video Studio</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- =========================================================
+     GOOGLE FONTS
+========================================================= -->
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet">
+
+
+<!-- =========================================================
+     FONT AWESOME
+========================================================= -->
 
 <link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
 
 <style>
+
+/* =========================================================
+   RESET
+========================================================= */
 
 *{
     margin:0;
@@ -19,7 +39,9 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     box-sizing:border-box;
 }
 
+
 :root{
+
     --pink:#ff4fa3;
     --violet:#a855f7;
     --blue:#00cfff;
@@ -27,91 +49,162 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     --green:#00ffaa;
     --gold:#ffd166;
     --dark:#070313;
+
 }
+
+
+/* =========================================================
+   HTML
+========================================================= */
 
 html{
+
     scroll-behavior:smooth;
+
 }
 
+
+/* =========================================================
+   BODY
+========================================================= */
+
 body{
+
     min-height:100vh;
+
     font-family:'Poppins',sans-serif;
+
     color:white;
+
     overflow-x:hidden;
 
     background:
+
         linear-gradient(
             rgba(7,3,19,.82),
             rgba(7,3,19,.90)
         ),
+
         url("{{ url_for('static', filename='images/background.png') }}");
 
     background-size:cover;
+
     background-position:center;
+
     background-attachment:fixed;
+
 }
+
 
 /* =========================================================
    BACKGROUND ANIMATION
 ========================================================= */
 
 .background-glow{
+
     position:fixed;
+
     inset:0;
+
     pointer-events:none;
+
     overflow:hidden;
+
     z-index:-1;
+
 }
+
 
 .orb{
+
     position:absolute;
+
     width:300px;
+
     height:300px;
+
     border-radius:50%;
+
     filter:blur(90px);
+
     opacity:.20;
-    animation:floatOrb 9s ease-in-out infinite alternate;
+
+    animation:
+        floatOrb 9s ease-in-out infinite alternate;
+
 }
+
 
 .orb.one{
+
     background:#ff2fa3;
+
     top:10%;
+
     left:-80px;
+
 }
+
 
 .orb.two{
+
     background:#7c3aed;
+
     top:45%;
+
     right:-100px;
+
     animation-delay:2s;
+
 }
 
+
 .orb.three{
+
     background:#00d9ff;
+
     bottom:-120px;
+
     left:35%;
+
     animation-delay:4s;
+
 }
+
 
 @keyframes floatOrb{
 
     from{
-        transform:translate(0,0) scale(1);
+
+        transform:
+            translate(0,0)
+            scale(1);
+
     }
 
     to{
-        transform:translate(70px,-50px) scale(1.25);
+
+        transform:
+            translate(70px,-50px)
+            scale(1.25);
+
     }
+
 }
+
 
 /* =========================================================
    NAVBAR
 ========================================================= */
 
 nav{
+
     position:fixed;
+
     top:0;
+
     left:0;
+
     right:0;
 
     z-index:1000;
@@ -119,28 +212,39 @@ nav{
     height:72px;
 
     display:flex;
+
     align-items:center;
+
     justify-content:space-between;
 
     padding:0 5%;
 
-    background:rgba(5,2,15,.75);
+    background:
+        rgba(5,2,15,.75);
+
     backdrop-filter:blur(20px);
 
-    border-bottom:1px solid rgba(168,85,247,.25);
+    border-bottom:
+        1px solid rgba(168,85,247,.25);
 
     box-shadow:
         0 0 30px rgba(168,85,247,.10);
+
 }
 
+
 .logo{
+
     font-family:'Orbitron',sans-serif;
+
     font-weight:900;
+
     font-size:1.35rem;
 
     text-decoration:none;
 
     background:
+
         linear-gradient(
             90deg,
             #ff4fa3,
@@ -149,61 +253,92 @@ nav{
         );
 
     -webkit-background-clip:text;
+
     -webkit-text-fill-color:transparent;
 
     letter-spacing:2px;
+
 }
 
+
 .back-btn{
+
     color:#fff;
+
     text-decoration:none;
 
     padding:10px 18px;
 
-    border:1px solid rgba(255,255,255,.12);
+    border:
+        1px solid rgba(255,255,255,.12);
+
     border-radius:20px;
 
-    background:rgba(255,255,255,.05);
+    background:
+        rgba(255,255,255,.05);
 
     transition:.3s;
+
 }
 
+
 .back-btn:hover{
-    background:rgba(168,85,247,.2);
-    transform:translateY(-2px);
+
+    background:
+        rgba(168,85,247,.2);
+
+    transform:
+        translateY(-2px);
+
 }
+
 
 /* =========================================================
    MAIN
 ========================================================= */
 
 .main{
+
     min-height:100vh;
+
     padding:
         110px
         20px
         50px;
 
     display:flex;
+
     justify-content:center;
+
 }
 
+
 .container{
+
     width:min(1150px,100%);
+
 }
+
 
 /* =========================================================
    HEADER
 ========================================================= */
 
 .header{
+
     text-align:center;
+
     margin-bottom:35px;
+
 }
 
+
 .ai-badge{
+
     display:inline-flex;
+
     align-items:center;
+
     gap:8px;
 
     padding:8px 16px;
@@ -211,25 +346,32 @@ nav{
     border-radius:30px;
 
     font-size:12px;
+
     font-weight:600;
 
     color:#fff;
 
     background:
+
         linear-gradient(
             135deg,
             rgba(255,79,163,.20),
             rgba(0,207,255,.15)
         );
 
-    border:1px solid rgba(255,255,255,.12);
+    border:
+        1px solid rgba(255,255,255,.12);
 
     box-shadow:
         0 0 20px rgba(168,85,247,.18);
+
 }
 
+
 .pulse-dot{
+
     width:8px;
+
     height:8px;
 
     border-radius:50%;
@@ -239,32 +381,46 @@ nav{
     box-shadow:
         0 0 10px #00ffaa;
 
-    animation:pulse 1.5s infinite;
+    animation:
+        pulse 1.5s infinite;
+
 }
+
 
 @keyframes pulse{
 
     0%,100%{
+
         transform:scale(1);
+
         opacity:1;
+
     }
 
     50%{
+
         transform:scale(1.5);
+
         opacity:.5;
+
     }
+
 }
 
+
 .header h1{
+
     margin-top:18px;
 
     font-family:'Orbitron',sans-serif;
 
-    font-size:clamp(2rem,5vw,4rem);
+    font-size:
+        clamp(2rem,5vw,4rem);
 
     line-height:1.1;
 
     background:
+
         linear-gradient(
             90deg,
             #ff4fa3,
@@ -273,25 +429,33 @@ nav{
         );
 
     -webkit-background-clip:text;
+
     -webkit-text-fill-color:transparent;
 
     filter:
         drop-shadow(
             0 0 20px rgba(168,85,247,.25)
         );
+
 }
 
+
 .header p{
+
     margin-top:12px;
 
     color:#aaa;
 
     max-width:650px;
+
     margin-left:auto;
+
     margin-right:auto;
 
     line-height:1.7;
+
 }
+
 
 /* =========================================================
    GENERATOR CARD
@@ -306,6 +470,7 @@ nav{
     border-radius:28px;
 
     background:
+
         linear-gradient(
             145deg,
             rgba(25,10,50,.88),
@@ -316,11 +481,15 @@ nav{
         1px solid rgba(255,255,255,.10);
 
     box-shadow:
+
         0 25px 80px rgba(0,0,0,.45),
+
         0 0 50px rgba(168,85,247,.08);
 
     overflow:hidden;
+
 }
+
 
 .generator-card::before{
 
@@ -329,12 +498,15 @@ nav{
     position:absolute;
 
     top:0;
+
     left:0;
+
     right:0;
 
     height:2px;
 
     background:
+
         linear-gradient(
             90deg,
             transparent,
@@ -344,42 +516,63 @@ nav{
             transparent
         );
 
-    animation:scanLine 4s linear infinite;
+    animation:
+        scanLine 4s linear infinite;
+
 }
+
 
 @keyframes scanLine{
 
     from{
-        transform:translateX(-100%);
+
+        transform:
+            translateX(-100%);
+
     }
 
     to{
-        transform:translateX(100%);
+
+        transform:
+            translateX(100%);
+
     }
+
 }
+
 
 /* =========================================================
    INPUT
 ========================================================= */
 
 .input-title{
+
     font-size:15px;
+
     font-weight:600;
 
     margin-bottom:10px;
 
     display:flex;
+
     align-items:center;
+
     gap:8px;
+
 }
 
+
 .input-title i{
+
     color:#00cfff;
+
 }
+
 
 .topic-box{
 
     width:100%;
+
     min-height:135px;
 
     resize:vertical;
@@ -389,6 +582,7 @@ nav{
     color:#fff;
 
     font-family:'Poppins',sans-serif;
+
     font-size:15px;
 
     outline:none;
@@ -402,11 +596,16 @@ nav{
         rgba(0,0,0,.35);
 
     transition:.3s;
+
 }
 
+
 .topic-box::placeholder{
+
     color:#777;
+
 }
+
 
 .topic-box:focus{
 
@@ -414,19 +613,26 @@ nav{
 
     box-shadow:
         0 0 25px rgba(168,85,247,.15);
+
 }
 
+
 /* =========================================================
-   EXAMPLE TOPICS
+   EXAMPLES
 ========================================================= */
 
 .examples{
+
     display:flex;
+
     flex-wrap:wrap;
+
     gap:8px;
 
     margin-top:12px;
+
 }
+
 
 .example{
 
@@ -434,9 +640,11 @@ nav{
 
     border-radius:20px;
 
-    background:rgba(255,255,255,.05);
+    background:
+        rgba(255,255,255,.05);
 
-    border:1px solid rgba(255,255,255,.08);
+    border:
+        1px solid rgba(255,255,255,.08);
 
     color:#aaa;
 
@@ -445,7 +653,9 @@ nav{
     cursor:pointer;
 
     transition:.3s;
+
 }
+
 
 .example:hover{
 
@@ -456,8 +666,11 @@ nav{
     background:
         rgba(168,85,247,.12);
 
-    transform:translateY(-2px);
+    transform:
+        translateY(-2px);
+
 }
+
 
 /* =========================================================
    OPTIONS
@@ -473,18 +686,24 @@ nav{
     gap:15px;
 
     margin-top:20px;
+
 }
 
+
 .option{
+
     padding:14px;
 
     border-radius:16px;
 
-    background:rgba(255,255,255,.04);
+    background:
+        rgba(255,255,255,.04);
 
     border:
         1px solid rgba(255,255,255,.08);
+
 }
+
 
 .option label{
 
@@ -495,13 +714,16 @@ nav{
     font-size:11px;
 
     margin-bottom:7px;
+
 }
+
 
 .option select{
 
     width:100%;
 
     border:none;
+
     outline:none;
 
     background:transparent;
@@ -509,11 +731,16 @@ nav{
     color:white;
 
     font-family:'Poppins',sans-serif;
+
 }
 
+
 .option select option{
+
     background:#140827;
+
 }
+
 
 /* =========================================================
    GENERATE BUTTON
@@ -538,6 +765,7 @@ nav{
     font-family:'Poppins',sans-serif;
 
     font-size:15px;
+
     font-weight:700;
 
     cursor:pointer;
@@ -545,6 +773,7 @@ nav{
     overflow:hidden;
 
     background:
+
         linear-gradient(
             90deg,
             #ff3d91,
@@ -563,18 +792,26 @@ nav{
         0 0 25px rgba(168,85,247,.25);
 
     transition:.3s;
+
 }
+
 
 @keyframes gradientButton{
 
     0%{
+
         background-position:0% 50%;
+
     }
 
     100%{
+
         background-position:300% 50%;
+
     }
+
 }
+
 
 .generate-btn:hover{
 
@@ -583,16 +820,24 @@ nav{
         scale(1.01);
 
     box-shadow:
+
         0 0 30px rgba(255,79,163,.30),
+
         0 0 60px rgba(0,207,255,.15);
+
 }
+
 
 .generate-btn:disabled{
+
     cursor:not-allowed;
+
     opacity:.7;
+
 }
 
-/* shine */
+
+/* BUTTON SHINE */
 
 .generate-btn::after{
 
@@ -601,12 +846,15 @@ nav{
     position:absolute;
 
     top:0;
+
     left:-100%;
 
     width:60%;
+
     height:100%;
 
     background:
+
         linear-gradient(
             100deg,
             transparent,
@@ -614,27 +862,38 @@ nav{
             transparent
         );
 
-    transform:skewX(-20deg);
+    transform:
+        skewX(-20deg);
 
-    animation:shine 3s infinite;
+    animation:
+        shine 3s infinite;
+
 }
+
 
 @keyframes shine{
 
     0%{
+
         left:-100%;
+
     }
 
     45%,100%{
+
         left:150%;
+
     }
+
 }
+
 
 /* =========================================================
    GENERATION SCREEN
 ========================================================= */
 
 .generation{
+
     display:none;
 
     text-align:center;
@@ -650,24 +909,35 @@ nav{
 
     border:
         1px solid rgba(168,85,247,.18);
+
 }
+
+
+/* =========================================================
+   AI LOADER
+========================================================= */
 
 .ai-loader{
 
     width:90px;
+
     height:90px;
 
-    margin:0 auto 25px;
+    margin:
+        0 auto 25px;
 
     border-radius:50%;
 
     position:relative;
 
     display:flex;
+
     align-items:center;
+
     justify-content:center;
 
     background:
+
         radial-gradient(
             circle,
             rgba(168,85,247,.30),
@@ -676,7 +946,9 @@ nav{
 
     box-shadow:
         0 0 35px rgba(168,85,247,.25);
+
 }
+
 
 .ai-loader::before,
 .ai-loader::after{
@@ -688,53 +960,94 @@ nav{
     border-radius:50%;
 
     border:2px solid transparent;
+
 }
+
 
 .ai-loader::before{
 
     inset:-5px;
 
     border-top-color:#ff4fa3;
+
     border-right-color:#a855f7;
 
-    animation:spin 1s linear infinite;
+    animation:
+        spin 1s linear infinite;
+
 }
+
 
 .ai-loader::after{
 
     inset:5px;
 
     border-bottom-color:#00cfff;
+
     border-left-color:#00ffaa;
 
-    animation:spinReverse 1.5s linear infinite;
+    animation:
+        spinReverse 1.5s linear infinite;
+
 }
+
 
 .ai-loader i{
+
     font-size:28px;
+
     color:#fff;
 
-    animation:brainPulse 1.3s infinite;
+    animation:
+        brainPulse 1.3s infinite;
+
 }
+
 
 @keyframes spin{
-    to{transform:rotate(360deg)}
+
+    to{
+
+        transform:
+            rotate(360deg);
+
+    }
+
 }
 
+
 @keyframes spinReverse{
-    to{transform:rotate(-360deg)}
+
+    to{
+
+        transform:
+            rotate(-360deg);
+
+    }
+
 }
+
 
 @keyframes brainPulse{
 
     0%,100%{
+
         transform:scale(1);
+
     }
 
     50%{
+
         transform:scale(1.2);
+
     }
+
 }
+
+
+/* =========================================================
+   GENERATION TEXT
+========================================================= */
 
 .generation h2{
 
@@ -743,12 +1056,22 @@ nav{
     font-size:20px;
 
     margin-bottom:8px;
+
 }
 
+
 .generation p{
+
     color:#888;
+
     font-size:13px;
+
 }
+
+
+/* =========================================================
+   PROGRESS
+========================================================= */
 
 .progress{
 
@@ -756,21 +1079,26 @@ nav{
 
     height:5px;
 
-    margin:25px auto 0;
+    margin:
+        25px auto 0;
 
     border-radius:10px;
 
     background:#222;
 
     overflow:hidden;
+
 }
+
 
 .progress-bar{
 
     width:0%;
+
     height:100%;
 
     background:
+
         linear-gradient(
             90deg,
             #ff4fa3,
@@ -780,7 +1108,9 @@ nav{
 
     transition:
         width .5s ease;
+
 }
+
 
 /* =========================================================
    RESULT
@@ -791,7 +1121,9 @@ nav{
     display:none;
 
     margin-top:25px;
+
 }
+
 
 .result-card{
 
@@ -807,7 +1139,9 @@ nav{
 
     box-shadow:
         0 0 50px rgba(0,207,255,.06);
+
 }
+
 
 .result-header{
 
@@ -820,7 +1154,9 @@ nav{
     gap:15px;
 
     margin-bottom:18px;
+
 }
+
 
 .result-title{
 
@@ -829,7 +1165,9 @@ nav{
     font-size:18px;
 
     color:#fff;
+
 }
+
 
 .status{
 
@@ -846,9 +1184,13 @@ nav{
 
     border:
         1px solid rgba(0,255,170,.2);
+
 }
 
-/* VIDEO */
+
+/* =========================================================
+   VIDEO
+========================================================= */
 
 .video-container{
 
@@ -866,17 +1208,22 @@ nav{
 
     box-shadow:
         0 0 40px rgba(0,0,0,.6);
+
 }
+
 
 .video-container video{
 
     width:100%;
+
     height:100%;
 
     object-fit:cover;
 
     display:block;
+
 }
+
 
 .video-overlay{
 
@@ -890,10 +1237,12 @@ nav{
         1px solid rgba(255,255,255,.08);
 
     border-radius:18px;
+
 }
 
+
 /* =========================================================
-   RESULT ACTIONS
+   ACTION BUTTONS
 ========================================================= */
 
 .actions{
@@ -903,7 +1252,9 @@ nav{
     gap:10px;
 
     margin-top:18px;
+
 }
+
 
 .action-btn{
 
@@ -913,9 +1264,11 @@ nav{
 
     border-radius:13px;
 
-    border:1px solid rgba(255,255,255,.1);
+    border:
+        1px solid rgba(255,255,255,.1);
 
-    background:rgba(255,255,255,.05);
+    background:
+        rgba(255,255,255,.05);
 
     color:#fff;
 
@@ -928,7 +1281,9 @@ nav{
     font-family:'Poppins',sans-serif;
 
     transition:.3s;
+
 }
+
 
 .action-btn:hover{
 
@@ -938,12 +1293,16 @@ nav{
     border-color:
         rgba(168,85,247,.4);
 
-    transform:translateY(-2px);
+    transform:
+        translateY(-2px);
+
 }
+
 
 .action-btn.primary{
 
     background:
+
         linear-gradient(
             135deg,
             #ff4fa3,
@@ -951,7 +1310,9 @@ nav{
         );
 
     border:none;
+
 }
+
 
 /* =========================================================
    INFO
@@ -976,11 +1337,54 @@ nav{
     font-size:11px;
 
     line-height:1.7;
+
 }
 
+
 .info strong{
+
     color:#aaa;
+
 }
+
+
+/* =========================================================
+   ERROR MESSAGE
+========================================================= */
+
+.error-box{
+
+    display:none;
+
+    margin-top:20px;
+
+    padding:15px 18px;
+
+    border-radius:15px;
+
+    background:
+        rgba(255,50,100,.08);
+
+    border:
+        1px solid rgba(255,80,120,.25);
+
+    color:#ff9bb8;
+
+    font-size:12px;
+
+    line-height:1.6;
+
+}
+
+
+.error-box i{
+
+    margin-right:7px;
+
+    color:#ff4f8b;
+
+}
+
 
 /* =========================================================
    MOBILE
@@ -989,107 +1393,191 @@ nav{
 @media(max-width:700px){
 
     nav{
+
         padding:0 18px;
+
     }
+
 
     .logo{
+
         font-size:1rem;
+
     }
+
 
     .back-btn{
+
         padding:8px 12px;
+
         font-size:12px;
+
     }
 
+
     .main{
+
         padding:
             95px
             12px
             35px;
+
     }
+
 
     .generator-card{
+
         padding:18px;
+
         border-radius:22px;
+
     }
+
 
     .options{
+
         grid-template-columns:1fr;
+
     }
+
 
     .actions{
+
         flex-direction:column;
+
     }
+
 
     .header h1{
+
         font-size:2rem;
+
     }
+
+
+    .generation{
+
+        padding:
+            35px 15px;
+
+    }
+
 }
 
+
 </style>
+
 </head>
+
 
 <body>
 
-<!-- BACKGROUND -->
+
+<!-- =========================================================
+     BACKGROUND
+========================================================= -->
 
 <div class="background-glow">
+
     <div class="orb one"></div>
+
     <div class="orb two"></div>
+
     <div class="orb three"></div>
+
 </div>
 
-<!-- NAVBAR -->
+
+<!-- =========================================================
+     NAVBAR
+========================================================= -->
 
 <nav>
 
-    <a href="/home" class="logo">
+    <a href="/home"
+       class="logo">
+
         MEDIPULSE AI
+
     </a>
 
-    <a href="/home" class="back-btn">
+
+    <a href="/home"
+       class="back-btn">
+
         <i class="fa-solid fa-arrow-left"></i>
+
         Back
+
     </a>
 
 </nav>
 
 
+
+<!-- =========================================================
+     MAIN
+========================================================= -->
+
 <main class="main">
 
 <div class="container">
 
-    <!-- HEADER -->
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
 
     <div class="header">
 
         <span class="ai-badge">
+
             <span class="pulse-dot"></span>
+
             AI MEDICAL EDUCATION STUDIO
+
         </span>
 
+
         <h1>
+
             Medical Video Studio
+
         </h1>
 
+
         <p>
+
             Turn any medical topic into a short,
             visually engaging educational video
             using AI-generated content, medical
             imagery and voice narration.
+
         </p>
 
     </div>
 
 
-    <!-- GENERATOR -->
+
+    <!-- =====================================================
+         GENERATOR CARD
+    ====================================================== -->
 
     <section class="generator-card">
 
+
+        <!-- =================================================
+             TOPIC INPUT
+        ================================================== -->
+
         <div class="input-title">
+
             <i class="fa-solid fa-wand-magic-sparkles"></i>
+
             Enter your medical topic
+
         </div>
+
 
         <textarea
             id="topic"
@@ -1098,100 +1586,184 @@ nav{
         ></textarea>
 
 
+
+        <!-- =================================================
+             EXAMPLE TOPICS
+        ================================================== -->
+
         <div class="examples">
+
 
             <span
                 class="example"
                 onclick="setTopic('What is diabetes and what are its common symptoms?')">
+
                 Diabetes
+
             </span>
+
 
             <span
                 class="example"
                 onclick="setTopic('Explain the warning signs of a heart attack.')">
+
                 Heart Attack
+
             </span>
+
 
             <span
                 class="example"
                 onclick="setTopic('What are the symptoms and prevention methods of dengue?')">
+
                 Dengue
+
             </span>
+
 
             <span
                 class="example"
                 onclick="setTopic('Explain the importance of drinking enough water.')">
+
                 Hydration
+
             </span>
+
 
             <span
                 class="example"
                 onclick="setTopic('Explain how the human lungs work.')">
+
                 Lungs
+
             </span>
+
 
         </div>
 
+
+
+        <!-- =================================================
+             OPTIONS
+        ================================================== -->
 
         <div class="options">
 
+
+            <!-- LANGUAGE -->
+
             <div class="option">
 
                 <label>
+
                     LANGUAGE
+
                 </label>
+
 
                 <select id="language">
+
                     <option value="English">
+
                         English
+
                     </option>
+
                 </select>
 
             </div>
 
+
+
+            <!-- VIDEO LENGTH -->
 
             <div class="option">
 
                 <label>
+
                     VIDEO LENGTH
+
                 </label>
 
+
                 <select id="duration">
+
                     <option value="18">
+
                         18 Seconds
+
                     </option>
+
 
                     <option value="15">
+
                         15 Seconds
+
                     </option>
 
+
                     <option value="20">
+
                         20 Seconds
+
                     </option>
+
                 </select>
 
             </div>
+
 
         </div>
 
+
+
+        <!-- =================================================
+             GENERATE BUTTON
+        ================================================== -->
 
         <button
             id="generateBtn"
             class="generate-btn"
             onclick="generateVideo()">
 
+
             <i class="fa-solid fa-sparkles"></i>
 
             &nbsp; GENERATE MEDICAL VIDEO
 
+
         </button>
 
 
-        <!-- GENERATION -->
+
+        <!-- =================================================
+             ERROR BOX
+        ================================================== -->
+
+        <div
+            id="errorBox"
+            class="error-box">
+
+            <i class="fa-solid fa-triangle-exclamation"></i>
+
+            <span id="errorText">
+
+                Something went wrong.
+
+            </span>
+
+        </div>
+
+
+
+        <!-- =================================================
+             GENERATION SCREEN
+        ================================================== -->
 
         <div
             id="generation"
             class="generation">
+
 
             <div class="ai-loader">
 
@@ -1199,13 +1771,20 @@ nav{
 
             </div>
 
+
             <h2 id="generationTitle">
+
                 AI is creating your video
+
             </h2>
 
+
             <p id="generationText">
-                Creating medical content...
+
+                Starting medical video generation...
+
             </p>
+
 
             <div class="progress">
 
@@ -1216,33 +1795,52 @@ nav{
 
             </div>
 
+
         </div>
 
 
-        <!-- RESULT -->
+
+        <!-- =================================================
+             RESULT
+        ================================================== -->
 
         <div
             id="result"
             class="result">
 
+
             <div class="result-card">
 
+
+                <!-- RESULT HEADER -->
+
                 <div class="result-header">
+
 
                     <div
                         id="resultTitle"
                         class="result-title">
+
                         Medical Educational Video
+
                     </div>
 
+
                     <span class="status">
+
                         READY
+
                     </span>
+
 
                 </div>
 
 
+
+                <!-- VIDEO -->
+
                 <div class="video-container">
+
 
                     <video
                         id="videoPlayer"
@@ -1251,12 +1849,18 @@ nav{
 
                     </video>
 
+
                     <div class="video-overlay"></div>
+
 
                 </div>
 
 
+
+                <!-- ACTIONS -->
+
                 <div class="actions">
+
 
                     <a
                         id="downloadBtn"
@@ -1264,26 +1868,44 @@ nav{
                         href="#"
                         download>
 
+
                         <i class="fa-solid fa-download"></i>
+
                         Download Video
 
+
                     </a>
+
+
 
                     <button
                         class="action-btn"
                         onclick="generateAnother()">
 
+
                         <i class="fa-solid fa-rotate"></i>
+
                         Generate Another
 
+
                     </button>
+
 
                 </div>
 
 
+
+                <!-- MEDICAL NOTICE -->
+
                 <div class="info">
 
-                    <strong>Medical awareness notice:</strong>
+
+                    <strong>
+
+                        Medical awareness notice:
+
+                    </strong>
+
 
                     This video is generated for
                     educational and awareness purposes.
@@ -1291,32 +1913,89 @@ nav{
                     for diagnosis, treatment or professional
                     medical advice.
 
+
                 </div>
+
 
             </div>
 
+
         </div>
 
+
     </section>
+
 
 </div>
 
 </main>
 
 
+
 <script>
 
 /* =========================================================
-   TOPIC EXAMPLES
+   SET EXAMPLE TOPIC
 ========================================================= */
 
 function setTopic(text){
 
-    document.getElementById("topic").value = text;
+    document
+        .getElementById("topic")
+        .value = text;
+
 
     document
         .getElementById("topic")
         .focus();
+
+}
+
+
+/* =========================================================
+   SHOW ERROR
+========================================================= */
+
+function showError(message){
+
+    const errorBox =
+        document.getElementById(
+            "errorBox"
+        );
+
+
+    const errorText =
+        document.getElementById(
+            "errorText"
+        );
+
+
+    errorText.innerText =
+        message;
+
+
+    errorBox.style.display =
+        "block";
+
+
+    errorBox.scrollIntoView({
+        behavior:"smooth",
+        block:"center"
+    });
+
+}
+
+
+/* =========================================================
+   HIDE ERROR
+========================================================= */
+
+function hideError(){
+
+    document
+        .getElementById("errorBox")
+        .style.display = "none";
+
 }
 
 
@@ -1326,16 +2005,23 @@ function setTopic(text){
 
 async function generateVideo(){
 
+
+    /* -----------------------------------------------------
+       GET USER DATA
+    ----------------------------------------------------- */
+
     const topic =
         document
         .getElementById("topic")
         .value
         .trim();
 
+
     const language =
         document
         .getElementById("language")
         .value;
+
 
     const duration =
         document
@@ -1343,35 +2029,50 @@ async function generateVideo(){
         .value;
 
 
+
+    /* -----------------------------------------------------
+       VALIDATE TOPIC
+    ----------------------------------------------------- */
+
     if(!topic){
 
-        alert(
+        showError(
             "Please enter a medical topic first."
         );
 
         return;
+
     }
 
+
+
+    /* -----------------------------------------------------
+       GET ELEMENTS
+    ----------------------------------------------------- */
 
     const btn =
         document.getElementById(
             "generateBtn"
         );
 
+
     const generation =
         document.getElementById(
             "generation"
         );
+
 
     const result =
         document.getElementById(
             "result"
         );
 
+
     const progress =
         document.getElementById(
             "progressBar"
         );
+
 
     const generationText =
         document.getElementById(
@@ -1379,18 +2080,51 @@ async function generateVideo(){
         );
 
 
+    const generationTitle =
+        document.getElementById(
+            "generationTitle"
+        );
+
+
+
+    /* -----------------------------------------------------
+       RESET UI
+    ----------------------------------------------------- */
+
+    hideError();
+
+
     btn.disabled = true;
+
 
     btn.innerHTML =
         '<i class="fa-solid fa-spinner fa-spin"></i> GENERATING...';
 
 
-    result.style.display = "none";
+    result.style.display =
+        "none";
 
-    generation.style.display = "block";
 
-    progress.style.width = "5%";
+    generation.style.display =
+        "block";
 
+
+    progress.style.width =
+        "3%";
+
+
+    generationTitle.innerText =
+        "AI is creating your video";
+
+
+    generationText.innerText =
+        "Understanding your medical topic...";
+
+
+
+    /* -----------------------------------------------------
+       GENERATION MESSAGES
+    ----------------------------------------------------- */
 
     const messages = [
 
@@ -1406,45 +2140,109 @@ async function generateVideo(){
 
         "Creating landscape video...",
 
-        "Adding transitions and subtitles..."
+        "Adding transitions and subtitles...",
+
+        "Finalizing your medical video..."
 
     ];
+
 
 
     let step = 0;
 
 
+    /*
+     * The progress is intentionally capped at 88%.
+     *
+     * Why?
+     *
+     * We don't actually know how long FFmpeg will take.
+     * Therefore the browser should NOT show 100% while
+     * the backend is still processing.
+     */
+
     const animation =
         setInterval(() => {
+
 
             if(step < messages.length){
 
                 generationText.innerText =
                     messages[step];
 
+
+                const calculatedProgress =
+                    10 +
+                    (
+                        (step + 1) /
+                        messages.length
+                    ) * 78;
+
+
                 progress.style.width =
-                    ((step + 1) /
-                    messages.length * 85) + "%";
+                    Math.min(
+                        calculatedProgress,
+                        88
+                    ) + "%";
+
 
                 step++;
 
             }
 
-        }, 1300);
+        }, 1800);
 
+
+
+    /* -----------------------------------------------------
+       ABORT CONTROLLER
+    ----------------------------------------------------- */
+
+    const controller =
+        new AbortController();
+
+
+    /*
+     * Allow the browser to wait up to 180 seconds.
+     *
+     * NOTE:
+     * This does NOT increase Render's server timeout.
+     * It only prevents the browser from waiting forever.
+     */
+
+    const timeoutId =
+        setTimeout(() => {
+
+            controller.abort();
+
+        }, 180000);
+
+
+
+    /* -----------------------------------------------------
+       SEND REQUEST
+    ----------------------------------------------------- */
 
     try{
+
 
         const response =
             await fetch(
                 "/api/generate_medical_video",
                 {
+
                     method:"POST",
 
                     headers:{
+
                         "Content-Type":
+                            "application/json",
+
+                        "Accept":
                             "application/json"
+
                     },
+
 
                     body:JSON.stringify({
 
@@ -1454,101 +2252,362 @@ async function generateVideo(){
 
                         duration:duration
 
-                    })
+                    }),
+
+
+                    signal:
+                        controller.signal
+
                 }
             );
 
 
-        const data =
-            await response.json();
+
+        /* -------------------------------------------------
+           CLEAR CLIENT TIMEOUT
+        ------------------------------------------------- */
+
+        clearTimeout(
+            timeoutId
+        );
 
 
-        clearInterval(animation);
+
+        /* -------------------------------------------------
+           READ RESPONSE AS TEXT FIRST
+        -------------------------------------------------
+
+           THIS IS THE IMPORTANT FIX.
+
+           Previously:
+
+               await response.json()
+
+           was used directly.
+
+           If Render returned:
+
+               <html> ... </html>
+
+           JavaScript crashed with:
+
+               Unexpected token '<'
+
+           Now we read the response as text first.
+        ------------------------------------------------- */
+
+        const responseText =
+            await response.text();
 
 
-        if(!response.ok){
+
+        console.log(
+            "Server status:",
+            response.status
+        );
+
+
+        console.log(
+            "Server response:",
+            responseText
+        );
+
+
+
+        /* -------------------------------------------------
+           TRY TO PARSE JSON
+        ------------------------------------------------- */
+
+        let data;
+
+
+        try{
+
+            data =
+                JSON.parse(
+                    responseText
+                );
+
+        }
+        catch(jsonError){
+
+            console.error(
+                "JSON parsing failed:",
+                jsonError
+            );
+
+
+            console.error(
+                "Raw server response:",
+                responseText
+            );
+
+
+            /*
+             * Detect common HTML responses.
+             */
+
+            if(
+                responseText
+                .trim()
+                .startsWith("<")
+            ){
+
+                throw new Error(
+                    "The server returned an HTML error page instead of JSON. " +
+                    "This usually means the Render request timed out or " +
+                    "the Flask route crashed. Please check the Render logs."
+                );
+
+            }
+
 
             throw new Error(
-                data.error ||
-                "Video generation failed."
+                "The server returned an invalid response. " +
+                "Please check the Render logs."
             );
 
         }
 
 
-        progress.style.width = "100%";
+
+        /* -------------------------------------------------
+           STOP ANIMATION
+        ------------------------------------------------- */
+
+        clearInterval(
+            animation
+        );
+
+
+
+        /* -------------------------------------------------
+           CHECK HTTP STATUS
+        ------------------------------------------------- */
+
+        if(!response.ok){
+
+            throw new Error(
+
+                data.error ||
+
+                data.message ||
+
+                (
+                    "Video generation failed. " +
+                    "Server status: " +
+                    response.status
+                )
+
+            );
+
+        }
+
+
+
+        /* -------------------------------------------------
+           CHECK VIDEO URL
+        ------------------------------------------------- */
+
+        if(
+            !data.video_url
+        ){
+
+            throw new Error(
+                "The server completed the request but did not return a video URL."
+            );
+
+        }
+
+
+
+        /* -------------------------------------------------
+           SUCCESS
+        ------------------------------------------------- */
+
+        progress.style.width =
+            "100%";
+
+
+        generationTitle.innerText =
+            "Video generation complete";
+
 
         generationText.innerText =
-            "Your medical video is ready!";
+            "Your medical educational video is ready!";
 
+
+
+        /* -------------------------------------------------
+           SHOW RESULT
+        ------------------------------------------------- */
 
         setTimeout(() => {
 
+
             generation.style.display =
                 "none";
+
 
             result.style.display =
                 "block";
 
 
+
+            /* ---------------------------------------------
+               RESULT TITLE
+            --------------------------------------------- */
+
             document
-                .getElementById("resultTitle")
+                .getElementById(
+                    "resultTitle"
+                )
                 .innerText =
+
                 data.title ||
+
                 "Medical Educational Video";
 
 
+
+            /* ---------------------------------------------
+               VIDEO PLAYER
+            --------------------------------------------- */
+
             const video =
-                document
-                .getElementById(
+                document.getElementById(
                     "videoPlayer"
                 );
+
+
+            video.pause();
+
 
             video.src =
                 data.video_url;
 
+
             video.load();
 
 
-            document
-                .getElementById(
+
+            /* ---------------------------------------------
+               DOWNLOAD BUTTON
+            --------------------------------------------- */
+
+            const downloadBtn =
+                document.getElementById(
                     "downloadBtn"
-                )
-                .href =
+                );
+
+
+            downloadBtn.href =
                 data.video_url;
 
 
-            btn.disabled = false;
+
+            /* ---------------------------------------------
+               RESET GENERATE BUTTON
+            --------------------------------------------- */
+
+            btn.disabled =
+                false;
+
 
             btn.innerHTML =
                 '<i class="fa-solid fa-sparkles"></i> &nbsp; GENERATE MEDICAL VIDEO';
 
 
+
+            /* ---------------------------------------------
+               SCROLL TO RESULT
+            --------------------------------------------- */
+
             result.scrollIntoView({
+
                 behavior:"smooth",
+
                 block:"center"
+
             });
+
 
         },700);
 
 
-    }catch(error){
 
-        clearInterval(animation);
+    }
+    catch(error){
+
+
+        /* -------------------------------------------------
+           STOP EVERYTHING
+        ------------------------------------------------- */
+
+        clearInterval(
+            animation
+        );
+
+
+        clearTimeout(
+            timeoutId
+        );
+
 
         generation.style.display =
             "none";
 
-        btn.disabled = false;
+
+        btn.disabled =
+            false;
+
 
         btn.innerHTML =
             '<i class="fa-solid fa-sparkles"></i> &nbsp; GENERATE MEDICAL VIDEO';
 
 
-        alert(
-            "Video generation error:\n\n" +
-            error.message
+
+        /* -------------------------------------------------
+           ERROR MESSAGE
+        ------------------------------------------------- */
+
+        let message =
+            error.message ||
+            "Unknown video generation error.";
+
+
+
+        /*
+         * Special message for browser timeout.
+         */
+
+        if(
+            error.name ===
+            "AbortError"
+        ){
+
+            message =
+                "The video generation is taking too long. " +
+                "The browser stopped waiting after 180 seconds. " +
+                "Please check your Render logs. " +
+                "If the backend is still processing, the video generation architecture " +
+                "may need to be changed to a background job.";
+
+        }
+
+
+
+        console.error(
+            "MEDICAL VIDEO ERROR:",
+            error
         );
+
+
+
+        showError(
+            message
+        );
+
 
     }
 
@@ -1561,21 +2620,128 @@ async function generateVideo(){
 
 function generateAnother(){
 
-    document
-        .getElementById("result")
-        .style.display = "none";
 
-    document
-        .getElementById("topic")
-        .focus();
+    const result =
+        document.getElementById(
+            "result"
+        );
+
+
+    const generation =
+        document.getElementById(
+            "generation"
+        );
+
+
+    const progress =
+        document.getElementById(
+            "progressBar"
+        );
+
+
+    const video =
+        document.getElementById(
+            "videoPlayer"
+        );
+
+
+
+    /* -----------------------------------------------------
+       STOP PREVIOUS VIDEO
+    ----------------------------------------------------- */
+
+    video.pause();
+
+    video.removeAttribute(
+        "src"
+    );
+
+    video.load();
+
+
+
+    /* -----------------------------------------------------
+       RESET UI
+    ----------------------------------------------------- */
+
+    result.style.display =
+        "none";
+
+
+    generation.style.display =
+        "none";
+
+
+    progress.style.width =
+        "0%";
+
+
+    hideError();
+
+
+
+    /* -----------------------------------------------------
+       FOCUS TOPIC
+    ----------------------------------------------------- */
+
+    const topic =
+        document.getElementById(
+            "topic"
+        );
+
+
+    topic.focus();
+
+
+
+    /* -----------------------------------------------------
+       SCROLL TOP
+    ----------------------------------------------------- */
 
     window.scrollTo({
+
         top:0,
+
         behavior:"smooth"
+
     });
+
 }
+
+
+/* =========================================================
+   ENTER KEY SUPPORT
+========================================================= */
+
+document
+    .getElementById("topic")
+    .addEventListener(
+        "keydown",
+        function(event){
+
+            /*
+             * Ctrl + Enter
+             * generates the video.
+             */
+
+            if(
+                event.key === "Enter" &&
+                event.ctrlKey
+            ){
+
+                event.preventDefault();
+
+                generateVideo();
+
+            }
+
+        }
+    );
+
 
 </script>
 
+
 </body>
+
 </html>
