@@ -2378,6 +2378,10 @@ def create_voice(
 # FFmpeg VIDEO CREATION - OPTIMIZED FOR RENDER
 # =========================================================
 
+# =========================================================
+# OPTIMIZED MEDICAL VIDEO CREATOR
+# =========================================================
+
 def create_video(
     scene_images,
     audio_path,
@@ -2385,45 +2389,118 @@ def create_video(
     duration=18
 ):
     """
-    Create a lightweight 16:9 medical educational video.
+    Creates a 16:9 medical educational video.
 
-    Optimized for Render:
+    Features:
+    - Exact 15 / 18 / 20 second duration
     - 1280x720 landscape
-    - 15 FPS instead of 30 FPS
-    - ultrafast H.264 encoding
-    - lower memory usage
-    - black fade transition between scenes
-    - narration added separately
-    - explicit FFmpeg timeout
+    - Black fade transitions
+    - Low-memory FFmpeg settings for Render
+    - English narration
+    - Silence automatically added if narration is shorter
     """
 
     if not scene_images:
-        raise ValueError("No scene images were provided.")
+        raise ValueError(
+            "No scene images were provided."
+        )
 
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
 
-    scene_count = len(scene_images)
+    # -----------------------------------------------------
+    # VALIDATE DURATION
+    # -----------------------------------------------------
 
-    # Safety limit
-    scene_count = min(scene_count, 5)
-    scene_images = scene_images[:scene_count]
-
-    duration = int(duration)
+    try:
+        duration = int(duration)
+    except Exception:
+        duration = 18
 
     if duration not in (15, 18, 20):
         duration = 18
 
-    scene_duration = float(duration) / scene_count
+    # -----------------------------------------------------
+    # LIMIT NUMBER OF SCENES
+    # -----------------------------------------------------
 
-    # Short black transition
+    scene_images = scene_images[:5]
+
+    scene_count = len(scene_images)
+
+    if scene_count == 0:
+        raise ValueError(
+            "No valid scene images found."
+        )
+
+    # -----------------------------------------------------
+    # TRANSITION SETTINGS
+    # -----------------------------------------------------
+
     transition_duration = 0.35
 
-    # Make sure transition does not become longer
-    # than the scene itself.
+    # Make sure transition is not too long
+    # for a small number of scenes.
     transition_duration = min(
         transition_duration,
-        max(0.10, scene_duration / 3)
+        0.25
     )
+
+    # IMPORTANT:
+    #
+    # We add the transition overlap back into
+    # each scene duration so the final output
+    # remains exactly the requested duration.
+    #
+    # Without this correction:
+    #
+    # 18 sec video - transition overlap
+    #
+    # would become shorter than 18 seconds.
+    #
+    scene_duration = (
+        duration
+        + (
+            (scene_count - 1)
+            * transition_duration
+        )
+    ) / scene_count
+
+    print(
+        "========================================"
+    )
+
+    print(
+        "VIDEO CREATION"
+    )
+
+    print(
+        "Requested duration:",
+        duration,
+        "seconds"
+    )
+
+    print(
+        "Scene count:",
+        scene_count
+    )
+
+    print(
+        "Scene duration:",
+        scene_duration
+    )
+
+    print(
+        "Transition:",
+        transition_duration
+    )
+
+    print(
+        "========================================"
+    )
+
+    # -----------------------------------------------------
+    # TEMPORARY FOLDER
+    # -----------------------------------------------------
 
     with tempfile.TemporaryDirectory(
         prefix="medipulse_ffmpeg_"
@@ -2433,18 +2510,19 @@ def create_video(
 
         silent_video = (
             temp_dir /
-            "silent.mp4"
+            "silent_video.mp4"
         )
 
-        # -------------------------------------------------
-        # CREATE INPUTS
-        # -------------------------------------------------
+        # =================================================
+        # STEP 1 — CREATE VIDEO FROM IMAGES
+        # =================================================
 
         command = [
             ffmpeg,
             "-y"
         ]
 
+        # Add every image as a looping input.
         for image_path in scene_images:
 
             command.extend([
@@ -2455,11 +2533,13 @@ def create_video(
                 f"{scene_duration:.3f}",
 
                 "-i",
-                str(Path(image_path).resolve())
+                str(
+                    Path(image_path).resolve()
+                )
             ])
 
         # -------------------------------------------------
-        # BUILD FILTER
+        # VIDEO FILTERS
         # -------------------------------------------------
 
         filter_parts = []
@@ -2479,22 +2559,23 @@ def create_video(
                 f"[v{index}]"
             )
 
-        # First scene
-        current_label = "v0"
+        # -------------------------------------------------
+        # BLACK FADE TRANSITIONS
+        # -------------------------------------------------
 
-        # Join scenes using fade-to-black transitions.
-        #
-        # Example:
-        # Scene 1 -> black -> Scene 2 -> black -> Scene 3
-        #
+        current_label = "v0"
 
         for index in range(1, scene_count):
 
             output_label = f"x{index}"
 
+            # Correct offset for overlapping xfade
             offset = (
-                scene_duration * index
-                - transition_duration
+                index
+                * (
+                    scene_duration
+                    - transition_duration
+                )
             )
 
             filter_parts.append(
@@ -2522,9 +2603,11 @@ def create_video(
 
             "-an",
 
+            # 15 FPS keeps Render CPU usage low.
             "-r",
             "15",
 
+            # Force exact requested duration.
             "-t",
             str(duration),
 
@@ -2547,33 +2630,30 @@ def create_video(
         ])
 
         print(
-            "Starting optimized FFmpeg video creation..."
-        )
-
-        print(
-            "Video:",
-            "1280x720",
-            "15 FPS",
-            f"{duration} seconds"
+            "Creating landscape video..."
         )
 
         try:
 
             result = subprocess.run(
                 command,
+
                 check=False,
+
                 stdout=subprocess.PIPE,
+
                 stderr=subprocess.PIPE,
+
                 text=True,
+
                 timeout=120
             )
 
         except subprocess.TimeoutExpired:
 
             raise RuntimeError(
-                "FFmpeg video creation timed out. "
-                "Render could not finish the video within "
-                "the allowed processing time."
+                "FFmpeg timed out while creating "
+                "the image video."
             )
 
         if result.returncode != 0:
@@ -2581,52 +2661,76 @@ def create_video(
             error_message = (
                 result.stderr[-5000:]
                 if result.stderr
-                else "Unknown FFmpeg error."
+                else
+                "Unknown FFmpeg error."
             )
 
             print(
-                "FFMPEG ERROR:",
+                "FFMPEG VIDEO ERROR:"
+            )
+
+            print(
                 error_message
             )
 
             raise RuntimeError(
-                "FFmpeg failed while creating the video:\n"
+                "FFmpeg failed while creating "
+                "the video:\n"
                 + error_message
             )
 
         if not silent_video.exists():
 
             raise RuntimeError(
-                "FFmpeg completed but the silent video "
-                "file was not created."
+                "Silent video was not created."
             )
 
-        # -------------------------------------------------
-        # ADD NARRATION
-        # -------------------------------------------------
+        # =================================================
+        # STEP 2 — ADD NARRATION
+        # =================================================
+
+        print(
+            "Adding English narration..."
+        )
 
         command_audio = [
+
             ffmpeg,
 
             "-y",
 
+            # Video
             "-i",
             str(silent_video),
 
+            # Audio
             "-i",
             str(audio_path),
+
+            # -------------------------------------------------
+            # VIDEO
+            # -------------------------------------------------
 
             "-map",
             "0:v:0",
 
+            # -------------------------------------------------
+            # AUDIO
+            # -------------------------------------------------
+
             "-map",
             "1:a:0",
 
-            "-t",
-            str(duration),
+            # -------------------------------------------------
+            # KEEP VIDEO STREAM
+            # -------------------------------------------------
 
             "-c:v",
             "copy",
+
+            # -------------------------------------------------
+            # ENCODE AUDIO
+            # -------------------------------------------------
 
             "-c:a",
             "aac",
@@ -2640,7 +2744,25 @@ def create_video(
             "-ac",
             "2",
 
-            "-shortest",
+            # -------------------------------------------------
+            # IMPORTANT FIX
+            #
+            # If narration is only 6 seconds,
+            # DON'T stop the video at 6 seconds.
+            #
+            # apad adds silence until the requested
+            # video duration is reached.
+            # -------------------------------------------------
+
+            "-af",
+            "apad",
+
+            # -------------------------------------------------
+            # FORCE FINAL VIDEO LENGTH
+            # -------------------------------------------------
+
+            "-t",
+            str(duration),
 
             "-movflags",
             "+faststart",
@@ -2648,25 +2770,27 @@ def create_video(
             str(output_path)
         ]
 
-        print(
-            "Adding narration to medical video..."
-        )
-
         try:
 
             result_audio = subprocess.run(
                 command_audio,
+
                 check=False,
+
                 stdout=subprocess.PIPE,
+
                 stderr=subprocess.PIPE,
+
                 text=True,
+
                 timeout=60
             )
 
         except subprocess.TimeoutExpired:
 
             raise RuntimeError(
-                "FFmpeg timed out while adding narration."
+                "FFmpeg timed out while adding "
+                "the narration."
             )
 
         if result_audio.returncode != 0:
@@ -2674,30 +2798,62 @@ def create_video(
             error_message = (
                 result_audio.stderr[-5000:]
                 if result_audio.stderr
-                else "Unknown FFmpeg audio error."
+                else
+                "Unknown FFmpeg audio error."
             )
 
             print(
-                "FFMPEG AUDIO ERROR:",
+                "FFMPEG AUDIO ERROR:"
+            )
+
+            print(
                 error_message
             )
 
             raise RuntimeError(
-                "FFmpeg failed while adding narration:\n"
+                "FFmpeg failed while adding "
+                "narration:\n"
                 + error_message
             )
+
+        # -----------------------------------------------------
+        # VERIFY OUTPUT
+        # -----------------------------------------------------
 
         if not output_path.exists():
 
             raise RuntimeError(
-                "Final medical video was not created."
+                "Final video file was not created."
+            )
+
+        if output_path.stat().st_size < 10000:
+
+            raise RuntimeError(
+                "Final video file is unexpectedly small."
             )
 
         print(
-            "Medical video successfully created:",
+            "========================================"
+        )
+
+        print(
+            "MEDICAL VIDEO CREATED SUCCESSFULLY"
+        )
+
+        print(
+            "Output:",
             output_path
         )
 
+        print(
+            "Requested duration:",
+            duration,
+            "seconds"
+        )
+
+        print(
+            "========================================"
+        )
 
 # =========================================================
 # VIDEO GENERATION API
