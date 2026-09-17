@@ -2316,26 +2316,64 @@ def create_scene_image(
 # CREATE VOICE
 # =========================================================
 
+# =========================================================
+# CREATE ENGLISH VOICE
+# =========================================================
+
 def create_voice(
     narration,
     output_path
 ):
 
-    tts = gTTS(
-        text=narration,
-        lang="en",
-        slow=False
+    narration = (
+        narration or ""
+    ).strip()
+
+    if not narration:
+
+        narration = (
+            "This video provides "
+            "general medical awareness "
+            "and educational information."
+        )
+
+    # Keep narration short for the 15–20 second video.
+    words = narration.split()
+
+    if len(words) > 65:
+
+        narration = " ".join(
+            words[:65]
+        )
+
+    print(
+        "Creating English narration..."
     )
 
-    tts.save(
-        str(output_path)
-    )
+    try:
 
+        tts = gTTS(
+            text=narration,
+            lang="en",
+            slow=False
+        )
 
-# =========================================================
-# FFmpeg VIDEO CREATION
-# =========================================================
+        tts.save(
+            str(output_path)
+        )
 
+    except Exception as e:
+
+        raise RuntimeError(
+            "Voice generation failed: "
+            + str(e)
+        )
+
+    if not output_path.exists():
+
+        raise RuntimeError(
+            "Voice file was not created."
+        )
 # =========================================================
 # FFmpeg VIDEO CREATION - OPTIMIZED FOR RENDER
 # =========================================================
@@ -2671,9 +2709,13 @@ def create_video(
 )
 def generate_medical_video():
 
+    work_dir = None
+
     try:
 
-        data = request.get_json() or {}
+        data = request.get_json(
+            silent=True
+        ) or {}
 
         topic = (
             data.get("topic") or ""
@@ -2684,21 +2726,26 @@ def generate_medical_video():
             or "English"
         )
 
-        duration = int(
-            data.get(
-                "duration",
-                18
-            )
-        )
+        try:
 
+            duration = int(
+                data.get(
+                    "duration",
+                    18
+                )
+            )
+
+        except Exception:
+
+            duration = 18
 
         if not topic:
 
             return jsonify({
+                "success": False,
                 "error":
                     "Please enter a medical topic."
             }), 400
-
 
         if duration not in (
             15,
@@ -2708,16 +2755,36 @@ def generate_medical_video():
 
             duration = 18
 
+        print(
+            "\n========================================"
+        )
 
         print(
             "MEDICAL VIDEO TOPIC:",
             topic
         )
 
+        print(
+            "LANGUAGE:",
+            language
+        )
+
+        print(
+            "DURATION:",
+            duration
+        )
+
+        print(
+            "========================================"
+        )
 
         # -----------------------------------------
         # STEP 1: AI CONTENT
         # -----------------------------------------
+
+        print(
+            "STEP 1: Generating AI medical content..."
+        )
 
         content = (
             generate_medical_video_content(
@@ -2726,30 +2793,44 @@ def generate_medical_video():
             )
         )
 
+        if not isinstance(
+            content,
+            dict
+        ):
+
+            raise ValueError(
+                "AI returned an invalid content format."
+            )
 
         title = content.get(
             "title",
             "Medical Awareness"
         )
 
-
         scenes = content.get(
             "scenes",
             []
         )
 
+        if not isinstance(
+            scenes,
+            list
+        ):
+
+            scenes = []
+
+        scenes = scenes[:5]
 
         if not scenes:
 
             raise ValueError(
-                "AI did not generate scenes."
+                "AI did not generate any scenes."
             )
 
-
-        # Keep exactly 5 scenes
-
-        scenes = scenes[:5]
-
+        print(
+            "AI scenes generated:",
+            len(scenes)
+        )
 
         # -----------------------------------------
         # STEP 2: TEMP WORKSPACE
@@ -2761,48 +2842,59 @@ def generate_medical_video():
             )
         )
 
+        scene_images = []
+        narration_parts = []
 
-        try:
+        # -----------------------------------------
+        # STEP 3: IMAGES
+        # -----------------------------------------
 
-            scene_images = []
+        print(
+            "STEP 2: Preparing medical images..."
+        )
 
-            narration_parts = []
+        for index, scene in enumerate(
+            scenes,
+            start=1
+        ):
 
-
-            # -------------------------------------
-            # STEP 3: DOWNLOAD IMAGES
-            # -------------------------------------
-
-            for index, scene in enumerate(
-                scenes,
-                start=1
+            if not isinstance(
+                scene,
+                dict
             ):
 
-                search_term = (
-                    scene.get(
-                        "image_search"
-                    )
-                    or topic
+                scene = {}
+
+            search_term = (
+                scene.get(
+                    "image_search"
                 )
+                or topic
+            )
 
+            raw_image = (
+                work_dir /
+                f"raw_{index}.jpg"
+            )
 
-                raw_image = (
-                    work_dir /
-                    f"raw_{index}.jpg"
-                )
+            landscape_image = (
+                work_dir /
+                f"landscape_{index}.jpg"
+            )
 
+            final_scene = (
+                work_dir /
+                f"scene_{index}.jpg"
+            )
 
-                landscape_image = (
-                    work_dir /
-                    f"landscape_{index}.jpg"
-                )
+            print(
+                f"Scene {index}/{len(scenes)}:",
+                search_term
+            )
 
+            image_url = None
 
-                final_scene = (
-                    work_dir /
-                    f"scene_{index}.jpg"
-                )
-
+            try:
 
                 image_url = (
                     search_wikimedia_image(
@@ -2810,176 +2902,208 @@ def generate_medical_video():
                     )
                 )
 
+            except Exception as e:
 
-                if image_url:
+                print(
+                    "IMAGE SEARCH ERROR:",
+                    str(e)
+                )
 
-                    try:
+            if image_url:
 
-                        download_image(
-                            image_url,
-                            raw_image
-                        )
+                try:
 
-                        prepare_landscape_image(
-                            raw_image,
-                            landscape_image
-                        )
-
-                    except Exception as image_error:
-
-                        print(
-                            "IMAGE ERROR:",
-                            image_error
-                        )
-
-                        # Create fallback image
-
-                        fallback = Image.new(
-                            "RGB",
-                            (1280,720),
-                            (10,5,25)
-                        )
-
-                        fallback.save(
-                            landscape_image
-                        )
-
-                else:
-
-                    fallback = Image.new(
-                        "RGB",
-                        (1280,720),
-                        (10,5,25)
+                    download_image(
+                        image_url,
+                        raw_image
                     )
 
-                    fallback.save(
+                    prepare_landscape_image(
+                        raw_image,
                         landscape_image
                     )
 
+                except Exception as image_error:
 
-                # Add title overlay
-
-                create_scene_image(
-                    landscape_image,
-                    final_scene,
-                    scene.get(
-                        "title",
-                        f"Medical Scene {index}"
-                    ),
-                    index,
-                    len(scenes)
-                )
-
-
-                scene_images.append(
-                    final_scene
-                )
-
-
-                narration = (
-                    scene.get(
-                        "narration",
-                        ""
-                    ).strip()
-                )
-
-
-                if narration:
-                    narration_parts.append(
-                        narration
+                    print(
+                        "IMAGE DOWNLOAD ERROR:",
+                        image_error
                     )
 
+                    image_url = None
 
-            # -----------------------------------------
-            # STEP 4: VOICE
-            # -----------------------------------------
+            # -------------------------------------
+            # FALLBACK IMAGE
+            # -------------------------------------
 
-            narration = " ".join(
-                narration_parts
-            )
+            if not image_url:
 
-
-            if not narration:
-
-                narration = (
-                    f"This short video provides "
-                    f"educational information about "
-                    f"{topic}."
+                print(
+                    "Using generated fallback image."
                 )
 
-
-            audio_path = (
-                work_dir /
-                "narration.mp3"
-            )
-
-
-            create_voice(
-                narration,
-                audio_path
-            )
-
-
-            # -----------------------------------------
-            # STEP 5: FINAL VIDEO
-            # -----------------------------------------
-
-            filename = (
-                "medical_"
-                + datetime.now().strftime(
-                    "%Y%m%d_%H%M%S"
+                fallback = Image.new(
+                    "RGB",
+                    (1280, 720),
+                    (10, 5, 25)
                 )
-                + ".mp4"
+
+                fallback.save(
+                    landscape_image,
+                    "JPEG",
+                    quality=85
+                )
+
+            # -------------------------------------
+            # TITLE OVERLAY
+            # -------------------------------------
+
+            create_scene_image(
+                landscape_image,
+                final_scene,
+                scene.get(
+                    "title",
+                    f"Medical Scene {index}"
+                ),
+                index,
+                len(scenes)
             )
 
-
-            output_path = (
-                VIDEO_OUTPUT_DIR /
-                filename
+            scene_images.append(
+                final_scene
             )
 
+            narration = (
+                scene.get(
+                    "narration",
+                    ""
+                ) or ""
+            ).strip()
 
-            create_video(
-                scene_images,
-                audio_path,
-                output_path,
-                duration
+            if narration:
+
+                narration_parts.append(
+                    narration
+                )
+
+        # -----------------------------------------
+        # STEP 4: NARRATION
+        # -----------------------------------------
+
+        print(
+            "STEP 3: Preparing narration..."
+        )
+
+        narration = " ".join(
+            narration_parts
+        ).strip()
+
+        if not narration:
+
+            narration = (
+                f"This short video explains "
+                f"{topic} for general medical "
+                f"awareness and education."
             )
 
+        audio_path = (
+            work_dir /
+            "narration.mp3"
+        )
 
-            # -----------------------------------------
-            # RESPONSE
-            # -----------------------------------------
+        create_voice(
+            narration,
+            audio_path
+        )
 
-            return jsonify({
+        # -----------------------------------------
+        # STEP 5: OUTPUT
+        # -----------------------------------------
 
-                "success": True,
-
-                "title": title,
-
-                "video_url":
-                    "/static/generated_videos/"
-                    + filename
-
-            })
-
-
-        finally:
-
-            shutil.rmtree(
-                work_dir,
-                ignore_errors=True
+        filename = (
+            "medical_"
+            + datetime.now().strftime(
+                "%Y%m%d_%H%M%S_%f"
             )
+            + ".mp4"
+        )
 
+        output_path = (
+            VIDEO_OUTPUT_DIR /
+            filename
+        )
+
+        print(
+            "STEP 4: Creating final video..."
+        )
+
+        create_video(
+            scene_images,
+            audio_path,
+            output_path,
+            duration
+        )
+
+        # -----------------------------------------
+        # SUCCESS
+        # -----------------------------------------
+
+        video_url = (
+            "/static/generated_videos/"
+            + filename
+        )
+
+        print(
+            "========================================"
+        )
+
+        print(
+            "MEDICAL VIDEO COMPLETE"
+        )
+
+        print(
+            "VIDEO:",
+            video_url
+        )
+
+        print(
+            "========================================"
+        )
+
+        return jsonify({
+
+            "success": True,
+
+            "title":
+                title,
+
+            "video_url":
+                video_url
+
+        })
 
     except Exception as e:
 
         print(
-            "MEDICAL VIDEO ERROR:",
+            "\n========================================"
+        )
+
+        print(
+            "MEDICAL VIDEO ERROR:"
+        )
+
+        print(
+            type(e).__name__,
             str(e)
         )
 
+        print(
+            "========================================"
+        )
+
         return jsonify({
+
+            "success": False,
 
             "error":
                 "Video generation failed: "
@@ -2987,6 +3111,20 @@ def generate_medical_video():
 
         }), 500
 
+    finally:
+
+        if work_dir:
+
+            try:
+
+                shutil.rmtree(
+                    work_dir,
+                    ignore_errors=True
+                )
+
+            except Exception:
+
+                pass
 
 # =========================================================
 # PAGE ROUTES
