@@ -2270,124 +2270,238 @@ def create_voice(
 # FFmpeg VIDEO CREATION
 # =========================================================
 
+# =========================================================
+# FFmpeg VIDEO CREATION - OPTIMIZED FOR RENDER
+# =========================================================
+
 def create_video(
     scene_images,
     audio_path,
     output_path,
     duration=18
 ):
+    """
+    Create a lightweight 16:9 medical educational video.
+
+    Optimized for Render:
+    - 1280x720 landscape
+    - 15 FPS instead of 30 FPS
+    - ultrafast H.264 encoding
+    - lower memory usage
+    - black fade transition between scenes
+    - narration added separately
+    - explicit FFmpeg timeout
+    """
+
+    if not scene_images:
+        raise ValueError("No scene images were provided.")
 
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
 
-    scene_count = len(
-        scene_images
+    scene_count = len(scene_images)
+
+    # Safety limit
+    scene_count = min(scene_count, 5)
+    scene_images = scene_images[:scene_count]
+
+    duration = int(duration)
+
+    if duration not in (15, 18, 20):
+        duration = 18
+
+    scene_duration = float(duration) / scene_count
+
+    # Short black transition
+    transition_duration = 0.35
+
+    # Make sure transition does not become longer
+    # than the scene itself.
+    transition_duration = min(
+        transition_duration,
+        max(0.10, scene_duration / 3)
     )
 
-    scene_duration = (
-        float(duration) /
-        scene_count
-    )
-
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with tempfile.TemporaryDirectory(
+        prefix="medipulse_ffmpeg_"
+    ) as temp_dir:
 
         temp_dir = Path(temp_dir)
-
-        concat_file = (
-            temp_dir /
-            "images.txt"
-        )
-
-
-        with open(
-            concat_file,
-            "w",
-            encoding="utf-8"
-        ) as file:
-
-            for image_path in scene_images:
-
-                file.write(
-                    f"file '{Path(image_path).resolve()}'\n"
-                )
-
-                file.write(
-                    f"duration {scene_duration:.3f}\n"
-                )
-
-
-            # FFmpeg concat demuxer needs
-            # the final image repeated.
-
-            file.write(
-                f"file '{Path(scene_images[-1]).resolve()}'\n"
-            )
-
 
         silent_video = (
             temp_dir /
             "silent.mp4"
         )
 
-
-        # Create slideshow
+        # -------------------------------------------------
+        # CREATE INPUTS
+        # -------------------------------------------------
 
         command = [
-
             ffmpeg,
+            "-y"
+        ]
 
-            "-y",
+        for image_path in scene_images:
 
-            "-f",
-            "concat",
+            command.extend([
+                "-loop",
+                "1",
 
-            "-safe",
-            "0",
+                "-t",
+                f"{scene_duration:.3f}",
 
-            "-i",
-            str(concat_file),
+                "-i",
+                str(Path(image_path).resolve())
+            ])
 
-            "-vf",
-            (
+        # -------------------------------------------------
+        # BUILD FILTER
+        # -------------------------------------------------
+
+        filter_parts = []
+
+        for index in range(scene_count):
+
+            filter_parts.append(
+                f"[{index}:v]"
                 "scale=1280:720:"
                 "force_original_aspect_ratio=decrease,"
                 "pad=1280:720:"
                 "(ow-iw)/2:"
-                "(oh-ih)/2,"
-                "format=yuv420p"
-            ),
+                "(oh-ih)/2:"
+                "black,"
+                "format=yuv420p,"
+                "setsar=1"
+                f"[v{index}]"
+            )
+
+        # First scene
+        current_label = "v0"
+
+        # Join scenes using fade-to-black transitions.
+        #
+        # Example:
+        # Scene 1 -> black -> Scene 2 -> black -> Scene 3
+        #
+
+        for index in range(1, scene_count):
+
+            output_label = f"x{index}"
+
+            offset = (
+                scene_duration * index
+                - transition_duration
+            )
+
+            filter_parts.append(
+                f"[{current_label}]"
+                f"[v{index}]"
+                "xfade="
+                "transition=fadeblack:"
+                f"duration={transition_duration:.3f}:"
+                f"offset={offset:.3f}"
+                f"[{output_label}]"
+            )
+
+            current_label = output_label
+
+        filter_complex = ";".join(
+            filter_parts
+        )
+
+        command.extend([
+            "-filter_complex",
+            filter_complex,
+
+            "-map",
+            f"[{current_label}]",
+
+            "-an",
 
             "-r",
-            "30",
+            "15",
 
             "-t",
             str(duration),
-
-            "-an",
 
             "-c:v",
             "libx264",
 
             "-preset",
-            "veryfast",
+            "ultrafast",
 
             "-crf",
-            "24",
+            "28",
+
+            "-pix_fmt",
+            "yuv420p",
+
+            "-movflags",
+            "+faststart",
 
             str(silent_video)
-        ]
+        ])
 
-
-        subprocess.run(
-            command,
-            check=True,
-            capture_output=True
+        print(
+            "Starting optimized FFmpeg video creation..."
         )
 
+        print(
+            "Video:",
+            "1280x720",
+            "15 FPS",
+            f"{duration} seconds"
+        )
 
-        # Add narration
+        try:
+
+            result = subprocess.run(
+                command,
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=120
+            )
+
+        except subprocess.TimeoutExpired:
+
+            raise RuntimeError(
+                "FFmpeg video creation timed out. "
+                "Render could not finish the video within "
+                "the allowed processing time."
+            )
+
+        if result.returncode != 0:
+
+            error_message = (
+                result.stderr[-5000:]
+                if result.stderr
+                else "Unknown FFmpeg error."
+            )
+
+            print(
+                "FFMPEG ERROR:",
+                error_message
+            )
+
+            raise RuntimeError(
+                "FFmpeg failed while creating the video:\n"
+                + error_message
+            )
+
+        if not silent_video.exists():
+
+            raise RuntimeError(
+                "FFmpeg completed but the silent video "
+                "file was not created."
+            )
+
+        # -------------------------------------------------
+        # ADD NARRATION
+        # -------------------------------------------------
 
         command_audio = [
-
             ffmpeg,
 
             "-y",
@@ -2398,14 +2512,14 @@ def create_video(
             "-i",
             str(audio_path),
 
-            "-t",
-            str(duration),
-
             "-map",
             "0:v:0",
 
             "-map",
             "1:a:0",
+
+            "-t",
+            str(duration),
 
             "-c:v",
             "copy",
@@ -2414,18 +2528,70 @@ def create_video(
             "aac",
 
             "-b:a",
-            "128k",
+            "96k",
+
+            "-ar",
+            "44100",
+
+            "-ac",
+            "2",
 
             "-shortest",
+
+            "-movflags",
+            "+faststart",
 
             str(output_path)
         ]
 
+        print(
+            "Adding narration to medical video..."
+        )
 
-        subprocess.run(
-            command_audio,
-            check=True,
-            capture_output=True
+        try:
+
+            result_audio = subprocess.run(
+                command_audio,
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=60
+            )
+
+        except subprocess.TimeoutExpired:
+
+            raise RuntimeError(
+                "FFmpeg timed out while adding narration."
+            )
+
+        if result_audio.returncode != 0:
+
+            error_message = (
+                result_audio.stderr[-5000:]
+                if result_audio.stderr
+                else "Unknown FFmpeg audio error."
+            )
+
+            print(
+                "FFMPEG AUDIO ERROR:",
+                error_message
+            )
+
+            raise RuntimeError(
+                "FFmpeg failed while adding narration:\n"
+                + error_message
+            )
+
+        if not output_path.exists():
+
+            raise RuntimeError(
+                "Final medical video was not created."
+            )
+
+        print(
+            "Medical video successfully created:",
+            output_path
         )
 
 
