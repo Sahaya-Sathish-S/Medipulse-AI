@@ -1916,6 +1916,10 @@ Format:
 # WIKIMEDIA COMMONS IMAGE SEARCH
 # =========================================================
 
+# =========================================================
+# WIKIMEDIA COMMONS IMAGE SEARCH
+# =========================================================
+
 def search_wikimedia_image(search_term):
 
     url = (
@@ -1933,7 +1937,7 @@ def search_wikimedia_image(search_term):
 
         "gsrnamespace": 6,
 
-        "gsrlimit": 8,
+        "gsrlimit": 5,
 
         "prop":
             "imageinfo",
@@ -1942,7 +1946,7 @@ def search_wikimedia_image(search_term):
             "url",
 
         "iiurlwidth":
-            1280,
+            1000,
 
         "format":
             "json"
@@ -1950,21 +1954,34 @@ def search_wikimedia_image(search_term):
     }
 
     headers = {
+
         "User-Agent":
             "MediPulseAI/1.0 "
             "(educational medical video generator)"
+
     }
 
-    response = requests.get(
-        url,
-        params=params,
-        headers=headers,
-        timeout=20
-    )
+    try:
 
-    response.raise_for_status()
+        response = requests.get(
+            url,
+            params=params,
+            headers=headers,
+            timeout=8
+        )
 
-    data = response.json()
+        response.raise_for_status()
+
+        data = response.json()
+
+    except Exception as e:
+
+        print(
+            "WIKIMEDIA SEARCH ERROR:",
+            str(e)
+        )
+
+        return None
 
     pages = (
         data
@@ -2001,6 +2018,9 @@ def search_wikimedia_image(search_term):
 
     return candidates[0]
 
+# =========================================================
+# DOWNLOAD IMAGE - RENDER OPTIMIZED
+# =========================================================
 
 def download_image(
     image_url,
@@ -2009,26 +2029,65 @@ def download_image(
 
     headers = {
         "User-Agent":
-            "MediPulseAI/1.0"
+            "MediPulseAI/1.0 "
+            "(educational medical video generator)"
     }
 
     response = requests.get(
         image_url,
         headers=headers,
-        timeout=25
+        timeout=10,
+        stream=True
     )
 
     response.raise_for_status()
+
+    # Protect Render memory by limiting image size.
+    max_bytes = 8 * 1024 * 1024
+
+    content_length = response.headers.get(
+        "Content-Length"
+    )
+
+    if content_length:
+
+        try:
+
+            if int(content_length) > max_bytes:
+
+                raise ValueError(
+                    "Image is too large."
+                )
+
+        except ValueError as e:
+
+            if "too large" in str(e).lower():
+                raise
+
+    total = 0
 
     with open(
         output_path,
         "wb"
     ) as file:
 
-        file.write(
-            response.content
-        )
+        for chunk in response.iter_content(
+            chunk_size=64 * 1024
+        ):
 
+            if not chunk:
+                continue
+
+            total += len(chunk)
+
+            if total > max_bytes:
+
+                raise ValueError(
+                    "Downloaded image exceeded "
+                    "8 MB limit."
+                )
+
+            file.write(chunk)
 
 # =========================================================
 # PREPARE LANDSCAPE IMAGE
@@ -2041,80 +2100,87 @@ def prepare_landscape_image(
     height=720
 ):
 
-    image = Image.open(
-        input_path
-    ).convert("RGB")
+    try:
 
+        with Image.open(input_path) as source:
 
-    # Cover crop to 16:9
+            image = source.convert("RGB")
 
-    target_ratio = (
-        width / height
-    )
+            target_ratio = (
+                width / height
+            )
 
-    image_ratio = (
-        image.width /
-        image.height
-    )
+            image_ratio = (
+                image.width /
+                image.height
+            )
 
+            if image_ratio > target_ratio:
 
-    if image_ratio > target_ratio:
+                new_height = height
 
-        new_height = height
+                new_width = int(
+                    image.width *
+                    height /
+                    image.height
+                )
 
-        new_width = int(
-            image.width *
-            height /
-            image.height
+            else:
+
+                new_width = width
+
+                new_height = int(
+                    image.height *
+                    width /
+                    image.width
+                )
+
+            image = image.resize(
+                (
+                    new_width,
+                    new_height
+                ),
+                Image.Resampling.LANCZOS
+            )
+
+            left = max(
+                0,
+                (
+                    image.width -
+                    width
+                ) // 2
+            )
+
+            top = max(
+                0,
+                (
+                    image.height -
+                    height
+                ) // 2
+            )
+
+            image = image.crop(
+                (
+                    left,
+                    top,
+                    left + width,
+                    top + height
+                )
+            )
+
+            image.save(
+                output_path,
+                "JPEG",
+                quality=85,
+                optimize=True
+            )
+
+    except Exception as e:
+
+        raise RuntimeError(
+            "Could not prepare medical image: "
+            + str(e)
         )
-
-    else:
-
-        new_width = width
-
-        new_height = int(
-            image.height *
-            width /
-            image.width
-        )
-
-
-    image = image.resize(
-        (
-            new_width,
-            new_height
-        ),
-        Image.Resampling.LANCZOS
-    )
-
-
-    left = (
-        image.width -
-        width
-    ) // 2
-
-    top = (
-        image.height -
-        height
-    ) // 2
-
-
-    image = image.crop(
-        (
-            left,
-            top,
-            left + width,
-            top + height
-        )
-    )
-
-
-    image.save(
-        output_path,
-        "JPEG",
-        quality=92
-    )
-
 
 # =========================================================
 # ADD MEDICAL VIDEO TEXT
