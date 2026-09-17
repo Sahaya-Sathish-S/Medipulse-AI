@@ -3,6 +3,15 @@ import io
 import json
 import os
 import socket
+import re
+import subprocess
+import tempfile
+import shutil
+from pathlib import Path
+
+from PIL import Image, ImageFilter, ImageDraw, ImageFont
+from gtts import gTTS
+import imageio_ffmpeg
 from datetime import datetime, timedelta
 
 from flask import Flask, render_template, request, jsonify
@@ -1757,9 +1766,1004 @@ def analyze_complaint_ai():
         return jsonify({
             "reply": str(e)
         })
+
+# =========================================================
+# AI MEDICAL VIDEO STUDIO
+# =========================================================
+
+VIDEO_OUTPUT_DIR = Path(
+    app.static_folder
+) / "generated_videos"
+
+VIDEO_OUTPUT_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+
+def clean_ai_json(text):
+    """
+    Extract JSON from AI response even if
+    the model adds markdown/code fences.
+    """
+
+    text = text.strip()
+
+    text = re.sub(
+        r"```json",
+        "",
+        text,
+        flags=re.IGNORECASE
+    )
+
+    text = re.sub(
+        r"```",
+        "",
+        text
+    )
+
+    start = text.find("{")
+    end = text.rfind("}")
+
+    if start == -1 or end == -1:
+        raise ValueError(
+            "AI did not return valid JSON."
+        )
+
+    return json.loads(
+        text[start:end + 1]
+    )
+
+
+def generate_medical_video_content(
+    topic,
+    language="English"
+):
+
+    prompt = f"""
+You are MediPulse AI Medical Education
+Content Generator.
+
+Create a very short public medical awareness
+video about:
+
+{topic}
+
+Language:
+{language}
+
+The video will be approximately 15-20 seconds.
+
+Create exactly 5 scenes.
+
+The content must be:
+- Simple
+- Educational
+- Suitable for the general public
+- Medically responsible
+- Easy to understand
+- Not a diagnosis
+- Not a prescription
+- Not personalized medical advice
+
+For each scene provide:
+1. title
+2. narration
+3. image_search
+
+The total narration should be short enough
+for approximately 15-20 seconds.
+
+Use simple English.
+
+IMPORTANT:
+Return ONLY valid JSON.
+
+Format:
+
+{{
+    "title": "Short video title",
+    "scenes": [
+        {{
+            "title": "Scene title",
+            "narration": "Short narration",
+            "image_search": "medical image search keywords"
+        }},
+        {{
+            "title": "Scene title",
+            "narration": "Short narration",
+            "image_search": "medical image search keywords"
+        }},
+        {{
+            "title": "Scene title",
+            "narration": "Short narration",
+            "image_search": "medical image search keywords"
+        }},
+        {{
+            "title": "Scene title",
+            "narration": "Short narration",
+            "image_search": "medical image search keywords"
+        }},
+        {{
+            "title": "Scene title",
+            "narration": "Short narration",
+            "image_search": "medical image search keywords"
+        }}
+    ]
+}}
+"""
+
+    response = ask_ai(
+        [
+            {
+                "role": "system",
+                "content":
+                    "You are a safe medical education AI."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.2,
+        max_tokens=1000
+    )
+
+    return clean_ai_json(response)
+
+
+# =========================================================
+# WIKIMEDIA COMMONS IMAGE SEARCH
+# =========================================================
+
+def search_wikimedia_image(search_term):
+
+    url = (
+        "https://commons.wikimedia.org/w/api.php"
+    )
+
+    params = {
+
+        "action": "query",
+
+        "generator": "search",
+
+        "gsrsearch":
+            search_term,
+
+        "gsrnamespace": 6,
+
+        "gsrlimit": 8,
+
+        "prop":
+            "imageinfo",
+
+        "iiprop":
+            "url",
+
+        "iiurlwidth":
+            1280,
+
+        "format":
+            "json"
+
+    }
+
+    headers = {
+        "User-Agent":
+            "MediPulseAI/1.0 "
+            "(educational medical video generator)"
+    }
+
+    response = requests.get(
+        url,
+        params=params,
+        headers=headers,
+        timeout=20
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    pages = (
+        data
+        .get("query", {})
+        .get("pages", {})
+    )
+
+    candidates = []
+
+    for page in pages.values():
+
+        imageinfo = page.get(
+            "imageinfo",
+            []
+        )
+
+        if not imageinfo:
+            continue
+
+        info = imageinfo[0]
+
+        image_url = (
+            info.get("thumburl")
+            or info.get("url")
+        )
+
+        if image_url:
+            candidates.append(
+                image_url
+            )
+
+    if not candidates:
+        return None
+
+    return candidates[0]
+
+
+def download_image(
+    image_url,
+    output_path
+):
+
+    headers = {
+        "User-Agent":
+            "MediPulseAI/1.0"
+    }
+
+    response = requests.get(
+        image_url,
+        headers=headers,
+        timeout=25
+    )
+
+    response.raise_for_status()
+
+    with open(
+        output_path,
+        "wb"
+    ) as file:
+
+        file.write(
+            response.content
+        )
+
+
+# =========================================================
+# PREPARE LANDSCAPE IMAGE
+# =========================================================
+
+def prepare_landscape_image(
+    input_path,
+    output_path,
+    width=1280,
+    height=720
+):
+
+    image = Image.open(
+        input_path
+    ).convert("RGB")
+
+
+    # Cover crop to 16:9
+
+    target_ratio = (
+        width / height
+    )
+
+    image_ratio = (
+        image.width /
+        image.height
+    )
+
+
+    if image_ratio > target_ratio:
+
+        new_height = height
+
+        new_width = int(
+            image.width *
+            height /
+            image.height
+        )
+
+    else:
+
+        new_width = width
+
+        new_height = int(
+            image.height *
+            width /
+            image.width
+        )
+
+
+    image = image.resize(
+        (
+            new_width,
+            new_height
+        ),
+        Image.Resampling.LANCZOS
+    )
+
+
+    left = (
+        image.width -
+        width
+    ) // 2
+
+    top = (
+        image.height -
+        height
+    ) // 2
+
+
+    image = image.crop(
+        (
+            left,
+            top,
+            left + width,
+            top + height
+        )
+    )
+
+
+    image.save(
+        output_path,
+        "JPEG",
+        quality=92
+    )
+
+
+# =========================================================
+# ADD MEDICAL VIDEO TEXT
+# =========================================================
+
+def create_scene_image(
+    image_path,
+    output_path,
+    scene_title,
+    scene_number,
+    total_scenes
+):
+
+    image = Image.open(
+        image_path
+    ).convert("RGB")
+
+    image = image.resize(
+        (1280,720),
+        Image.Resampling.LANCZOS
+    )
+
+
+    # Dark bottom gradient
+
+    overlay = Image.new(
+        "RGBA",
+        image.size,
+        (0,0,0,0)
+    )
+
+    draw = ImageDraw.Draw(
+        overlay
+    )
+
+
+    for y in range(450,720):
+
+        alpha = int(
+            190 *
+            (y - 450) /
+            270
+        )
+
+        draw.line(
+            [(0,y),(1280,y)],
+            fill=(0,0,0,alpha)
+        )
+
+
+    image = Image.alpha_composite(
+        image.convert("RGBA"),
+        overlay
+    )
+
+
+    draw = ImageDraw.Draw(
+        image
+    )
+
+
+    try:
+
+        font_large = ImageFont.truetype(
+            "DejaVuSans-Bold.ttf",
+            48
+        )
+
+        font_small = ImageFont.truetype(
+            "DejaVuSans.ttf",
+            22
+        )
+
+    except:
+
+        font_large = ImageFont.load_default()
+        font_small = ImageFont.load_default()
+
+
+    # MediPulse label
+
+    draw.text(
+        (45,40),
+        "MEDIPULSE AI",
+        font=font_small,
+        fill=(255,255,255,230)
+    )
+
+
+    # Scene counter
+
+    counter = (
+        f"{scene_number:02d} / "
+        f"{total_scenes:02d}"
+    )
+
+    draw.text(
+        (1130,40),
+        counter,
+        font=font_small,
+        fill=(0,220,255,230)
+    )
+
+
+    # Title
+
+    draw.text(
+        (50,575),
+        scene_title[:55],
+        font=font_large,
+        fill=(255,255,255,255)
+    )
+
+
+    # Bottom line
+
+    draw.rectangle(
+        (50,650,350,654),
+        fill=(168,85,247,255)
+    )
+
+
+    image.convert(
+        "RGB"
+    ).save(
+        output_path,
+        "JPEG",
+        quality=94
+    )
+
+
+# =========================================================
+# CREATE VOICE
+# =========================================================
+
+def create_voice(
+    narration,
+    output_path
+):
+
+    tts = gTTS(
+        text=narration,
+        lang="en",
+        slow=False
+    )
+
+    tts.save(
+        str(output_path)
+    )
+
+
+# =========================================================
+# FFmpeg VIDEO CREATION
+# =========================================================
+
+def create_video(
+    scene_images,
+    audio_path,
+    output_path,
+    duration=18
+):
+
+    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+
+    scene_count = len(
+        scene_images
+    )
+
+    scene_duration = (
+        float(duration) /
+        scene_count
+    )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+
+        temp_dir = Path(temp_dir)
+
+        concat_file = (
+            temp_dir /
+            "images.txt"
+        )
+
+
+        with open(
+            concat_file,
+            "w",
+            encoding="utf-8"
+        ) as file:
+
+            for image_path in scene_images:
+
+                file.write(
+                    f"file '{Path(image_path).resolve()}'\n"
+                )
+
+                file.write(
+                    f"duration {scene_duration:.3f}\n"
+                )
+
+
+            # FFmpeg concat demuxer needs
+            # the final image repeated.
+
+            file.write(
+                f"file '{Path(scene_images[-1]).resolve()}'\n"
+            )
+
+
+        silent_video = (
+            temp_dir /
+            "silent.mp4"
+        )
+
+
+        # Create slideshow
+
+        command = [
+
+            ffmpeg,
+
+            "-y",
+
+            "-f",
+            "concat",
+
+            "-safe",
+            "0",
+
+            "-i",
+            str(concat_file),
+
+            "-vf",
+            (
+                "scale=1280:720:"
+                "force_original_aspect_ratio=decrease,"
+                "pad=1280:720:"
+                "(ow-iw)/2:"
+                "(oh-ih)/2,"
+                "format=yuv420p"
+            ),
+
+            "-r",
+            "30",
+
+            "-t",
+            str(duration),
+
+            "-an",
+
+            "-c:v",
+            "libx264",
+
+            "-preset",
+            "veryfast",
+
+            "-crf",
+            "24",
+
+            str(silent_video)
+        ]
+
+
+        subprocess.run(
+            command,
+            check=True,
+            capture_output=True
+        )
+
+
+        # Add narration
+
+        command_audio = [
+
+            ffmpeg,
+
+            "-y",
+
+            "-i",
+            str(silent_video),
+
+            "-i",
+            str(audio_path),
+
+            "-t",
+            str(duration),
+
+            "-map",
+            "0:v:0",
+
+            "-map",
+            "1:a:0",
+
+            "-c:v",
+            "copy",
+
+            "-c:a",
+            "aac",
+
+            "-b:a",
+            "128k",
+
+            "-shortest",
+
+            str(output_path)
+        ]
+
+
+        subprocess.run(
+            command_audio,
+            check=True,
+            capture_output=True
+        )
+
+
+# =========================================================
+# VIDEO GENERATION API
+# =========================================================
+
+@app.route(
+    "/api/generate_medical_video",
+    methods=["POST"]
+)
+def generate_medical_video():
+
+    try:
+
+        data = request.get_json() or {}
+
+        topic = (
+            data.get("topic") or ""
+        ).strip()
+
+        language = (
+            data.get("language")
+            or "English"
+        )
+
+        duration = int(
+            data.get(
+                "duration",
+                18
+            )
+        )
+
+
+        if not topic:
+
+            return jsonify({
+                "error":
+                    "Please enter a medical topic."
+            }), 400
+
+
+        if duration not in (
+            15,
+            18,
+            20
+        ):
+
+            duration = 18
+
+
+        print(
+            "MEDICAL VIDEO TOPIC:",
+            topic
+        )
+
+
+        # -----------------------------------------
+        # STEP 1: AI CONTENT
+        # -----------------------------------------
+
+        content = (
+            generate_medical_video_content(
+                topic,
+                language
+            )
+        )
+
+
+        title = content.get(
+            "title",
+            "Medical Awareness"
+        )
+
+
+        scenes = content.get(
+            "scenes",
+            []
+        )
+
+
+        if not scenes:
+
+            raise ValueError(
+                "AI did not generate scenes."
+            )
+
+
+        # Keep exactly 5 scenes
+
+        scenes = scenes[:5]
+
+
+        # -----------------------------------------
+        # STEP 2: TEMP WORKSPACE
+        # -----------------------------------------
+
+        work_dir = Path(
+            tempfile.mkdtemp(
+                prefix="medipulse_video_"
+            )
+        )
+
+
+        try:
+
+            scene_images = []
+
+            narration_parts = []
+
+
+            # -------------------------------------
+            # STEP 3: DOWNLOAD IMAGES
+            # -------------------------------------
+
+            for index, scene in enumerate(
+                scenes,
+                start=1
+            ):
+
+                search_term = (
+                    scene.get(
+                        "image_search"
+                    )
+                    or topic
+                )
+
+
+                raw_image = (
+                    work_dir /
+                    f"raw_{index}.jpg"
+                )
+
+
+                landscape_image = (
+                    work_dir /
+                    f"landscape_{index}.jpg"
+                )
+
+
+                final_scene = (
+                    work_dir /
+                    f"scene_{index}.jpg"
+                )
+
+
+                image_url = (
+                    search_wikimedia_image(
+                        search_term
+                    )
+                )
+
+
+                if image_url:
+
+                    try:
+
+                        download_image(
+                            image_url,
+                            raw_image
+                        )
+
+                        prepare_landscape_image(
+                            raw_image,
+                            landscape_image
+                        )
+
+                    except Exception as image_error:
+
+                        print(
+                            "IMAGE ERROR:",
+                            image_error
+                        )
+
+                        # Create fallback image
+
+                        fallback = Image.new(
+                            "RGB",
+                            (1280,720),
+                            (10,5,25)
+                        )
+
+                        fallback.save(
+                            landscape_image
+                        )
+
+                else:
+
+                    fallback = Image.new(
+                        "RGB",
+                        (1280,720),
+                        (10,5,25)
+                    )
+
+                    fallback.save(
+                        landscape_image
+                    )
+
+
+                # Add title overlay
+
+                create_scene_image(
+                    landscape_image,
+                    final_scene,
+                    scene.get(
+                        "title",
+                        f"Medical Scene {index}"
+                    ),
+                    index,
+                    len(scenes)
+                )
+
+
+                scene_images.append(
+                    final_scene
+                )
+
+
+                narration = (
+                    scene.get(
+                        "narration",
+                        ""
+                    ).strip()
+                )
+
+
+                if narration:
+                    narration_parts.append(
+                        narration
+                    )
+
+
+            # -----------------------------------------
+            # STEP 4: VOICE
+            # -----------------------------------------
+
+            narration = " ".join(
+                narration_parts
+            )
+
+
+            if not narration:
+
+                narration = (
+                    f"This short video provides "
+                    f"educational information about "
+                    f"{topic}."
+                )
+
+
+            audio_path = (
+                work_dir /
+                "narration.mp3"
+            )
+
+
+            create_voice(
+                narration,
+                audio_path
+            )
+
+
+            # -----------------------------------------
+            # STEP 5: FINAL VIDEO
+            # -----------------------------------------
+
+            filename = (
+                "medical_"
+                + datetime.now().strftime(
+                    "%Y%m%d_%H%M%S"
+                )
+                + ".mp4"
+            )
+
+
+            output_path = (
+                VIDEO_OUTPUT_DIR /
+                filename
+            )
+
+
+            create_video(
+                scene_images,
+                audio_path,
+                output_path,
+                duration
+            )
+
+
+            # -----------------------------------------
+            # RESPONSE
+            # -----------------------------------------
+
+            return jsonify({
+
+                "success": True,
+
+                "title": title,
+
+                "video_url":
+                    "/static/generated_videos/"
+                    + filename
+
+            })
+
+
+        finally:
+
+            shutil.rmtree(
+                work_dir,
+                ignore_errors=True
+            )
+
+
+    except Exception as e:
+
+        print(
+            "MEDICAL VIDEO ERROR:",
+            str(e)
+        )
+
+        return jsonify({
+
+            "error":
+                "Video generation failed: "
+                + str(e)
+
+        }), 500
+
+
 # =========================================================
 # PAGE ROUTES
 # =========================================================
+
+@app.route("/medical-video")
+def medical_video():
+    return render_template("medical_video.html")
+
 @app.route("/")
 def loading(): return render_template("loading.html")
 
