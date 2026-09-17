@@ -6,3 +6,6 @@ APScheduler
 gunicorn
 python-dotenv
 resend
+Pillow
+gTTS
+imageio-ffmpeg
