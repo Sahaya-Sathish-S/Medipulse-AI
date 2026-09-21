@@ -2,572 +2,524 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-<title>MediPulse AI — Smart Medical Navigation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1322">
+<title>MediPulse AI: Smart Medical Navigation</title>
 
-<!-- Leaflet -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
-<!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-<!-- Icons -->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <style>
+/* =========================================================
+   TOKENS: change the look of the whole page from here
+========================================================= */
 :root{
-  --bg-navy:#060a16;
-  --bg-navy-2:#0a1024;
-  --panel: rgba(12,18,38,.62);
-  --panel-solid:#0c1226;
-  --line: rgba(255,255,255,.08);
-  --cyan:#28e6ff;
-  --cyan-soft: rgba(40,230,255,.35);
-  --violet:#8b6bff;
-  --magenta:#ff4fd8;
-  --green:#22ffb0;
-  --amber:#ffb545;
-  --red:#ff5470;
-  --text:#eaf2ff;
-  --text-dim:#93a3c4;
-  --text-faint:#5c6a8c;
-  --radius-lg:20px;
-  --radius-md:14px;
-  --radius-sm:9px;
-  --sidebar-w:420px;
+  --bg:#0b1322;
+  --surface:#111c30;
+  --surface-2:#172440;
+  --line:#1f2d45;
+  --line-strong:#2d4060;
+  --ink:#e8eef8;
+  --muted:#9aabc2;
+  --faint:#6d7f99;
+
+  --brand:#4da3ff;
+  --brand-ink:#04162d;
+  --brand-soft:rgba(77,163,255,.14);
+
+  --hospital:#ff5c7a;
+  --hospital-rgb:255,92,122;
+  --pharmacy:#2fcf95;
+  --pharmacy-rgb:47,207,149;
+
+  --sos:#e0334f;
+  --ok:#3ddc84;
+  --warn:#f5b342;
+  --danger:#ff6b6b;
+
+  --radius:12px;
+  --sidebar-w:400px;
+  --ease:cubic-bezier(.22,.8,.24,1);
 }
 
-*{box-sizing:border-box;}
+*{box-sizing:border-box}
 html,body{
-  margin:0;padding:0;height:100%;
-  font-family:'Poppins',sans-serif;
-  background:var(--bg-navy);
-  color:var(--text);
-  overflow:hidden;
+  margin:0;height:100%;overflow:hidden;
+  background:var(--bg);color:var(--ink);
+  font-family:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  font-size:14px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
 }
-body{
-  background-image:
-    radial-gradient(circle at 15% 8%, rgba(139,107,255,.16), transparent 45%),
-    radial-gradient(circle at 90% 15%, rgba(40,230,255,.14), transparent 40%),
-    radial-gradient(circle at 80% 90%, rgba(255,79,216,.12), transparent 45%),
-    linear-gradient(180deg, rgba(6,10,22,.88), rgba(6,10,22,.94));
-  background-size:cover;
-  background-position:center;
-  background-attachment:fixed;
-  background-repeat:no-repeat;
-}
-::selection{background:var(--cyan-soft);}
-a{color:inherit;}
-button{font-family:inherit;}
+[hidden]{display:none!important}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit}
+h1,h2,p{margin:0}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 
-.grid-overlay{
-  position:fixed;inset:0;pointer-events:none;z-index:0;
-  background-image:
-    linear-gradient(rgba(40,230,255,.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(40,230,255,.045) 1px, transparent 1px);
-  background-size:42px 42px;
-  mask-image:radial-gradient(circle at 30% 20%, black, transparent 75%);
-  animation:gridDrift 60s linear infinite;
-}
-@keyframes gridDrift{
-  0%{background-position:0 0,0 0;}
-  100%{background-position:400px 400px,400px 400px;}
-}
-.particle{
-  position:fixed;border-radius:50%;pointer-events:none;z-index:0;
-  background:radial-gradient(circle, rgba(40,230,255,.55), transparent 70%);
-  filter:blur(1px);
-  animation:floatUp linear infinite;
-}
-@keyframes floatUp{
-  0%{transform:translateY(0) translateX(0);opacity:0;}
-  10%{opacity:.7;}
-  90%{opacity:.5;}
-  100%{transform:translateY(-110vh) translateX(30px);opacity:0;}
-}
+/* =========================================================
+   LAYOUT
+========================================================= */
+.app{display:flex;height:100vh;height:100dvh;width:100%;overflow:hidden;overflow:clip}
 
-.app{
-  position:relative;z-index:1;
-  display:flex;
-  height:100vh;
-  width:100vw;
+.panel{
+  width:var(--sidebar-w);flex:none;
+  display:flex;flex-direction:column;
+  background:var(--bg);border-right:1px solid var(--line);
+  position:relative;z-index:20;
 }
+.panel-top{padding:16px 18px 14px;border-bottom:1px solid var(--line);background:var(--bg)}
+.panel-body{flex:1;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
+.panel-body::-webkit-scrollbar{width:6px}
+.panel-body::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:6px}
 
-.sidebar{
-  width:var(--sidebar-w);
-  min-width:var(--sidebar-w);
-  height:100vh;
-  overflow-y:auto;
-  overflow-x:hidden;
-  padding:18px 16px 24px;
-  background:linear-gradient(180deg, rgba(8,12,26,.86), rgba(8,12,26,.72));
-  border-right:1px solid var(--line);
-  backdrop-filter:blur(18px);
-  -webkit-backdrop-filter:blur(18px);
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-}
-.sidebar::-webkit-scrollbar{width:6px;}
-.sidebar::-webkit-scrollbar-thumb{background:rgba(40,230,255,.25);border-radius:6px;}
+.sheet-handle{display:none;width:100%;padding:8px 0 10px;background:none;border:0;cursor:grab}
+.sheet-handle span{display:block;width:40px;height:4px;border-radius:4px;background:var(--line-strong);margin:0 auto}
 
-.card{
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:var(--radius-lg);
-  padding:16px;
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
-  box-shadow:0 8px 30px rgba(0,0,0,.25);
-  position:relative;
-  overflow:hidden;
-}
-.card::before{
-  content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;
-  background:linear-gradient(135deg, rgba(40,230,255,.35), rgba(139,107,255,.15) 40%, transparent 70%);
-  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite:xor;mask-composite:exclude;
-  pointer-events:none;
-}
-
-.brand{
-  display:flex;align-items:center;gap:12px;padding:14px 16px;
-}
+.panel-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
 .brand-icon{
-  width:46px;height:46px;border-radius:14px;
-  display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg, rgba(40,230,255,.22), rgba(139,107,255,.22));
-  border:1px solid rgba(40,230,255,.4);
-  box-shadow:0 0 22px rgba(40,230,255,.35);
-  font-size:20px;color:var(--cyan);
-  flex-shrink:0;
+  width:38px;height:38px;border-radius:10px;flex:none;
+  display:grid;place-items:center;
+  background:var(--brand);color:var(--brand-ink);font-size:16px;
 }
-.brand-text h1{
-  font-family:'Orbitron',sans-serif;
-  font-size:19px;font-weight:800;margin:0;letter-spacing:.5px;
-  background:linear-gradient(90deg, var(--cyan), var(--violet) 55%, var(--magenta));
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-}
-.brand-text p{margin:2px 0 0;font-size:11px;color:var(--text-dim);letter-spacing:.6px;}
+.brand-text h1{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.brand-text p{font-size:12.5px;color:var(--muted)}
 
-.ecg-wrap{height:26px;margin-top:2px;overflow:hidden;}
-.ecg-wrap svg{width:220%;height:26px;animation:ecgMove 3.2s linear infinite;}
-@keyframes ecgMove{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+.sos-btn{
+  display:inline-flex;align-items:center;gap:8px;flex:none;
+  padding:9px 14px;border-radius:10px;
+  background:var(--sos);color:#fff;font-weight:700;font-size:13.5px;
+  transition:filter .2s,transform .2s var(--ease);
+}
+.sos-btn:hover{filter:brightness(1.1)}
+.sos-btn:active{transform:scale(.97)}
 
-.status-grid{
-  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+/* Search buttons: type is encoded by colour, so it reads before the label does */
+.search-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.search-btn{
+  --c:var(--brand);--c-rgb:77,163,255;
+  position:relative;display:flex;align-items:center;gap:10px;
+  padding:11px 12px;border-radius:var(--radius);cursor:pointer;
+  background:rgba(var(--c-rgb),.10);border:1px solid rgba(var(--c-rgb),.28);
+  font-weight:700;font-size:14px;text-align:left;
+  transition:background .2s,border-color .2s,transform .2s var(--ease);
 }
-.status-box{
-  padding:11px 12px;border-radius:var(--radius-md);
-  background:rgba(255,255,255,.03);
-  border:1px solid var(--line);
+.search-btn.hospital{--c:var(--hospital);--c-rgb:var(--hospital-rgb)}
+.search-btn.pharmacy{--c:var(--pharmacy);--c-rgb:var(--pharmacy-rgb)}
+.search-btn:hover{background:rgba(var(--c-rgb),.18);border-color:rgba(var(--c-rgb),.55)}
+.search-btn:active{transform:scale(.98)}
+.search-btn-icon{
+  width:32px;height:32px;border-radius:9px;flex:none;
+  display:grid;place-items:center;background:var(--c);color:#0b1322;font-size:14px;
 }
-.status-box .label{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;}
-.status-box .value{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px;}
-.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.dot.green{background:var(--green);box-shadow:0 0 8px var(--green);}
-.dot.amber{background:var(--amber);box-shadow:0 0 8px var(--amber);animation:pulseDot 1.2s infinite;}
-.dot.red{background:var(--red);box-shadow:0 0 8px var(--red);}
-@keyframes pulseDot{0%,100%{opacity:1;}50%{opacity:.35;}}
-
-.coords-line{font-size:11.5px;color:var(--text-dim);margin-top:8px;font-family:'Poppins',monospace;letter-spacing:.2px;}
-.addr-line{font-size:12px;color:var(--text);margin-top:4px;line-height:1.4;}
-
-.btn{
-  border:1px solid var(--line);
-  background:rgba(255,255,255,.04);
-  color:var(--text);
-  padding:10px 14px;
-  border-radius:var(--radius-md);
-  font-size:12.5px;font-weight:600;
-  display:flex;align-items:center;justify-content:center;gap:7px;
-  cursor:pointer;
-  transition:all .18s ease;
-  white-space:nowrap;
-}
-.btn:hover{border-color:var(--cyan-soft);background:rgba(40,230,255,.08);transform:translateY(-1px);}
-.btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
-.btn:active{transform:translateY(0);}
-.btn.primary{
-  background:linear-gradient(135deg, rgba(40,230,255,.25), rgba(139,107,255,.25));
-  border-color:rgba(40,230,255,.5);
-  color:#fff;
-  box-shadow:0 0 18px rgba(40,230,255,.2);
-}
-.btn.ghost{background:transparent;}
-.btn.danger{border-color:rgba(255,84,112,.5);color:var(--red);}
-.btn.danger:hover{background:rgba(255,84,112,.1);}
-.btn.small{padding:7px 10px;font-size:11.5px;}
-.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
-.btn-row{display:flex;flex-wrap:wrap;gap:8px;}
-.btn-row .btn{flex:1;min-width:100px;}
-
-.section-title{
-  font-family:'Orbitron',sans-serif;
-  font-size:12px;letter-spacing:1.2px;text-transform:uppercase;
-  color:var(--cyan);margin:0 0 10px;display:flex;align-items:center;gap:8px;
-}
-.section-title i{font-size:12px;}
-.section-title .count-pill{
-  margin-left:auto;font-family:'Poppins',sans-serif;font-size:10.5px;font-weight:600;
-  background:rgba(40,230,255,.12);color:var(--cyan);
-  padding:2px 8px;border-radius:20px;letter-spacing:0;
-}
-
-.results-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:260px;overflow-y:auto;padding-right:2px;}
-.results-list::-webkit-scrollbar{width:5px;}
-.results-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:5px;}
-
-.result-card{
-  background:rgba(255,255,255,.035);
-  border:1px solid var(--line);
-  border-radius:var(--radius-md);
-  padding:11px 12px;
-  cursor:pointer;
-  transition:all .15s ease;
-}
-.result-card:hover, .result-card.active{
-  border-color:var(--cyan-soft);
-  background:rgba(40,230,255,.06);
-}
-.result-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
-.result-name{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.3;}
-.badge{
-  font-size:9px;font-weight:700;letter-spacing:.6px;padding:3px 7px;border-radius:6px;flex-shrink:0;
-}
-.badge.hospital{background:rgba(255,79,216,.15);color:var(--magenta);border:1px solid rgba(255,79,216,.3);}
-.badge.pharmacy{background:rgba(34,255,176,.15);color:var(--green);border:1px solid rgba(34,255,176,.3);}
-.result-dist{font-size:11.5px;color:var(--cyan);font-weight:600;margin-top:5px;}
-.result-addr{font-size:11.5px;color:var(--text-dim);margin-top:2px;line-height:1.4;}
-.result-meta{font-size:10.5px;color:var(--text-faint);margin-top:3px;}
-.result-actions{display:flex;gap:6px;margin-top:9px;}
-.result-actions .btn{flex:1;padding:6px 8px;font-size:11px;}
-
-.state-box{
-  text-align:center;padding:22px 10px;color:var(--text-dim);font-size:12.5px;
-  border:1px dashed var(--line);border-radius:var(--radius-md);margin-top:10px;line-height:1.55;
-}
-.state-box i{display:block;font-size:22px;margin-bottom:8px;}
-.state-box.error{color:var(--red);border-color:rgba(255,84,112,.3);}
-.state-box.error i{color:var(--red);}
-.state-box .retry-btn{margin-top:10px;display:inline-flex;}
+.search-btn .spinner{display:none;margin-left:auto}
+.search-btn.loading .spinner{display:block}
+.search-btn.loading{pointer-events:none}
 
 .spinner{
-  width:16px;height:16px;border-radius:50%;
-  border:2px solid rgba(255,255,255,.15);border-top-color:var(--cyan);
-  animation:spin .7s linear infinite;display:inline-block;
+  width:16px;height:16px;border-radius:50%;flex:none;
+  border:2px solid rgba(255,255,255,.18);border-top-color:var(--c,var(--brand));
+  animation:spin .7s linear infinite;
 }
-@keyframes spin{to{transform:rotate(360deg);}}
-.search-status-line{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-dim);margin-top:8px;}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-.chat-box{
-  display:flex;flex-direction:column;gap:8px;
-  max-height:230px;overflow-y:auto;margin-bottom:10px;padding-right:2px;
+/* Sections: hairline dividers instead of boxes */
+.section{padding:16px 18px;border-bottom:1px solid var(--line)}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.section-head h2{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.section-head h2 i{color:var(--faint);font-size:13px}
+
+.status-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;
+  background:rgba(255,255,255,.06);color:var(--muted);
 }
-.chat-box::-webkit-scrollbar{width:5px;}
-.chat-box::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:5px;}
-.msg{max-width:88%;padding:9px 12px;border-radius:14px;font-size:12.5px;line-height:1.5;}
-.msg.user{align-self:flex-end;background:linear-gradient(135deg, rgba(40,230,255,.22), rgba(139,107,255,.22));border:1px solid rgba(40,230,255,.3);border-bottom-right-radius:4px;}
-.msg.ai{align-self:flex-start;background:rgba(255,255,255,.05);border:1px solid var(--line);border-bottom-left-radius:4px;white-space:pre-wrap;}
-.msg.system{align-self:center;font-size:11px;color:var(--text-faint);background:none;border:none;text-align:center;}
+.status-pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.status-pill.green{color:var(--ok);background:rgba(61,220,132,.12)}
+.status-pill.amber{color:var(--warn);background:rgba(245,179,66,.12)}
+.status-pill.amber .dot{animation:blink 1.2s ease-in-out infinite}
+.status-pill.blue{color:var(--brand);background:var(--brand-soft)}
+.status-pill.red{color:var(--danger);background:rgba(255,107,107,.12)}
+@keyframes blink{50%{opacity:.35}}
 
-.chat-input-row{display:flex;gap:8px;align-items:center;}
+.addr{font-size:14px;font-weight:700;margin-bottom:2px}
+.coords{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.stat{padding:9px 10px;border-radius:10px;background:var(--surface)}
+.stat-label{display:block;font-size:12px;color:var(--faint)}
+.stat-value{display:block;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:9px 13px;border-radius:10px;cursor:pointer;
+  background:var(--surface-2);border:1px solid var(--line-strong);
+  font-size:13px;font-weight:700;white-space:nowrap;
+  transition:background .2s,border-color .2s,transform .2s var(--ease);
+}
+.btn:hover{border-color:var(--brand)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--danger);border-color:rgba(255,107,107,.45);background:transparent}
+.btn.small{padding:7px 11px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.link-btn{background:none;border:0;padding:0;color:var(--brand);font-weight:700;font-size:12.5px;cursor:pointer}
+.link-btn:hover{text-decoration:underline}
+
+/* Results */
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.tab{
+  --c:var(--brand);
+  display:flex;align-items:center;gap:7px;padding:6px 0 9px;margin-bottom:-1px;
+  background:none;border:0;border-bottom:2px solid transparent;
+  color:var(--muted);font-weight:700;font-size:14px;cursor:pointer;
+  transition:color .2s,border-color .2s;
+}
+.tab[data-type="hospital"]{--c:var(--hospital)}
+.tab[data-type="pharmacy"]{--c:var(--pharmacy)}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--ink);border-bottom-color:var(--c)}
+.count{
+  min-width:22px;padding:1px 7px;border-radius:999px;text-align:center;
+  font-size:12px;background:rgba(255,255,255,.07);font-variant-numeric:tabular-nums;
+}
+
+.results{display:flex;flex-direction:column;gap:10px}
+.result{
+  --c:var(--brand);
+  position:relative;padding:12px 12px 12px 16px;border-radius:var(--radius);cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);
+  transition:border-color .2s,background .2s;
+}
+.result.hospital{--c:var(--hospital)}
+.result.pharmacy{--c:var(--pharmacy)}
+.result::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:var(--c)}
+.result:hover{border-color:var(--line-strong);background:var(--surface-2)}
+.result.active{border-color:var(--brand);background:var(--surface-2)}
+.result-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.result-name{font-size:14.5px;font-weight:700;line-height:1.3}
+.result-dist{font-size:16px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.result-kind{display:flex;align-items:center;gap:8px;margin-top:2px;font-size:12.5px;color:var(--c);font-weight:700}
+.tag{padding:1px 8px;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-size:12px;font-weight:700}
+.result-addr{margin-top:6px;font-size:13px;color:var(--muted)}
+.result-hours{margin-top:3px;font-size:12.5px;color:var(--faint)}
+.result-actions{display:flex;gap:8px;margin-top:12px}
+.result-actions .btn{flex:1}
+.results-footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12.5px;color:var(--faint)}
+
+.skeleton{
+  height:112px;border-radius:var(--radius);
+  background:linear-gradient(90deg,var(--surface) 25%,var(--surface-2) 40%,var(--surface) 55%);
+  background-size:300% 100%;animation:shimmer 1.4s ease infinite;
+}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:0 0}}
+
+.state-box{padding:22px 14px;text-align:center;border:1px dashed var(--line-strong);border-radius:var(--radius);color:var(--muted)}
+.state-box i{display:block;font-size:20px;margin-bottom:8px;color:var(--faint)}
+.state-box.error i{color:var(--danger)}
+.state-box p{margin-bottom:12px}
+
+/* Assistant */
+.chat-box{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;margin-bottom:10px;scrollbar-width:thin}
+.msg{max-width:88%;padding:9px 12px;border-radius:14px;font-size:13.5px;line-height:1.5;white-space:pre-wrap}
+.msg.user{align-self:flex-end;background:var(--brand);color:var(--brand-ink);border-bottom-right-radius:4px}
+.msg.ai{align-self:flex-start;background:var(--surface-2);border-bottom-left-radius:4px}
+.msg.typing{color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{
+  padding:6px 11px;border-radius:999px;cursor:pointer;
+  background:transparent;border:1px solid var(--line-strong);color:var(--muted);font-size:12.5px;font-weight:700;
+  transition:color .2s,border-color .2s;
+}
+.chip:hover{color:var(--ink);border-color:var(--brand)}
+.chat-input-row{display:flex;gap:8px;align-items:center}
 .chat-input{
-  flex:1;background:rgba(255,255,255,.04);border:1px solid var(--line);
-  border-radius:22px;padding:10px 14px;color:var(--text);font-size:12.5px;outline:none;
+  flex:1;min-width:0;padding:10px 14px;border-radius:999px;
+  background:var(--surface);border:1px solid var(--line-strong);color:var(--ink);font:inherit;font-size:13.5px;outline:none;
 }
-.chat-input:focus{border-color:var(--cyan-soft);}
+.chat-input:focus{border-color:var(--brand)}
 .icon-btn{
-  width:38px;height:38px;border-radius:50%;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--text);cursor:pointer;
-  transition:all .18s ease;
+  width:38px;height:38px;border-radius:50%;flex:none;display:grid;place-items:center;cursor:pointer;
+  background:var(--surface-2);border:1px solid var(--line-strong);
+  transition:border-color .2s,background .2s;
 }
-.icon-btn:hover{border-color:var(--cyan-soft);background:rgba(40,230,255,.08);}
-.icon-btn.mic.listening{
-  background:rgba(255,84,112,.18);border-color:var(--red);color:var(--red);
-  animation:micPulse 1s infinite;
-}
-@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,84,112,.4);}50%{box-shadow:0 0 0 8px rgba(255,84,112,0);}}
-.icon-btn.send{background:linear-gradient(135deg, var(--cyan), var(--violet));color:#06101f;border:none;}
+.icon-btn:hover{border-color:var(--brand)}
+.icon-btn.send{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.icon-btn.listening{background:rgba(255,107,107,.18);border-color:var(--danger);color:var(--danger)}
 
-.emergency-card{
-  border:1px solid rgba(255,84,112,.4);
-  background:linear-gradient(135deg, rgba(255,84,112,.1), rgba(255,84,112,.03));
-}
-.emergency-card p{font-size:11.5px;color:var(--text-dim);line-height:1.5;margin:6px 0 10px;}
-.emergency-call{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  background:linear-gradient(135deg, var(--red), #c81f45);
-  color:#fff;padding:12px;border-radius:var(--radius-md);
-  font-weight:700;font-size:14px;text-decoration:none;
-  box-shadow:0 0 20px rgba(255,84,112,.35);
-}
+/* Diagnostics */
+.diag summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px}
+.diag summary::-webkit-details-marker{display:none}
+.diag summary i{transition:transform .2s var(--ease);font-size:11px}
+.diag[open] summary i{transform:rotate(90deg)}
+.diag dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:12px 0 0;font-size:12.5px}
+.diag dt{color:var(--faint)}
+.diag dd{margin:0;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+.disclaimer{padding:16px 18px 24px;font-size:12.5px;color:var(--faint)}
 
-.debug-toggle{
-  position:fixed;bottom:14px;left:14px;z-index:20;
-  width:34px;height:34px;border-radius:50%;
-  background:rgba(8,12,26,.8);border:1px solid var(--line);color:var(--text-faint);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;
-  backdrop-filter:blur(8px);
-}
-.debug-panel{
-  position:fixed;bottom:56px;left:14px;z-index:20;
-  width:270px;max-height:60vh;overflow-y:auto;
-  background:rgba(6,10,22,.94);border:1px solid var(--line);border-radius:var(--radius-md);
-  padding:12px;font-size:10.5px;color:var(--text-dim);font-family:monospace;
-  display:none;line-height:1.6;
-}
-.debug-panel.open{display:block;}
-.debug-panel h4{margin:8px 0 3px;color:var(--cyan);font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-family:'Poppins',monospace;}
-.debug-panel h4:first-child{margin-top:0;}
+/* =========================================================
+   MAP
+========================================================= */
+.map-area{position:relative;flex:1;min-width:0}
+#map{position:absolute;inset:0;background:#dfe6ee}
+.map-area.picking #map{cursor:crosshair}
 
-.map-area{flex:1;position:relative;height:100vh;}
-#map{width:100%;height:100%;filter:saturate(1.05) brightness(.92) contrast(1.02);}
-.leaflet-container{background:#0a1024;}
-
-.map-controls{
-  position:absolute;top:16px;right:16px;z-index:15;
-  display:flex;flex-direction:column;gap:8px;
+.map-controls{position:absolute;top:16px;right:16px;z-index:12;display:flex;flex-direction:column;gap:10px}
+.map-fab{
+  width:44px;height:44px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  background:var(--bg);border:1px solid var(--line-strong);color:var(--ink);
+  box-shadow:0 6px 18px rgba(0,0,0,.28);
+  transition:color .2s,border-color .2s,transform .2s var(--ease);
 }
-.map-controls .btn{
-  background:rgba(8,12,26,.82);backdrop-filter:blur(10px);
-  width:46px;height:46px;border-radius:50%;padding:0;font-size:15px;
+.map-fab:active{transform:scale(.94)}
+.map-fab.active{color:var(--brand);border-color:var(--brand)}
+
+.pick-banner{
+  position:absolute;z-index:14;top:16px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:12px;padding:9px 10px 9px 16px;border-radius:999px;
+  background:var(--bg);border:1px solid var(--brand);box-shadow:0 8px 24px rgba(0,0,0,.35);
+  font-weight:700;font-size:13.5px;white-space:nowrap;
 }
 
-.route-panel{
-  position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
-  z-index:15;display:none;
-  background:rgba(8,12,26,.88);backdrop-filter:blur(14px);
-  border:1px solid var(--cyan-soft);border-radius:var(--radius-lg);
-  padding:12px 20px;min-width:320px;max-width:92vw;
-  box-shadow:0 0 30px rgba(40,230,255,.15);
+.route-card{
+  position:absolute;z-index:15;left:50%;bottom:24px;
+  width:min(440px,calc(100% - 32px));padding:14px 16px;border-radius:16px;
+  background:var(--bg);border:1px solid var(--line-strong);box-shadow:0 16px 40px rgba(0,0,0,.4);
+  opacity:0;pointer-events:none;transform:translate(-50%,16px);
+  transition:transform .35s var(--ease),opacity .25s;
 }
-.route-panel.active{display:block;}
-.route-panel-top{display:flex;justify-content:space-between;align-items:center;gap:14px;}
-.route-dest{font-size:13px;font-weight:600;color:var(--text);}
-.route-stats{display:flex;gap:16px;margin-top:6px;}
-.route-stats .stat{font-size:12px;color:var(--text-dim);}
-.route-stats .stat b{color:var(--cyan);font-size:14px;display:block;}
-.route-actions{display:flex;gap:8px;margin-top:10px;}
+.route-card.active{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.route-dest{font-size:15px;font-weight:700;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.route-stats{display:flex;gap:22px}
+.route-stats .stat-label{margin-bottom:1px}
+.route-stats b{font-size:18px;font-variant-numeric:tabular-nums}
+.route-instruction{margin-top:10px;padding:9px 12px;border-radius:10px;background:var(--brand-soft);color:var(--brand);font-weight:700}
+.route-actions{display:flex;gap:8px;margin-top:12px}
+.route-actions .btn{flex:1}
 
-.voice-fab{
-  position:absolute;bottom:18px;right:18px;z-index:15;
-  width:52px;height:52px;border-radius:50%;
-  background:linear-gradient(135deg, var(--cyan), var(--violet));
-  display:flex;align-items:center;justify-content:center;
-  color:#06101f;font-size:18px;border:none;cursor:pointer;
-  box-shadow:0 0 22px rgba(40,230,255,.4);
-}
+/* Markers */
+.user-dot{position:relative;width:18px;height:18px;isolation:isolate}
+.user-dot::before{content:"";position:absolute;inset:0;border-radius:50%;background:#2f7bff;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.user-dot::after{content:"";position:absolute;inset:-6px;z-index:-1;border-radius:50%;background:rgba(47,123,255,.35);animation:ping 2.2s ease-out infinite}
+@keyframes ping{from{transform:scale(.6);opacity:.9}to{transform:scale(1.9);opacity:0}}
 
-.toast-stack{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center;}
-.toast{
-  background:rgba(8,12,26,.94);border:1px solid var(--line);border-left:3px solid var(--cyan);
-  padding:10px 16px;border-radius:10px;font-size:12.5px;color:var(--text);
-  box-shadow:0 8px 24px rgba(0,0,0,.35);
-  animation:toastIn .25s ease;
-  max-width:88vw;
+.pin{
+  --c:var(--brand);
+  width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+  display:grid;place-items:center;background:var(--c);border:2px solid #fff;
+  box-shadow:0 5px 12px rgba(0,0,0,.35);
 }
-.toast.error{border-left-color:var(--red);}
-.toast.success{border-left-color:var(--green);}
-.toast.warn{border-left-color:var(--amber);}
-@keyframes toastIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
+.pin.hospital{--c:#e83e5f}
+.pin.pharmacy{--c:#13a874}
+.pin i{transform:rotate(45deg);color:#fff;font-size:13px}
 
-.mp-marker{display:flex;align-items:center;justify-content:center;}
-.mp-marker .pin{
-  width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 0 14px currentColor;
-}
-.mp-marker .pin i{transform:rotate(45deg);font-size:12px;color:#06101f;}
-.mp-marker.hospital .pin{background:var(--magenta);color:var(--magenta);}
-.mp-marker.pharmacy .pin{background:var(--green);color:var(--green);}
-.user-marker{
-  width:22px;height:22px;border-radius:50%;
-  background:var(--cyan);border:3px solid #fff;
-  box-shadow:0 0 0 6px rgba(40,230,255,.25), 0 0 18px var(--cyan);
-  animation:userPulse 2s infinite;
-}
-@keyframes userPulse{0%,100%{box-shadow:0 0 0 6px rgba(40,230,255,.25),0 0 18px var(--cyan);}50%{box-shadow:0 0 0 10px rgba(40,230,255,.1),0 0 24px var(--cyan);}}
-.leaflet-popup-content-wrapper{background:var(--panel-solid);color:var(--text);border-radius:12px;border:1px solid var(--line);}
-.leaflet-popup-tip{background:var(--panel-solid);}
-.popup-title{font-weight:700;font-size:13px;margin-bottom:2px;}
-.popup-meta{font-size:11px;color:var(--text-dim);margin-bottom:6px;}
+.leaflet-popup-content-wrapper{background:var(--bg);color:var(--ink);border-radius:12px;border:1px solid var(--line-strong);box-shadow:0 12px 30px rgba(0,0,0,.4)}
+.leaflet-popup-tip{background:var(--bg)}
+.leaflet-popup-content{margin:12px 14px;font-family:inherit}
+.leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
+.popup-title{font-weight:700;font-size:14px;margin-bottom:2px}
+.popup-meta{font-size:12.5px;color:var(--muted);margin-bottom:10px}
 .popup-nav-btn{
-  display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
-  background:rgba(40,230,255,.15);color:var(--cyan);border:1px solid rgba(40,230,255,.3);
-  padding:5px 10px;border-radius:8px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:9px;cursor:pointer;
+  background:var(--brand);border:0;color:var(--brand-ink);font-weight:700;font-size:12.5px;
 }
+.leaflet-bar a,.leaflet-bar a:hover{background:var(--bg);color:var(--ink);border-color:var(--line-strong)}
+.leaflet-control-attribution{background:rgba(255,255,255,.75)!important;font-size:10px}
 
-@media (max-width: 860px){
-  .app{flex-direction:column;}
-  .sidebar{
-    width:100%;min-width:0;height:auto;max-height:52vh;
-    border-right:none;border-bottom:1px solid var(--line);
-    padding:14px 12px 16px;
+/* Toasts */
+.toast-stack{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{
+  display:flex;align-items:center;gap:10px;max-width:88vw;padding:10px 16px;border-radius:10px;
+  background:var(--surface-2);border:1px solid var(--line-strong);box-shadow:0 10px 28px rgba(0,0,0,.4);
+  font-size:13.5px;font-weight:700;animation:toastIn .28s var(--ease);
+}
+.toast::before{content:"";width:8px;height:8px;border-radius:50%;flex:none;background:var(--brand)}
+.toast.success::before{background:var(--ok)}
+.toast.warn::before{background:var(--warn)}
+.toast.error::before{background:var(--danger)}
+.toast.out{opacity:0;transform:translateY(-6px);transition:opacity .3s,transform .3s}
+@keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+
+/* =========================================================
+   MOBILE: map fills the screen, panel becomes a bottom sheet
+========================================================= */
+@media (max-width:860px){
+  .app{display:block;position:relative}
+  .map-area{position:absolute;inset:0}
+
+  .panel{
+    position:absolute;left:0;right:0;bottom:0;width:auto;
+    height:88vh;height:88dvh;
+    border-right:0;border-top:1px solid var(--line-strong);border-radius:20px 20px 0 0;
+    box-shadow:0 -12px 40px rgba(0,0,0,.45);
+    transition:transform .38s var(--ease);will-change:transform;
   }
-  .map-area{height:48vh;flex:none;width:100%;}
-  .results-list{max-height:180px;}
-  .chat-box{max-height:150px;}
-  .debug-panel{width:calc(100vw - 28px);}
-  .route-panel{min-width:0;width:92vw;}
-  .voice-fab{width:46px;height:46px;bottom:14px;right:14px;}
-  .map-controls .btn{width:40px;height:40px;font-size:13px;}
+  .panel[data-state="peek"]{transform:translateY(calc(100% - var(--peek,150px)))}
+  .panel[data-state="half"]{transform:translateY(calc(100% - 50vh))}
+  .panel[data-state="full"]{transform:none}
+
+  .sheet-handle{display:block}
+  .panel-top{padding:0 16px calc(12px + env(safe-area-inset-bottom));touch-action:none;border-radius:20px 20px 0 0}
+  .panel-body{padding-bottom:env(safe-area-inset-bottom)}
+
+  .route-card{top:12px;bottom:auto;left:12px;right:68px;width:auto;transform:translateY(-14px)}
+  .route-card.active{transform:none}
+  .pick-banner{top:12px}
+  .leaflet-control-zoom{display:none}
 }
 @media (max-width:420px){
-  .status-grid{grid-template-columns:1fr;}
-  .btn-row .btn{min-width:80px;font-size:11.5px;}
+  .stats{grid-template-columns:1fr 1fr 1fr;gap:6px}
+  .route-stats{gap:16px}
 }
-
-.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
-:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
 </style>
 </head>
 <body>
 
-<div class="grid-overlay" aria-hidden="true"></div>
 <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
 <div class="app">
 
-  <!-- ============================= SIDEBAR ============================= -->
-  <aside class="sidebar" id="sidebar">
+  <!-- ============================= PANEL ============================= -->
+  <aside class="panel" id="panel" data-state="half">
+    <div class="panel-top" id="panelTop">
+      <button class="sheet-handle" id="sheetHandle" aria-label="Expand or collapse panel"><span></span></button>
 
-    <div class="card brand">
-      <div class="brand-icon"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i></div>
-      <div class="brand-text">
-        <h1>MediPulse AI</h1>
-        <p>Smart Medical Navigation</p>
-        <div class="ecg-wrap" aria-hidden="true">
-          <svg viewBox="0 0 600 26" preserveAspectRatio="none">
-            <polyline points="0,13 40,13 55,4 68,24 82,13 130,13 145,2 160,26 175,13 260,13 275,4 288,24 302,13 360,13 400,13 415,2 430,26 445,13 600,13"
-              fill="none" stroke="#28e6ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-          </svg>
+      <header class="panel-header">
+        <div class="brand">
+          <div class="brand-icon"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i></div>
+          <div class="brand-text">
+            <h1>MediPulse AI</h1>
+            <p>Smart medical navigation</p>
+          </div>
         </div>
+        <a class="sos-btn" href="tel:112" aria-label="Call emergency services on 112">
+          <i class="fa-solid fa-phone-volume" aria-hidden="true"></i> Call 112
+        </a>
+      </header>
+
+      <div class="search-actions">
+        <button class="search-btn hospital" id="btnFindHospitals">
+          <span class="search-btn-icon"><i class="fa-solid fa-hospital" aria-hidden="true"></i></span>
+          Hospitals
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+        <button class="search-btn pharmacy" id="btnFindPharmacies">
+          <span class="search-btn-icon"><i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i></span>
+          Pharmacies
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
       </div>
     </div>
 
-    <div class="card">
-      <div class="section-title"><i class="fa-solid fa-satellite-dish"></i> Live Status</div>
-      <div class="status-grid">
-        <div class="status-box">
-          <div class="label">GPS</div>
-          <div class="value" id="gpsStatusValue"><span class="dot amber" id="gpsDot"></span><span id="gpsStatusText">Getting Location</span></div>
+    <div class="panel-body" id="panelBody">
+
+      <section class="section" id="locationSection">
+        <div class="section-head">
+          <h2><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Your location</h2>
+          <span class="status-pill amber" id="gpsPill"><span class="dot"></span><span id="gpsStatusText">Locating…</span></span>
         </div>
-        <div class="status-box">
-          <div class="label">Speed</div>
-          <div class="value" id="speedValue">— km/h</div>
+        <p class="addr" id="addrLine">Finding your location…</p>
+        <p class="coords" id="coordsLine">Waiting for GPS</p>
+        <div class="stats">
+          <div class="stat"><span class="stat-label">Accuracy</span><span class="stat-value" id="accValue">—</span></div>
+          <div class="stat"><span class="stat-label">Speed</span><span class="stat-value" id="speedValue">—</span></div>
+          <div class="stat"><span class="stat-label">Time</span><span class="stat-value" id="timeValue">—</span></div>
         </div>
-        <div class="status-box">
-          <div class="label">Local Time</div>
-          <div class="value" id="timeValue">--:--:--</div>
+        <div class="row-actions">
+          <button class="btn small" id="btnRecenter"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> Recenter</button>
+          <button class="btn small" id="btnManual"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Set on map</button>
         </div>
-        <div class="status-box">
-          <div class="label">Accuracy</div>
-          <div class="value" id="accValue">— m</div>
+      </section>
+
+      <section class="section" id="resultsCard" hidden>
+        <div class="tabs" role="tablist">
+          <button class="tab active" role="tab" data-action="tab" data-type="hospital">Hospitals <span class="count" id="countHospital">0</span></button>
+          <button class="tab" role="tab" data-action="tab" data-type="pharmacy">Pharmacies <span class="count" id="countPharmacy">0</span></button>
         </div>
-      </div>
-      <div class="coords-line" id="coordsLine">Latitude: —, Longitude: —</div>
-      <div class="addr-line" id="addrLine">Resolving current location…</div>
-    </div>
+        <div class="results" id="resultsList" role="list" aria-live="polite"></div>
+        <div class="results-footer">
+          <span id="resultsMeta"></span>
+          <button class="link-btn" id="btnClear">Clear results</button>
+        </div>
+      </section>
 
-    <div class="card">
-      <div class="section-title"><i class="fa-solid fa-magnifying-glass-location"></i> Nearby Search</div>
-      <div class="btn-row">
-        <button class="btn primary" id="btnFindHospitals" title="Find nearby hospitals"><i class="fa-solid fa-hospital"></i> Hospitals</button>
-        <button class="btn primary" id="btnFindPharmacies" title="Find nearby pharmacies"><i class="fa-solid fa-prescription-bottle-medical"></i> Pharmacies</button>
-      </div>
-      <div class="btn-row" style="margin-top:8px;">
-        <button class="btn ghost small" id="btnMyLocation" title="Re-center on my location"><i class="fa-solid fa-location-crosshairs"></i> My Location</button>
-        <button class="btn ghost small" id="btnClearResults" title="Clear search results"><i class="fa-solid fa-eraser"></i> Clear</button>
-      </div>
-      <div class="search-status-line" id="searchStatusLine" style="display:none;"></div>
-    </div>
+      <section class="section">
+        <div class="section-head"><h2><i class="fa-solid fa-robot" aria-hidden="true"></i> Assistant</h2></div>
+        <div class="chat-box" id="chatBox">
+          <div class="msg ai">Hi, I'm your MediPulse navigation assistant. Ask for the nearest hospital or pharmacy, or how long a route will take.</div>
+        </div>
+        <div class="chips">
+          <button class="chip" data-action="ask" data-q="Nearest hospital">Nearest hospital</button>
+          <button class="chip" data-action="ask" data-q="Nearest pharmacy">Nearest pharmacy</button>
+          <button class="chip" data-action="ask" data-q="What's my ETA?">My ETA</button>
+        </div>
+        <div class="chat-input-row">
+          <button class="icon-btn" id="btnMic" title="Voice input" aria-label="Voice input"><i class="fa-solid fa-microphone" aria-hidden="true"></i></button>
+          <input type="text" class="chat-input" id="chatInput" placeholder="Ask about hospitals, routes, ETA…" aria-label="Message the assistant">
+          <button class="icon-btn send" id="btnSend" title="Send" aria-label="Send message"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button>
+        </div>
+      </section>
 
-    <div class="card" id="hospitalCard" style="display:none;">
-      <div class="section-title"><i class="fa-solid fa-hospital"></i> Hospitals <span class="count-pill" id="hospitalCount">0</span></div>
-      <div id="hospitalState"></div>
-      <div class="results-list" id="hospitalList"></div>
-    </div>
+      <details class="section diag">
+        <summary><i class="fa-solid fa-chevron-right" aria-hidden="true"></i> Diagnostics</summary>
+        <dl>
+          <dt>Latitude</dt><dd id="dbgLat">—</dd>
+          <dt>Longitude</dt><dd id="dbgLng">—</dd>
+          <dt>GPS accuracy</dt><dd id="dbgAcc">—</dd>
+          <dt>Last search</dt><dd id="dbgType">—</dd>
+          <dt>Results</dt><dd id="dbgResults">—</dd>
+          <dt>Search radius</dt><dd id="dbgRadius">—</dd>
+          <dt>Data source</dt><dd id="dbgSource">—</dd>
+          <dt>Response time</dt><dd id="dbgTime">—</dd>
+          <dt>Route status</dt><dd id="dbgRouteStatus">—</dd>
+          <dt>Route distance</dt><dd id="dbgRouteDist">—</dd>
+          <dt>Route duration</dt><dd id="dbgRouteDur">—</dd>
+        </dl>
+      </details>
 
-    <div class="card" id="pharmacyCard" style="display:none;">
-      <div class="section-title"><i class="fa-solid fa-prescription-bottle-medical"></i> Pharmacies <span class="count-pill" id="pharmacyCount">0</span></div>
-      <div id="pharmacyState"></div>
-      <div class="results-list" id="pharmacyList"></div>
+      <p class="disclaimer">In a medical emergency, call 112 straight away. MediPulse helps you find and reach care; it does not replace professional medical advice.</p>
     </div>
-
-    <div class="card">
-      <div class="section-title"><i class="fa-solid fa-robot"></i> AI Navigation Assistant</div>
-      <div class="chat-box" id="chatBox">
-        <div class="msg ai">Hi, I'm your MediPulse navigation assistant. Ask me "nearest hospital", "how far is the pharmacy", or "what's my ETA".</div>
-      </div>
-      <div class="chat-input-row">
-        <button class="icon-btn mic" id="btnMic" title="Voice input" aria-label="Voice input"><i class="fa-solid fa-microphone"></i></button>
-        <input type="text" class="chat-input" id="chatInput" placeholder="Ask about hospitals, routes, ETA…" aria-label="Message the AI assistant">
-        <button class="icon-btn send" id="btnSend" title="Send message" aria-label="Send message"><i class="fa-solid fa-paper-plane"></i></button>
-      </div>
-    </div>
-
-    <div class="card emergency-card">
-      <div class="section-title" style="color:var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> Emergency</div>
-      <p>If this may be a medical emergency, contact local emergency services immediately. Do not rely on this application for emergency medical decisions.</p>
-      <a href="tel:112" class="emergency-call"><i class="fa-solid fa-phone"></i> Call 112 (India Emergency)</a>
-    </div>
-
   </aside>
 
   <!-- ============================= MAP ============================= -->
-  <main class="map-area">
+  <main class="map-area" id="mapArea">
     <div id="map" role="application" aria-label="Medical navigation map"></div>
 
     <div class="map-controls">
-      <button class="btn" id="ctrlMyLocation" title="My Location" aria-label="My Location"><i class="fa-solid fa-location-crosshairs"></i></button>
-      <button class="btn" id="ctrlHospitals" title="Hospitals" aria-label="Show hospitals"><i class="fa-solid fa-hospital"></i></button>
-      <button class="btn" id="ctrlPharmacies" title="Pharmacies" aria-label="Show pharmacies"><i class="fa-solid fa-prescription-bottle-medical"></i></button>
-      <button class="btn" id="ctrlStop" title="Stop Navigation" aria-label="Stop navigation" style="display:none;"><i class="fa-solid fa-stop"></i></button>
-      <button class="btn" id="ctrlRepeat" title="Repeat Directions" aria-label="Repeat directions" style="display:none;"><i class="fa-solid fa-volume-high"></i></button>
+      <button class="map-fab active" id="ctrlLocate" title="Follow my location" aria-label="Follow my location"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i></button>
     </div>
 
-    <div class="route-panel" id="routePanel">
-      <div class="route-panel-top">
-        <div>
-          <div class="route-dest" id="routeDest">Destination</div>
-          <div class="route-stats">
-            <div class="stat">Distance<b id="routeDistance">—</b></div>
-            <div class="stat">ETA<b id="routeEta">—</b></div>
-            <div class="stat">Status<b id="routeStatusText">—</b></div>
-          </div>
-        </div>
+    <div class="pick-banner" id="pickBanner" hidden>
+      Tap the map to set your location
+      <button class="btn small" id="btnCancelPick">Cancel</button>
+    </div>
+
+    <div class="route-card" id="routeCard">
+      <div class="route-dest" id="routeDest">Destination</div>
+      <div class="route-stats">
+        <div><span class="stat-label">Distance</span><b id="routeDistance">—</b></div>
+        <div><span class="stat-label">Arrive in</span><b id="routeEta">—</b></div>
+        <div><span class="stat-label">Status</span><b id="routeStatus">—</b></div>
       </div>
+      <div class="route-instruction" id="routeInstruction" hidden></div>
       <div class="route-actions">
-        <button class="btn primary small" id="btnStartNav"><i class="fa-solid fa-diamond-turn-right"></i> Start Navigation</button>
-        <button class="btn danger small" id="btnStopNav" style="display:none;"><i class="fa-solid fa-stop"></i> Stop</button>
-        <button class="btn ghost small" id="btnRepeatNav" style="display:none;"><i class="fa-solid fa-volume-high"></i> Repeat</button>
+        <button class="btn primary" id="btnStartNav"><i class="fa-solid fa-diamond-turn-right" aria-hidden="true"></i> Start navigation</button>
+        <button class="btn" id="btnCloseRoute">Close</button>
+        <button class="btn" id="btnRepeatNav" hidden><i class="fa-solid fa-volume-high" aria-hidden="true"></i> Repeat</button>
+        <button class="btn danger" id="btnStopNav" hidden><i class="fa-solid fa-stop" aria-hidden="true"></i> End</button>
       </div>
     </div>
-
-    <button class="voice-fab" id="voiceFab" title="Voice navigation" aria-label="Voice navigation"><i class="fa-solid fa-wave-square"></i></button>
   </main>
 
-</div>
-
-<button class="debug-toggle" id="debugToggle" title="Toggle debug panel" aria-label="Toggle debug panel"><i class="fa-solid fa-bug"></i></button>
-<div class="debug-panel" id="debugPanel">
-  <h4>GPS</h4>
-  <div>Lat: <span id="dbgLat">—</span></div>
-  <div>Lng: <span id="dbgLng">—</span></div>
-  <div>Accuracy: <span id="dbgAcc">—</span></div>
-  <h4>Search</h4>
-  <div>Type: <span id="dbgType">—</span></div>
-  <div>Results: <span id="dbgResults">—</span></div>
-  <div>Source: <span id="dbgSource">—</span></div>
-  <div>Response time: <span id="dbgTime">—</span></div>
-  <h4>Routing</h4>
-  <div>Status: <span id="dbgRouteStatus">—</span></div>
-  <div>Distance: <span id="dbgRouteDist">—</span></div>
-  <div>Duration: <span id="dbgRouteDur">—</span></div>
 </div>
 
 <script>
@@ -575,689 +527,975 @@ button{font-family:inherit;}
 "use strict";
 
 /* =========================================================
-   CONFIGURATION
-   /nearby_search response contract (from app.py):
-   success: { status:"success", elements:[{id,lat,lon,tags,name,address,
-              phone,website,distance_km}], search_radius_km, user_location }
-   empty:   { status:"empty", elements:[], message, debug }
-   error:   { status:"error", error }
+   CONFIG + STATE
+
+   /nearby_search response (from app.py):
+     success: { status:"success", elements:[{id,lat,lon,name,address,phone,
+                website,opening_hours,subtype,distance_km}], search_radius_km, source }
+     empty:   { status:"empty", elements:[], message }
+     error:   { status:"error", error }
 ========================================================= */
+const $ = (id) => document.getElementById(id);
+const TYPES = ["hospital", "pharmacy"];
+const LABELS = { hospital: "hospitals", pharmacy: "pharmacies" };
+
 const CONFIG = {
   NEARBY_ENDPOINT: "/nearby_search",
   AI_ENDPOINT: "/map_ai",
   OSRM_BASE: "https://router.project-osrm.org/route/v1/driving/",
   NOMINATIM_REVERSE: "https://nominatim.openstreetmap.org/reverse",
-  SEARCH_TIMEOUT_MS: 30000,
+  TILE_URL: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+  SEARCH_TIMEOUT_MS: 50000,
   ROUTE_TIMEOUT_MS: 15000,
-  AI_TIMEOUT_MS: 10000,
+  AI_TIMEOUT_MS: 25000,
   REVERSE_GEOCODE_MIN_INTERVAL_MS: 25000,
-  MAX_RESULTS_SHOWN: 20,
-  NAV_CLOSE_THRESHOLD_M: 40,
-  NAV_SPEAK_MIN_INTERVAL_MS: 12000
+  MAX_RESULTS_SHOWN: 25,
+  ARRIVAL_M: 40,
+  STEP_TRIGGER_M: 60,
+  OFF_ROUTE_M: 120,
+  REROUTE_MIN_INTERVAL_MS: 15000
 };
+
+function newSearchState(){ return { status: "idle", results: [], message: "", radius: null }; }
 
 const STATE = {
   map: null,
   userMarker: null,
-  hasCenteredOnce: false,
+  accuracyCircle: null,
+  markerAnim: null,
+
   userLat: null,
   userLng: null,
   userAccuracy: null,
-  lastSpeedKmh: null,
+  lastFixAt: 0,
   watchId: null,
-  gpsStatus: "GETTING",
 
-  hospitalMarkers: [],
-  pharmacyMarkers: [],
-  hospitalResults: [],
-  pharmacyResults: [],
-  activeSearchAbort: null,
-  activeSearchType: null,
+  hasCentered: false,
+  centeredAccuracy: Infinity,
+  userMovedMap: false,
+  following: true,
+  manualLocation: false,
+  picking: false,
 
-  reverseGeocodeAbort: null,
-  lastReverseGeocodeAt: 0,
-  lastReverseGeocodeKey: null,
+  search: { hospital: newSearchState(), pharmacy: newSearchState() },
+  markers: { hospital: [], pharmacy: [] },
+  searchAbort: { hospital: null, pharmacy: null },
+  activeTab: "hospital",
+  activeId: null,
 
-  routeLine: null,
+  lastGeocodeAt: 0,
+  lastGeocodeKey: null,
+  geocodeAbort: null,
+
+  routeLayer: null,
   routeAbort: null,
   routeData: null,
   navigating: false,
-  lastSpokenStepIndex: -1,
-  lastSpokenAt: 0,
 
   recognition: null,
   listening: false,
-
-  debugOpen: false
+  lastSpeedKmh: null
 };
 
 /* =========================================================
-   UI HELPERS
+   SMALL HELPERS
 ========================================================= */
 function escapeHtml(str){
   if(str === null || str === undefined) return "";
   return String(str)
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#039;");
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function setText(id, text){
+  const el = $(id);
+  if(el) el.textContent = text;
+}
+
+function setDebug(fields){
+  Object.keys(fields).forEach(id => setText(id, String(fields[id])));
 }
 
 function toast(message, type){
-  type = type || "info";
-  const stack = document.getElementById("toastStack");
   const el = document.createElement("div");
-  el.className = "toast" + (type !== "info" ? " " + type : "");
+  el.className = "toast" + (type ? " " + type : "");
   el.textContent = message;
-  stack.appendChild(el);
-  setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity .3s"; }, 3600);
-  setTimeout(() => { el.remove(); }, 4000);
+  $("toastStack").appendChild(el);
+  setTimeout(() => el.classList.add("out"), 3400);
+  setTimeout(() => el.remove(), 3800);
 }
 
 function haversineKm(lat1, lon1, lat2, lon2){
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)*Math.sin(dLat/2) +
-            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
-            Math.sin(dLon/2)*Math.sin(dLon/2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistance(km){
+  if(km < 1) return Math.round(km * 1000) + " m";
+  return km.toFixed(km < 10 ? 1 : 0) + " km";
+}
+
+function formatDuration(seconds){
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  if(minutes < 60) return minutes + " min";
+  return Math.floor(minutes / 60) + " h " + (minutes % 60) + " min";
+}
+
+function spokenDistance(meters){
+  if(meters < 1000) return Math.round(meters / 10) * 10 + " meters";
+  return (meters / 1000).toFixed(1) + " kilometers";
 }
 
 function fetchWithTimeout(url, options, timeoutMs){
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
-  options = options || {};
-  options.signal = controller.signal;
-  return fetch(url, options).finally(() => clearTimeout(id));
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+    .finally(() => clearTimeout(timer));
 }
 
-function setDebug(fields){
-  Object.keys(fields).forEach(k => {
-    const el = document.getElementById(k);
-    if(el) el.textContent = fields[k];
-  });
-}
+function isMobile(){ return window.matchMedia("(max-width: 860px)").matches; }
 
 /* =========================================================
-   PARTICLES (decorative)
-========================================================= */
-function spawnParticles(){
-  const colors = ["rgba(40,230,255,.55)","rgba(139,107,255,.5)","rgba(255,79,216,.45)"];
-  for(let i=0;i<18;i++){
-    const p = document.createElement("div");
-    p.className = "particle";
-    const size = 2 + Math.random()*3;
-    p.style.width = size+"px";
-    p.style.height = size+"px";
-    p.style.left = Math.random()*100+"vw";
-    p.style.bottom = "-10px";
-    p.style.background = "radial-gradient(circle,"+colors[i%3]+", transparent 70%)";
-    p.style.animationDuration = (14 + Math.random()*16)+"s";
-    p.style.animationDelay = (Math.random()*10)+"s";
-    document.body.appendChild(p);
-  }
-}
-spawnParticles();
-
-/* =========================================================
-   MAP INITIALIZATION
+   MAP
 ========================================================= */
 function initMap(){
-  STATE.map = L.map("map", { zoomControl:false, attributionControl:true }).setView([20.5937, 78.9629], 5);
+  STATE.map = L.map("map", { zoomControl: false, attributionControl: true }).setView([20.5937, 78.9629], 5);
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  L.tileLayer(CONFIG.TILE_URL, {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    subdomains: "abcd",
+    keepBuffer: 4,
+    updateWhenIdle: false,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
   }).addTo(STATE.map);
 
-  L.control.zoom({ position:"bottomleft" }).addTo(STATE.map);
-}
-initMap();
+  L.control.zoom({ position: "bottomright" }).addTo(STATE.map);
 
-function userDivIcon(){
-  return L.divIcon({ className:"", html:'<div class="user-marker"></div>', iconSize:[22,22], iconAnchor:[11,11] });
+  // Dragging the map means "stop following me", like every navigation app
+  STATE.map.on("dragstart", () => {
+    STATE.userMovedMap = true;
+    setFollowing(false);
+  });
+  STATE.map.on("click", onMapClick);
 }
-function facilityDivIcon(kind){
+
+const userIcon = L.divIcon({ className: "", html: '<div class="user-dot"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
+
+function facilityIcon(kind){
   const icon = kind === "hospital" ? "fa-hospital" : "fa-prescription-bottle-medical";
   return L.divIcon({
-    className:"",
-    html:'<div class="mp-marker '+kind+'"><div class="pin"><i class="fa-solid '+icon+'"></i></div></div>',
-    iconSize:[30,30],
-    iconAnchor:[15,29],
-    popupAnchor:[0,-28]
+    className: "",
+    html: '<div class="pin ' + kind + '"><i class="fa-solid ' + icon + '"></i></div>',
+    iconSize: [34, 34],
+    iconAnchor: [17, 41],
+    popupAnchor: [0, -40]
   });
+}
+
+function setFollowing(on){
+  STATE.following = on;
+  $("ctrlLocate").classList.toggle("active", on);
+}
+
+/* How much of the map the mobile bottom sheet is covering, so fitBounds can leave room */
+function sheetCoverPx(){
+  if(!isMobile()) return 0;
+  const state = $("panel").dataset.state;
+  if(state === "peek") return $("panelTop").offsetHeight;
+  if(state === "half") return window.innerHeight * 0.5;
+  return window.innerHeight * 0.88;
+}
+
+function mapPadding(extra){
+  return Object.assign({
+    paddingTopLeft: [40, isMobile() ? 100 : 60],
+    paddingBottomRight: [40, sheetCoverPx() + 30]
+  }, extra);
+}
+
+/* =========================================================
+   BOTTOM SHEET (mobile)
+========================================================= */
+function setSheetState(state){
+  if(isMobile()) $("panel").dataset.state = state;
+}
+
+function initSheet(){
+  const panel = $("panel");
+  const top = $("panelTop");
+  const order = ["peek", "half", "full"];
+  let dragging = false, moved = false, startedOnHandle = false, startY = 0, startOffset = 0, lastOffset = 0;
+
+  function measure(){ panel.style.setProperty("--peek", top.offsetHeight + "px"); }
+  function offsets(){
+    const height = panel.offsetHeight;
+    return { peek: height - top.offsetHeight, half: Math.max(0, height - window.innerHeight * 0.5), full: 0 };
+  }
+  function cycle(){
+    const next = order[(order.indexOf(panel.dataset.state) + 1) % order.length];
+    panel.dataset.state = next;
+  }
+
+  top.addEventListener("pointerdown", (e) => {
+    if(!isMobile()) return;
+    startedOnHandle = !!e.target.closest("#sheetHandle");
+    if(!startedOnHandle && e.target.closest("a, button")) return;
+    dragging = true;
+    moved = false;
+    startY = e.clientY;
+    startOffset = offsets()[panel.dataset.state];
+    lastOffset = startOffset;
+    top.setPointerCapture(e.pointerId);
+    panel.style.transition = "none";
+  });
+
+  top.addEventListener("pointermove", (e) => {
+    if(!dragging) return;
+    const dy = e.clientY - startY;
+    if(Math.abs(dy) > 4) moved = true;
+    lastOffset = Math.min(offsets().peek, Math.max(0, startOffset + dy));
+    panel.style.transform = "translateY(" + lastOffset + "px)";
+  });
+
+  function endDrag(){
+    if(!dragging) return;
+    dragging = false;
+    panel.style.transition = "";
+    panel.style.transform = "";
+    if(!moved){
+      if(startedOnHandle) cycle();
+      return;
+    }
+    const o = offsets();
+    let best = "half", bestDist = Infinity;
+    order.forEach(name => {
+      const d = Math.abs(o[name] - lastOffset);
+      if(d < bestDist){ bestDist = d; best = name; }
+    });
+    panel.dataset.state = best;
+  }
+  top.addEventListener("pointerup", endDrag);
+  top.addEventListener("pointercancel", endDrag);
+
+  // keyboard users: Enter/Space on the handle
+  $("sheetHandle").addEventListener("click", (e) => { if(e.detail === 0) cycle(); });
+
+  window.addEventListener("resize", () => { measure(); STATE.map.invalidateSize(); });
+  window.addEventListener("load", measure);
+  measure();
 }
 
 /* =========================================================
    CLOCK
 ========================================================= */
 function tickClock(){
-  document.getElementById("timeValue").textContent = new Date().toLocaleTimeString();
+  setText("timeValue", new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
 }
-tickClock();
-setInterval(tickClock, 1000);
 
 /* =========================================================
    GPS
+
+   Why the pin used to feel "stuck":
+   - the map centred once and never followed you
+   - desktop browsers often return one coarse Wi-Fi/IP fix and never update
+   Fixes: quick coarse fix first, then precise updates; follow mode; ignore
+   noisy fixes; smooth marker movement; and "Set on map" for when the device
+   location is simply wrong.
 ========================================================= */
-function setGpsStatus(status, textOverride){
-  STATE.gpsStatus = status;
-  const dot = document.getElementById("gpsDot");
-  const text = document.getElementById("gpsStatusText");
-  const map = {
-    GETTING:   { cls:"amber", label:"Getting Location" },
-    ACTIVE:    { cls:"green", label:"GPS Active" },
-    OFFLINE:   { cls:"red",   label:"GPS Offline" },
-    DENIED:    { cls:"red",   label:"Location Permission Denied" },
-    UNAVAILABLE:{cls:"red",   label:"Location Unavailable" },
-    TIMEOUT:   { cls:"red",   label:"Location Timeout" }
-  };
-  const m = map[status] || map.OFFLINE;
-  dot.className = "dot " + m.cls;
-  text.textContent = textOverride || m.label;
+const GPS_STATUS = {
+  GETTING:     { cls: "amber", label: "Locating…" },
+  ACTIVE:      { cls: "green", label: "GPS active" },
+  WEAK:        { cls: "amber", label: "Low accuracy" },
+  MANUAL:      { cls: "blue",  label: "Set manually" },
+  DENIED:      { cls: "red",   label: "Permission denied" },
+  UNAVAILABLE: { cls: "red",   label: "Unavailable" },
+  TIMEOUT:     { cls: "red",   label: "Timed out" }
+};
+
+function setGpsStatus(key){
+  const s = GPS_STATUS[key];
+  $("gpsPill").className = "status-pill " + s.cls;
+  setText("gpsStatusText", s.label);
 }
 
 function startGps(){
   if(!("geolocation" in navigator)){
     setGpsStatus("UNAVAILABLE");
-    toast("Geolocation is not supported in this browser.", "error");
+    setText("addrLine", "This browser can't share your location. Use “Set on map” instead.");
     return;
   }
   setGpsStatus("GETTING");
+
+  // 1) fast, coarse fix so the map isn't left on the default view
+  navigator.geolocation.getCurrentPosition(onGpsSuccess, onGpsError, {
+    enableHighAccuracy: false, maximumAge: 60000, timeout: 10000
+  });
+  // 2) continuous, precise updates
   STATE.watchId = navigator.geolocation.watchPosition(onGpsSuccess, onGpsError, {
-    enableHighAccuracy: true,
-    maximumAge: 5000,
-    timeout: 15000
+    enableHighAccuracy: true, maximumAge: 2000, timeout: 20000
   });
 }
 
 function onGpsSuccess(pos){
-  const { latitude, longitude, accuracy, speed } = pos.coords;
-  STATE.userLat = latitude;
-  STATE.userLng = longitude;
-  STATE.userAccuracy = accuracy;
-  setGpsStatus("ACTIVE");
+  if(STATE.manualLocation) return;
+  const c = pos.coords;
 
-  document.getElementById("coordsLine").textContent =
-    "Latitude: " + latitude.toFixed(5) + ", Longitude: " + longitude.toFixed(5);
-  document.getElementById("accValue").textContent = (accuracy ? Math.round(accuracy) : "—") + " m";
+  // A much worse fix right after a good one is a coarse network fix, so ignore it
+  const recentGoodFix = STATE.userAccuracy !== null && Date.now() - STATE.lastFixAt < 20000;
+  if(recentGoodFix && c.accuracy > 200 && c.accuracy > STATE.userAccuracy * 3) return;
 
-  if(speed !== null && speed !== undefined && !isNaN(speed)){
-    STATE.lastSpeedKmh = Math.max(0, speed * 3.6);
-    document.getElementById("speedValue").textContent = STATE.lastSpeedKmh.toFixed(1) + " km/h";
-  }
-
-  setDebug({ dbgLat: latitude.toFixed(6), dbgLng: longitude.toFixed(6), dbgAcc: (accuracy||"—")+" m" });
-
-  updateUserMarker(latitude, longitude);
-
-  if(!STATE.hasCenteredOnce){
-    STATE.hasCenteredOnce = true;
-    STATE.map.setView([latitude, longitude], 15);
-    reverseGeocode(latitude, longitude);
-    toast("GPS lock acquired.", "success");
-  } else {
-    maybeReverseGeocode(latitude, longitude);
-  }
-
-  if(STATE.navigating){
-    updateLiveNavigation(latitude, longitude);
-  }
+  setGpsStatus(c.accuracy > 500 ? "WEAK" : "ACTIVE");
+  applyLocation(c.latitude, c.longitude, c.accuracy, c.speed);
 }
 
 function onGpsError(err){
+  if(STATE.manualLocation) return;
   if(err.code === err.PERMISSION_DENIED){
     setGpsStatus("DENIED");
-    toast("Location permission denied. Enable it in your browser settings.", "error");
+    setText("addrLine", "Location access is off. Allow it in your browser, or use “Set on map”.");
+    toast("Location permission denied.", "error");
+    if(STATE.watchId !== null) navigator.geolocation.clearWatch(STATE.watchId);
   } else if(err.code === err.POSITION_UNAVAILABLE){
-    setGpsStatus("UNAVAILABLE");
-    toast("Your location is currently unavailable.", "error");
-  } else if(err.code === err.TIMEOUT){
-    setGpsStatus("TIMEOUT");
-    toast("Location request timed out.", "warn");
-  } else {
-    setGpsStatus("OFFLINE");
+    if(STATE.userLat === null){
+      setGpsStatus("UNAVAILABLE");
+      toast("Your location is unavailable right now.", "error");
+    }
+  } else if(STATE.userLat === null){
+    setGpsStatus("TIMEOUT");   // keep using the last good fix otherwise
   }
 }
 
-function updateUserMarker(lat, lng){
+/* Every location change, from GPS or a manual pick, goes through here */
+function applyLocation(lat, lng, accuracy, speed){
+  const firstFix = STATE.userLat === null;
+  STATE.userLat = lat;
+  STATE.userLng = lng;
+  STATE.userAccuracy = accuracy;
+  STATE.lastFixAt = Date.now();
+
+  setText("coordsLine", lat.toFixed(5) + ", " + lng.toFixed(5));
+  setText("accValue", accuracy ? "±" + Math.round(accuracy) + " m" : "—");
+  if(speed !== null && speed !== undefined && !isNaN(speed)){
+    STATE.lastSpeedKmh = Math.max(0, speed * 3.6);
+    setText("speedValue", Math.round(STATE.lastSpeedKmh) + " km/h");
+  } else {
+    STATE.lastSpeedKmh = null;
+    setText("speedValue", "—");
+  }
+  setDebug({ dbgLat: lat.toFixed(6), dbgLng: lng.toFixed(6), dbgAcc: accuracy ? Math.round(accuracy) + " m" : "manual" });
+
+  updateUserMarker(lat, lng, accuracy);
+
+  if(!STATE.hasCentered){
+    STATE.hasCentered = true;
+    STATE.centeredAccuracy = accuracy || 0;
+    STATE.map.setView([lat, lng], accuracy > 1000 ? 13 : 16);
+  } else if(!STATE.userMovedMap && !STATE.manualLocation && STATE.centeredAccuracy > 500 && accuracy && accuracy < 200){
+    // The first fix was coarse and a precise one has arrived: move there once
+    STATE.centeredAccuracy = accuracy;
+    STATE.map.flyTo([lat, lng], 16, { duration: 1.2 });
+  } else if(STATE.following){
+    const center = STATE.map.getCenter();
+    if(haversineKm(center.lat, center.lng, lat, lng) * 1000 > 4){
+      STATE.map.panTo([lat, lng], { animate: true, duration: 0.8 });
+    }
+  }
+
+  if(firstFix) toast("Location found.", "success");
+  if(STATE.manualLocation || firstFix) reverseGeocode(lat, lng);
+  else maybeReverseGeocode(lat, lng);
+
+  if(STATE.navigating) updateLiveNavigation(lat, lng);
+}
+
+function updateUserMarker(lat, lng, accuracy){
+  const radius = Math.min(accuracy || 0, 3000);
   if(!STATE.userMarker){
-    STATE.userMarker = L.marker([lat,lng], { icon:userDivIcon(), zIndexOffset:1000 }).addTo(STATE.map);
-  } else {
-    STATE.userMarker.setLatLng([lat,lng]);
+    STATE.userMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000, keyboard: false }).addTo(STATE.map);
+    STATE.accuracyCircle = L.circle([lat, lng], {
+      radius: radius, color: "#2f7bff", weight: 1, opacity: 0.5,
+      fillColor: "#2f7bff", fillOpacity: 0.1, interactive: false
+    }).addTo(STATE.map);
+    return;
   }
+  STATE.accuracyCircle.setRadius(radius);
+
+  const from = STATE.userMarker.getLatLng();
+  const jumpM = haversineKm(from.lat, from.lng, lat, lng) * 1000;
+  if(jumpM > 500){
+    STATE.userMarker.setLatLng([lat, lng]);
+    STATE.accuracyCircle.setLatLng([lat, lng]);
+    return;
+  }
+  animateUserTo(lat, lng, 700);
 }
 
-startGps();
+/* Glide the dot to its new position instead of teleporting */
+function animateUserTo(lat, lng, ms){
+  const from = STATE.userMarker.getLatLng();
+  const start = performance.now();
+  cancelAnimationFrame(STATE.markerAnim);
+  function step(now){
+    const t = Math.min(1, (now - start) / ms);
+    const e = 1 - Math.pow(1 - t, 3);
+    const p = [from.lat + (lat - from.lat) * e, from.lng + (lng - from.lng) * e];
+    STATE.userMarker.setLatLng(p);
+    STATE.accuracyCircle.setLatLng(p);
+    if(t < 1) STATE.markerAnim = requestAnimationFrame(step);
+  }
+  STATE.markerAnim = requestAnimationFrame(step);
+}
 
-/* =========================================================
-   REVERSE GEOCODING (client-side Nominatim — no backend endpoint for this)
-========================================================= */
+function recenterOnUser(){
+  if(STATE.userLat === null){
+    toast("Still finding your location.", "warn");
+    return;
+  }
+  STATE.userMovedMap = false;
+  setFollowing(true);
+  STATE.map.flyTo([STATE.userLat, STATE.userLng], Math.max(STATE.map.getZoom(), 16), { duration: 0.8 });
+}
+
+/* ----- manual location: for when the device location is wrong or blocked ----- */
+function startPickLocation(){
+  STATE.picking = true;
+  $("pickBanner").hidden = false;
+  $("mapArea").classList.add("picking");
+  setSheetState("peek");
+}
+
+function cancelPick(){
+  STATE.picking = false;
+  $("pickBanner").hidden = true;
+  $("mapArea").classList.remove("picking");
+}
+
+function onMapClick(e){
+  if(!STATE.picking) return;
+  cancelPick();
+  useManualLocation(e.latlng.lat, e.latlng.lng);
+}
+
+function useManualLocation(lat, lng){
+  STATE.manualLocation = true;
+  setGpsStatus("MANUAL");
+  $("btnManual").innerHTML = '<i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> Use GPS';
+  applyLocation(lat, lng, 0, null);
+  STATE.map.flyTo([lat, lng], Math.max(STATE.map.getZoom(), 15), { duration: 0.8 });
+  toast("Location set on the map.", "success");
+  // results were for the old spot, so refresh whatever was searched
+  TYPES.forEach(t => { if(STATE.search[t].status !== "idle") runSearch(t); });
+}
+
+function useGps(){
+  STATE.manualLocation = false;
+  STATE.userAccuracy = null;
+  STATE.userMovedMap = false;
+  setFollowing(true);
+  setGpsStatus("GETTING");
+  $("btnManual").innerHTML = '<i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Set on map';
+  navigator.geolocation.getCurrentPosition(onGpsSuccess, onGpsError, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+}
+
+/* ----- reverse geocoding (address line) ----- */
 function maybeReverseGeocode(lat, lng){
-  const now = Date.now();
   const key = lat.toFixed(3) + "," + lng.toFixed(3);
-  if(key === STATE.lastReverseGeocodeKey) return;
-  if(now - STATE.lastReverseGeocodeAt < CONFIG.REVERSE_GEOCODE_MIN_INTERVAL_MS) return;
+  if(key === STATE.lastGeocodeKey) return;
+  if(Date.now() - STATE.lastGeocodeAt < CONFIG.REVERSE_GEOCODE_MIN_INTERVAL_MS) return;
   reverseGeocode(lat, lng);
 }
 
 async function reverseGeocode(lat, lng){
-  const key = lat.toFixed(3) + "," + lng.toFixed(3);
-  STATE.lastReverseGeocodeAt = Date.now();
-  STATE.lastReverseGeocodeKey = key;
-  if(STATE.reverseGeocodeAbort) STATE.reverseGeocodeAbort.abort();
+  STATE.lastGeocodeAt = Date.now();
+  STATE.lastGeocodeKey = lat.toFixed(3) + "," + lng.toFixed(3);
+  if(STATE.geocodeAbort) STATE.geocodeAbort.abort();
   const controller = new AbortController();
-  STATE.reverseGeocodeAbort = controller;
+  STATE.geocodeAbort = controller;
   const timer = setTimeout(() => controller.abort(), 10000);
   try{
-    const url = CONFIG.NOMINATIM_REVERSE + "?format=jsonv2&lat=" + lat + "&lon=" + lng + "&zoom=16&addressdetails=1";
+    const url = CONFIG.NOMINATIM_REVERSE + "?format=jsonv2&addressdetails=1&accept-language=en&zoom=16&lat=" + lat + "&lon=" + lng;
     const resp = await fetch(url, { signal: controller.signal });
     if(!resp.ok) throw new Error("reverse geocode failed");
     const data = await resp.json();
-    const label = data.display_name ? data.display_name.split(",").slice(0,3).join(",") : "Location resolved";
-    document.getElementById("addrLine").textContent = label;
+    const a = data.address || {};
+    const parts = [
+      a.road || a.neighbourhood || a.suburb,
+      a.suburb || a.city_district,
+      a.city || a.town || a.village || a.county,
+      a.state
+    ].filter(Boolean).filter((p, i, all) => all.indexOf(p) === i).slice(0, 3);
+    setText("addrLine", parts.length ? parts.join(", ") : (data.display_name || "Location found").split(",").slice(0, 3).join(","));
   }catch(e){
-    document.getElementById("addrLine").textContent = "Address lookup unavailable — showing coordinates only.";
+    if(!STATE.geocodeAbort || STATE.geocodeAbort === controller) setText("addrLine", "Address unavailable. Showing coordinates only.");
   }finally{
     clearTimeout(timer);
   }
 }
 
 /* =========================================================
-   SEARCH  — talks to Flask /nearby_search, which already
-   normalizes OSM nodes/ways/relations, dedupes, sorts by
-   distance, and widens the radius (10km -> 25km -> 50km)
-   server-side. The frontend just renders what it's given.
+   SEARCH
 ========================================================= */
-const SearchState = { SEARCHING:"SEARCHING", NO_RESULTS:"NO_RESULTS", SERVICE_ERROR:"SERVICE_ERROR" };
-
-function renderStateBox(containerId, state, opts){
-  opts = opts || {};
-  const container = document.getElementById(containerId);
-  if(state === SearchState.SEARCHING){
-    container.innerHTML = '<div class="search-status-line"><span class="spinner"></span> Searching nearby facilities…</div>';
-  } else if(state === SearchState.NO_RESULTS){
-    container.innerHTML =
-      '<div class="state-box"><i class="fa-regular fa-face-frown"></i>'+
-      escapeHtml(opts.message || "No facilities were found nearby.")+
-      '<br><button class="btn small ghost retry-btn" data-retry="'+escapeHtml(opts.type)+'"><i class="fa-solid fa-arrows-rotate"></i> Try Again</button></div>';
-  } else if(state === SearchState.SERVICE_ERROR){
-    container.innerHTML =
-      '<div class="state-box error"><i class="fa-solid fa-triangle-exclamation"></i>'+
-      escapeHtml(opts.message || "The map data service is temporarily unavailable. Please try again.")+
-      '<br><button class="btn small ghost retry-btn" data-retry="'+escapeHtml(opts.type)+'"><i class="fa-solid fa-arrows-rotate"></i> Try Again</button></div>';
-  } else {
-    container.innerHTML = "";
-  }
-}
-
-/**
- * Backend elements already look like:
- * { id, osm_id, osm_type, lat, lon, tags, name, address, phone, website, distance_km }
- * This just maps them into the shape the rest of the UI (markers/cards) expects.
- */
 function normalizeElement(el, type){
-  if(el.lat === undefined || el.lat === null || el.lon === undefined || el.lon === null) return null;
+  const center = el.center || {};
+  const lat = typeof el.lat === "number" ? el.lat : center.lat;
+  const lng = typeof el.lon === "number" ? el.lon : center.lon;
+  if(typeof lat !== "number" || typeof lng !== "number") return null;
+
   const tags = el.tags || {};
-  const isClinic = tags.amenity === "clinic" || tags.healthcare === "clinic" ||
-                    tags.healthcare === "centre" || tags.healthcare === "doctor";
+  const km = typeof el.distance_km === "number" ? el.distance_km : haversineKm(STATE.userLat, STATE.userLng, lat, lng);
   return {
-    id: el.id,
-    name: el.name || (type === "hospital" ? "Unnamed Hospital" : "Unnamed Pharmacy"),
+    id: String(el.id),
     type: type,
-    subtype: isClinic ? "clinic" : type,
-    latitude: el.lat,
-    longitude: el.lon,
-    distance_km: typeof el.distance_km === "number" ? el.distance_km : 0,
+    subtype: el.subtype || type,
+    name: el.name || tags.name || (type === "hospital" ? "Unnamed hospital" : "Unnamed pharmacy"),
+    lat: lat,
+    lng: lng,
+    distance_km: km,
     address: el.address || "",
-    phone: el.phone || "",
+    phone: el.phone || tags.phone || "",
     website: el.website || "",
-    opening_hours: tags.opening_hours || ""
+    opening_hours: el.opening_hours || tags.opening_hours || ""
   };
 }
 
+function updateSearch(type, patch){
+  Object.assign(STATE.search[type], patch);
+  renderResults();
+  $(type === "hospital" ? "btnFindHospitals" : "btnFindPharmacies")
+    .classList.toggle("loading", STATE.search[type].status === "loading");
+}
+
 async function runSearch(type){
-  if(STATE.userLat === null || STATE.userLng === null){
-    toast("Waiting for GPS location before searching.", "warn");
+  if(STATE.userLat === null){
+    toast("Still finding your location. You can also use “Set on map”.", "warn");
     return;
   }
-  if(STATE.activeSearchAbort) STATE.activeSearchAbort.abort();
+  if(STATE.searchAbort[type]) STATE.searchAbort[type].abort();
   const controller = new AbortController();
-  STATE.activeSearchAbort = controller;
-  STATE.activeSearchType = type;
+  STATE.searchAbort[type] = controller;
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, CONFIG.SEARCH_TIMEOUT_MS);
 
-  const cardId = type === "hospital" ? "hospitalCard" : "pharmacyCard";
-  const stateId = type === "hospital" ? "hospitalState" : "pharmacyState";
-  const listId = type === "hospital" ? "hospitalList" : "pharmacyList";
-  const countId = type === "hospital" ? "hospitalCount" : "pharmacyCount";
-
-  document.getElementById(cardId).style.display = "block";
-  document.getElementById(listId).innerHTML = "";
-  renderStateBox(stateId, SearchState.SEARCHING);
+  STATE.activeTab = type;
+  updateSearch(type, { status: "loading", message: "" });
+  setSheetState("half");
 
   const startedAt = performance.now();
-  const timer = setTimeout(() => controller.abort(), CONFIG.SEARCH_TIMEOUT_MS);
+  const fail = (message) => {
+    updateSearch(type, { status: "error", message: message });
+    setDebug({ dbgType: type, dbgResults: "error", dbgTime: Math.round(performance.now() - startedAt) + " ms" });
+  };
 
   try{
     const url = CONFIG.NEARBY_ENDPOINT + "?type=" + encodeURIComponent(type) +
                 "&lat=" + STATE.userLat + "&lng=" + STATE.userLng;
     const resp = await fetch(url, { signal: controller.signal });
-    const elapsed = Math.round(performance.now() - startedAt);
+    let data = null;
+    try{ data = await resp.json(); }catch(e){ data = null; }
+    const ms = Math.round(performance.now() - startedAt);
 
-    let data;
-    try{
-      data = await resp.json();
-    }catch(parseErr){
-      renderStateBox(stateId, SearchState.SERVICE_ERROR, { type, message: "Received an invalid response from the server." });
-      setDebug({ dbgType:type, dbgResults:"bad response", dbgSource:"—", dbgTime: elapsed+"ms" });
-      return;
-    }
-
+    if(!data){ fail("The server sent an invalid response."); return; }
     if(!resp.ok || data.status === "error"){
-      renderStateBox(stateId, SearchState.SERVICE_ERROR, {
-        type,
-        message: data.error ? ("Search failed: " + data.error) : undefined
-      });
-      setDebug({ dbgType:type, dbgResults:"error", dbgSource:"—", dbgTime: elapsed+"ms" });
+      fail(data.error || "The map data service is temporarily unavailable.");
       return;
     }
 
-    if(data.status === "empty" || !data.elements || data.elements.length === 0){
-      renderStateBox(stateId, SearchState.NO_RESULTS, {
-        type,
-        message: data.message || ("No " + type + "s were found nearby.")
-      });
-      clearMarkersOfType(type);
-      document.getElementById(countId).textContent = "0";
-      if(type === "hospital") STATE.hospitalResults = []; else STATE.pharmacyResults = [];
-      setDebug({ dbgType:type, dbgResults:0, dbgSource:"—", dbgTime: elapsed+"ms" });
-      return;
-    }
-
-    // status === "success"
-    const results = data.elements
+    const results = (data.elements || [])
       .map(el => normalizeElement(el, type))
       .filter(Boolean)
+      .sort((a, b) => a.distance_km - b.distance_km)
       .slice(0, CONFIG.MAX_RESULTS_SHOWN);
 
-    setDebug({
-      dbgType: type,
-      dbgResults: results.length,
-      dbgSource: data.search_radius_km !== undefined
-        ? ("furthest result " + data.search_radius_km.toFixed(1) + " km")
-        : "—",
-      dbgTime: elapsed + "ms"
-    });
-
-    renderStateBox(stateId, null);
-    document.getElementById(countId).textContent = String(results.length);
-
-    if(type === "hospital") STATE.hospitalResults = results; else STATE.pharmacyResults = results;
-    renderResultCards(type, results);
-    plotMarkers(type, results);
-
-    toast(results.length + " " + type + (results.length===1?"":"s") + " found nearby.", "success");
-
-  }catch(err){
-    if(err.name === "AbortError"){
-      renderStateBox(stateId, SearchState.SERVICE_ERROR, { type, message: "Search timed out. Please try again." });
-      setDebug({ dbgType:type, dbgResults:"timeout/cancelled", dbgSource:"—", dbgTime:"—" });
-    } else {
-      renderStateBox(stateId, SearchState.SERVICE_ERROR, { type, message: "Could not reach the server." });
-      setDebug({ dbgType:type, dbgResults:"network error", dbgSource:"—", dbgTime:"—" });
+    if(data.status === "empty" || results.length === 0){
+      clearMarkers(type);
+      updateSearch(type, { status: "empty", results: [], message: data.message || "No " + LABELS[type] + " found nearby." });
+      setDebug({ dbgType: type, dbgResults: 0, dbgRadius: "—", dbgSource: "—", dbgTime: ms + " ms" });
+      return;
     }
+
+    const radius = typeof data.search_radius_km === "number" ? data.search_radius_km : null;
+    updateSearch(type, { status: "ok", results: results, radius: radius, message: "" });
+    setDebug({
+      dbgType: type, dbgResults: results.length,
+      dbgRadius: radius !== null ? radius + " km" : "—",
+      dbgSource: data.source || "—", dbgTime: ms + " ms"
+    });
+    plotMarkers(type, results);
+    fitToResults(type);
+  }catch(err){
+    if(STATE.searchAbort[type] !== controller) return;   // a newer search replaced this one
+    fail(timedOut ? "The search took too long. Please try again." : "Could not reach the server.");
   }finally{
     clearTimeout(timer);
+    if(STATE.searchAbort[type] === controller) STATE.searchAbort[type] = null;
   }
 }
 
-document.addEventListener("click", (e) => {
-  const retryBtn = e.target.closest(".retry-btn");
-  if(retryBtn){
-    runSearch(retryBtn.getAttribute("data-retry"));
-  }
-});
-
-/* =========================================================
-   RESULT CARDS
-========================================================= */
-function renderResultCards(type, results){
-  const listId = type === "hospital" ? "hospitalList" : "pharmacyList";
-  const list = document.getElementById(listId);
-  list.innerHTML = results.map((r) => {
-    const badgeLabel = r.subtype === "clinic" ? "CLINIC" : type.toUpperCase();
-    const phoneBtn = r.phone
-      ? '<a class="btn small" href="tel:'+escapeHtml(r.phone)+'"><i class="fa-solid fa-phone"></i> Call</a>'
-      : '<button class="btn small" disabled><i class="fa-solid fa-phone"></i> No number</button>';
-    return (
-      '<div class="result-card" data-id="'+escapeHtml(r.id)+'" data-type="'+type+'" tabindex="0" role="button" aria-label="View '+escapeHtml(r.name)+' on map">'+
-        '<div class="result-top">'+
-          '<div class="result-name">'+escapeHtml(r.name)+'</div>'+
-          '<div class="badge '+type+'">'+escapeHtml(badgeLabel)+'</div>'+
-        '</div>'+
-        '<div class="result-dist">'+r.distance_km.toFixed(2)+' km away</div>'+
-        (r.address ? '<div class="result-addr">'+escapeHtml(r.address)+'</div>' : '')+
-        (r.opening_hours ? '<div class="result-meta"><i class="fa-regular fa-clock"></i> '+escapeHtml(r.opening_hours)+'</div>' : '')+
-        '<div class="result-actions">'+
-          phoneBtn+
-          '<button class="btn small primary" data-nav="'+escapeHtml(r.id)+'"><i class="fa-solid fa-diamond-turn-right"></i> Navigate</button>'+
-        '</div>'+
-      '</div>'
-    );
-  }).join("");
+function fitToResults(type){
+  const points = [[STATE.userLat, STATE.userLng]]
+    .concat(STATE.search[type].results.slice(0, 5).map(r => [r.lat, r.lng]));
+  setFollowing(false);
+  STATE.map.flyToBounds(L.latLngBounds(points), mapPadding({ maxZoom: 16, duration: 1 }));
 }
 
-document.addEventListener("click", (e) => {
-  const navBtn = e.target.closest("[data-nav]");
-  if(navBtn){
-    e.stopPropagation();
-    const id = navBtn.getAttribute("data-nav");
-    const item = [...STATE.hospitalResults, ...STATE.pharmacyResults].find(r => r.id === id);
-    if(item) startRouteTo(item);
-    return;
-  }
-  const card = e.target.closest(".result-card");
-  if(card){
-    const id = card.getAttribute("data-id");
-    const type = card.getAttribute("data-type");
-    const item = (type === "hospital" ? STATE.hospitalResults : STATE.pharmacyResults).find(r => r.id === id);
-    if(item) focusResult(item);
-  }
-});
-
-function focusResult(item){
-  STATE.map.setView([item.latitude, item.longitude], 17, { animate:true });
-  const markers = item.type === "hospital" ? STATE.hospitalMarkers : STATE.pharmacyMarkers;
-  const marker = markers.find(m => m._mpId === item.id);
-  if(marker) marker.openPopup();
+/* ----- results list ----- */
+function stateBox(icon, message, type, isError, buttonLabel){
+  return '<div class="state-box' + (isError ? " error" : "") + '">' +
+    '<i class="fa-solid ' + icon + '" aria-hidden="true"></i>' +
+    '<p>' + escapeHtml(message) + '</p>' +
+    '<button class="btn small" data-action="retry" data-type="' + type + '"><i class="fa-solid fa-rotate" aria-hidden="true"></i> ' + buttonLabel + '</button>' +
+    '</div>';
 }
 
-/* =========================================================
-   MARKERS
-========================================================= */
-function clearMarkersOfType(type){
-  const arr = type === "hospital" ? STATE.hospitalMarkers : STATE.pharmacyMarkers;
-  arr.forEach(m => STATE.map.removeLayer(m));
-  if(type === "hospital") STATE.hospitalMarkers = []; else STATE.pharmacyMarkers = [];
+function resultCardHtml(r, index){
+  const kind = r.subtype === "clinic" ? "Clinic" : (r.type === "hospital" ? "Hospital" : "Pharmacy");
+  const call = r.phone
+    ? '<a class="btn small" data-action="call" href="tel:' + escapeHtml(r.phone) + '"><i class="fa-solid fa-phone" aria-hidden="true"></i> Call</a>'
+    : "";
+  return (
+    '<div class="result ' + r.type + (r.id === STATE.activeId ? " active" : "") + '" role="listitem" tabindex="0" data-action="focus" data-id="' + escapeHtml(r.id) + '">' +
+      '<div class="result-top">' +
+        '<div class="result-name">' + escapeHtml(r.name) + '</div>' +
+        '<div class="result-dist">' + formatDistance(r.distance_km) + '</div>' +
+      '</div>' +
+      '<div class="result-kind">' + kind + (index === 0 ? ' <span class="tag">Nearest</span>' : "") + '</div>' +
+      (r.address ? '<div class="result-addr">' + escapeHtml(r.address) + '</div>' : "") +
+      (r.opening_hours ? '<div class="result-hours"><i class="fa-regular fa-clock" aria-hidden="true"></i> ' + escapeHtml(r.opening_hours) + '</div>' : "") +
+      '<div class="result-actions">' + call +
+        '<button class="btn small primary" data-action="navigate" data-id="' + escapeHtml(r.id) + '"><i class="fa-solid fa-diamond-turn-right" aria-hidden="true"></i> Directions</button>' +
+      '</div>' +
+    '</div>'
+  );
 }
 
-function plotMarkers(type, results){
-  clearMarkersOfType(type);
-  const arr = type === "hospital" ? STATE.hospitalMarkers : STATE.pharmacyMarkers;
-  results.forEach(r => {
-    const marker = L.marker([r.latitude, r.longitude], { icon: facilityDivIcon(type) }).addTo(STATE.map);
-    marker._mpId = r.id;
-    const popupHtml =
-      '<div class="popup-title">'+escapeHtml(r.name)+'</div>'+
-      '<div class="popup-meta">'+ (r.subtype==="clinic"?"Clinic":type.charAt(0).toUpperCase()+type.slice(1)) +' · '+r.distance_km.toFixed(2)+' km<br>'+escapeHtml(r.address||"")+'</div>'+
-      '<button class="popup-nav-btn" data-popup-nav="'+escapeHtml(r.id)+'"><i class="fa-solid fa-diamond-turn-right"></i> Navigate</button>';
-    marker.bindPopup(popupHtml);
-    arr.push(marker);
+function renderResults(){
+  const anySearched = TYPES.some(t => STATE.search[t].status !== "idle");
+  $("resultsCard").hidden = !anySearched;
+  if(!anySearched) return;
+
+  TYPES.forEach(t => {
+    const s = STATE.search[t];
+    setText(t === "hospital" ? "countHospital" : "countPharmacy", s.status === "loading" ? "…" : String(s.results.length));
+    document.querySelector('.tab[data-type="' + t + '"]').classList.toggle("active", t === STATE.activeTab);
+  });
+
+  const type = STATE.activeTab;
+  const s = STATE.search[type];
+  const list = $("resultsList");
+
+  if(s.status === "loading"){
+    list.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+    setText("resultsMeta", "Searching nearby…");
+  } else if(s.status === "error"){
+    list.innerHTML = stateBox("fa-triangle-exclamation", s.message, type, true, "Try again");
+    setText("resultsMeta", "");
+  } else if(s.status === "empty"){
+    list.innerHTML = stateBox("fa-magnifying-glass", s.message, type, false, "Search again");
+    setText("resultsMeta", "");
+  } else if(s.status === "idle"){
+    list.innerHTML = stateBox("fa-magnifying-glass", "You haven't searched for " + LABELS[type] + " yet.", type, false, "Search " + LABELS[type]);
+    setText("resultsMeta", "");
+  } else {
+    list.innerHTML = s.results.map(resultCardHtml).join("");
+    setText("resultsMeta", "Showing " + s.results.length + (s.radius ? " within " + s.radius + " km" : ""));
+  }
+}
+
+function findResult(id){
+  return STATE.search.hospital.results.concat(STATE.search.pharmacy.results).find(r => r.id === id);
+}
+
+function setActiveResult(id, scroll){
+  STATE.activeId = id;
+  const item = findResult(id);
+  if(item && item.type !== STATE.activeTab){
+    STATE.activeTab = item.type;
+    renderResults();
+  }
+  document.querySelectorAll(".result").forEach(el => {
+    const active = el.dataset.id === id;
+    el.classList.toggle("active", active);
+    if(active && scroll) scrollPanelTo(el);
   });
 }
 
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-popup-nav]");
-  if(btn){
-    const id = btn.getAttribute("data-popup-nav");
-    const item = [...STATE.hospitalResults, ...STATE.pharmacyResults].find(r => r.id === id);
-    if(item) startRouteTo(item);
-  }
-});
+/* Scroll only the panel's own list. (scrollIntoView also scrolls the page and
+   would shove the layout around while the mobile sheet is collapsed.) */
+function scrollPanelTo(el){
+  const body = $("panelBody");
+  const b = body.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  if(r.top < b.top) body.scrollTo({ top: body.scrollTop - (b.top - r.top) - 12, behavior: "smooth" });
+  else if(r.bottom > b.bottom) body.scrollTo({ top: body.scrollTop + (r.bottom - b.bottom) + 12, behavior: "smooth" });
+}
+
+function focusResult(item){
+  setActiveResult(item.id, false);
+  setFollowing(false);
+  setSheetState("peek");
+  STATE.map.flyTo([item.lat, item.lng], Math.max(STATE.map.getZoom(), 16), { duration: 0.7 });
+  const marker = STATE.markers[item.type].find(m => m._mpId === item.id);
+  if(marker) setTimeout(() => marker.openPopup(), 500);
+}
+
+/* ----- markers ----- */
+function clearMarkers(type){
+  STATE.markers[type].forEach(m => STATE.map.removeLayer(m));
+  STATE.markers[type] = [];
+}
+
+function plotMarkers(type, results){
+  clearMarkers(type);
+  results.forEach(r => {
+    const marker = L.marker([r.lat, r.lng], { icon: facilityIcon(type), riseOnHover: true, title: r.name }).addTo(STATE.map);
+    marker._mpId = r.id;
+    marker.bindPopup(
+      '<div class="popup-title">' + escapeHtml(r.name) + '</div>' +
+      '<div class="popup-meta">' + formatDistance(r.distance_km) + " away" + (r.address ? "<br>" + escapeHtml(r.address) : "") + '</div>' +
+      '<button class="popup-nav-btn" data-popup-nav><i class="fa-solid fa-diamond-turn-right"></i> Directions</button>',
+      { autoPanPadding: [40, 40], maxWidth: 260 }
+    );
+    marker.on("click", () => setActiveResult(r.id, true));
+    marker.on("popupopen", (e) => {
+      const btn = e.popup.getElement().querySelector("[data-popup-nav]");
+      if(btn) btn.addEventListener("click", () => { STATE.map.closePopup(); startRouteTo(r); });
+    });
+    STATE.markers[type].push(marker);
+  });
+}
+
+function clearAllResults(){
+  TYPES.forEach(t => {
+    if(STATE.searchAbort[t]) STATE.searchAbort[t].abort();
+    STATE.searchAbort[t] = null;
+    clearMarkers(t);
+    STATE.search[t] = newSearchState();
+  });
+  STATE.activeId = null;
+  $("btnFindHospitals").classList.remove("loading");
+  $("btnFindPharmacies").classList.remove("loading");
+  renderResults();
+}
 
 /* =========================================================
-   ROUTING (OSRM — called directly, no backend /route exists)
+   ROUTING (OSRM, called straight from the browser)
 ========================================================= */
-async function startRouteTo(item){
-  if(STATE.userLat === null || STATE.userLng === null){
-    toast("Waiting for your GPS location.", "warn");
+function buildCumulative(coords){
+  const cum = [0];
+  for(let i = 1; i < coords.length; i++){
+    cum.push(cum[i - 1] + haversineKm(coords[i - 1][1], coords[i - 1][0], coords[i][1], coords[i][0]) * 1000);
+  }
+  return cum;
+}
+
+function drawRoute(coords){
+  if(STATE.routeLayer) STATE.map.removeLayer(STATE.routeLayer);
+  const latlngs = coords.map(c => [c[1], c[0]]);
+  const style = { lineCap: "round", lineJoin: "round", interactive: false };
+  STATE.routeLayer = L.layerGroup([
+    L.polyline(latlngs, Object.assign({ color: "#ffffff", weight: 10, opacity: 0.95 }, style)),
+    L.polyline(latlngs, Object.assign({ color: "#1f6bff", weight: 6, opacity: 1 }, style))
+  ]).addTo(STATE.map);
+  return latlngs;
+}
+
+async function startRouteTo(item, opts){
+  opts = opts || {};
+  if(STATE.userLat === null){
+    toast("Still finding your location.", "warn");
     return;
   }
   if(STATE.routeAbort) STATE.routeAbort.abort();
   const controller = new AbortController();
   STATE.routeAbort = controller;
-  const timer = setTimeout(() => controller.abort(), CONFIG.ROUTE_TIMEOUT_MS);
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, CONFIG.ROUTE_TIMEOUT_MS);
 
-  document.getElementById("routePanel").classList.add("active");
-  document.getElementById("routeDest").textContent = item.name;
-  document.getElementById("routeDistance").textContent = "…";
-  document.getElementById("routeEta").textContent = "…";
-  document.getElementById("routeStatusText").textContent = "Calculating";
+  if(!opts.reroute){
+    $("routeCard").classList.add("active");
+    setText("routeDest", item.name);
+    setText("routeDistance", "…");
+    setText("routeEta", "…");
+    setText("routeStatus", "Planning");
+    $("routeInstruction").hidden = true;
+    STATE.navigating = false;
+    updateRouteButtons();
+    setSheetState("peek");
+  }
 
   try{
-    const url = CONFIG.OSRM_BASE + STATE.userLng + "," + STATE.userLat + ";" + item.longitude + "," + item.latitude +
+    const url = CONFIG.OSRM_BASE + STATE.userLng + "," + STATE.userLat + ";" + item.lng + "," + item.lat +
                 "?overview=full&geometries=geojson&steps=true";
-    const resp = await fetchWithTimeout(url, {}, CONFIG.ROUTE_TIMEOUT_MS);
+    const resp = await fetch(url, { signal: controller.signal });
     if(!resp.ok) throw new Error("routing service error");
     const data = await resp.json();
     if(!data.routes || !data.routes.length) throw new Error("no route found");
 
     const route = data.routes[0];
-    const distanceKm = route.distance / 1000;
-    const durationMin = route.duration / 60;
-
+    const coords = route.geometry.coordinates;
+    const cum = buildCumulative(coords);
     STATE.routeData = {
-      distanceM: route.distance,
+      dest: item,
+      coords: coords,
+      cum: cum,
+      totalM: cum[cum.length - 1] || route.distance,
       durationS: route.duration,
-      geometry: route.geometry,
       steps: (route.legs && route.legs[0] && route.legs[0].steps) || [],
-      destName: item.name,
-      destLat: item.latitude,
-      destLng: item.longitude
+      nextStep: 1,
+      announcedFor: -1,
+      lastRerouteAt: opts.reroute ? Date.now() : 0
     };
 
-    drawRoute(route.geometry);
+    const latlngs = drawRoute(coords);
+    setText("routeDistance", formatDistance(route.distance / 1000));
+    setText("routeEta", formatDuration(route.duration));
+    setText("routeStatus", STATE.navigating ? "Navigating" : "Ready");
+    setDebug({ dbgRouteStatus: "ready", dbgRouteDist: (route.distance / 1000).toFixed(2) + " km", dbgRouteDur: Math.round(route.duration / 60) + " min" });
 
-    document.getElementById("routeDistance").textContent = distanceKm.toFixed(2) + " km";
-    document.getElementById("routeEta").textContent = Math.round(durationMin) + " min";
-    document.getElementById("routeStatusText").textContent = "Ready";
-    setDebug({ dbgRouteStatus:"ready", dbgRouteDist:distanceKm.toFixed(2)+" km", dbgRouteDur:Math.round(durationMin)+" min" });
-
-    const bounds = L.geoJSON(route.geometry).getBounds();
-    STATE.map.fitBounds(bounds, { padding:[60,60] });
-
+    if(!opts.reroute){
+      setFollowing(false);
+      STATE.map.flyToBounds(L.latLngBounds(latlngs), mapPadding({ duration: 1 }));
+    }
   }catch(err){
-    document.getElementById("routeStatusText").textContent = "Error";
-    document.getElementById("routeDistance").textContent = "—";
-    document.getElementById("routeEta").textContent = "—";
-    setDebug({ dbgRouteStatus:"error" });
-    toast("Routing service is temporarily unavailable. Please try again.", "error");
+    if(STATE.routeAbort !== controller) return;
+    setText("routeStatus", "Error");
+    setText("routeDistance", "—");
+    setText("routeEta", "—");
+    setDebug({ dbgRouteStatus: "error" });
+    toast(timedOut ? "Routing took too long. Please try again." : "Routing is unavailable right now. Please try again.", "error");
   }finally{
     clearTimeout(timer);
   }
 }
 
-function drawRoute(geojsonGeometry){
-  if(STATE.routeLine) STATE.map.removeLayer(STATE.routeLine);
-  STATE.routeLine = L.geoJSON(geojsonGeometry, {
-    style: { color: "#28e6ff", weight: 5, opacity: .85 }
-  }).addTo(STATE.map);
+function updateRouteButtons(){
+  const nav = STATE.navigating;
+  $("btnStartNav").hidden = nav;
+  $("btnCloseRoute").hidden = nav;
+  $("btnRepeatNav").hidden = !nav;
+  $("btnStopNav").hidden = !nav;
+}
+
+function clearRoute(){
+  STATE.navigating = false;
+  if(STATE.routeAbort) STATE.routeAbort.abort();
+  if(STATE.routeLayer){ STATE.map.removeLayer(STATE.routeLayer); STATE.routeLayer = null; }
+  STATE.routeData = null;
+  $("routeCard").classList.remove("active");
+  $("routeInstruction").hidden = true;
+  updateRouteButtons();
+  if("speechSynthesis" in window) speechSynthesis.cancel();
 }
 
 /* =========================================================
    LIVE NAVIGATION
 ========================================================= */
+function describeStep(step){
+  const m = step.maneuver || {};
+  const on = step.name ? " on " + step.name : "";
+  if(m.type === "depart") return "Head out" + on;
+  if(m.type === "arrive") return "Arrive at your destination";
+  if(m.type === "roundabout" || m.type === "rotary") return "Enter the roundabout" + (m.exit ? " and take exit " + m.exit : "");
+  if(m.modifier === "uturn") return "Make a U-turn";
+  if(!m.modifier || m.modifier === "straight") return "Continue straight" + on;
+  return "Turn " + m.modifier + (step.name ? " onto " + step.name : "");
+}
+
 function beginNavigation(){
-  if(!STATE.routeData){
+  const r = STATE.routeData;
+  if(!r){
     toast("Plan a route first.", "warn");
     return;
   }
   STATE.navigating = true;
-  document.getElementById("btnStartNav").style.display = "none";
-  document.getElementById("btnStopNav").style.display = "inline-flex";
-  document.getElementById("btnRepeatNav").style.display = "inline-flex";
-  document.getElementById("ctrlStop").style.display = "flex";
-  document.getElementById("ctrlRepeat").style.display = "flex";
-  STATE.lastSpokenStepIndex = -1;
-  speak("Navigation started to " + STATE.routeData.destName + ". Distance " + (STATE.routeData.distanceM/1000).toFixed(1) + " kilometers.");
+  r.nextStep = 1;
+  updateRouteButtons();
+  setText("routeStatus", "Navigating");
+  setSheetState("peek");
+  setFollowing(true);
+  STATE.map.flyTo([STATE.userLat, STATE.userLng], 17, { duration: 1 });
+  speak("Navigation started to " + r.dest.name + ". " + spokenDistance(r.totalM) + " to go.");
+  updateLiveNavigation(STATE.userLat, STATE.userLng);
 }
 
 function stopNavigation(){
-  STATE.navigating = false;
-  document.getElementById("btnStartNav").style.display = "inline-flex";
-  document.getElementById("btnStopNav").style.display = "none";
-  document.getElementById("btnRepeatNav").style.display = "none";
-  document.getElementById("ctrlStop").style.display = "none";
-  document.getElementById("ctrlRepeat").style.display = "none";
-  document.getElementById("routePanel").classList.remove("active");
-  if(STATE.routeLine){ STATE.map.removeLayer(STATE.routeLine); STATE.routeLine = null; }
-  STATE.routeData = null;
-  speechSynthesis.cancel();
+  clearRoute();
+}
+
+/* Nearest point on the route: gives remaining distance and off-route detection */
+function locateOnRoute(lat, lng){
+  const r = STATE.routeData;
+  let best = Infinity, index = 0;
+  for(let i = 0; i < r.coords.length; i++){
+    const d = haversineKm(lat, lng, r.coords[i][1], r.coords[i][0]) * 1000;
+    if(d < best){ best = d; index = i; }
+  }
+  return { offRouteM: best, remainingM: Math.max(0, r.totalM - r.cum[index]) + best };
 }
 
 function updateLiveNavigation(lat, lng){
-  if(!STATE.routeData) return;
-  const remainingKm = haversineKm(lat, lng, STATE.routeData.destLat, STATE.routeData.destLng);
-  document.getElementById("routeDistance").textContent = remainingKm.toFixed(2) + " km";
+  const r = STATE.routeData;
+  if(!r) return;
 
-  if(remainingKm * 1000 <= CONFIG.NAV_CLOSE_THRESHOLD_M){
-    speak("You have arrived at " + STATE.routeData.destName + ".");
-    stopNavigation();
-    toast("You have arrived at your destination.", "success");
+  const pos = locateOnRoute(lat, lng);
+
+  if(pos.offRouteM > CONFIG.OFF_ROUTE_M && Date.now() - r.lastRerouteAt > CONFIG.REROUTE_MIN_INTERVAL_MS){
+    r.lastRerouteAt = Date.now();
+    setText("routeStatus", "Rerouting");
+    speak("Rerouting.");
+    startRouteTo(r.dest, { reroute: true });
     return;
   }
 
-  const now = Date.now();
-  if(STATE.routeData.steps && STATE.routeData.steps.length && (now - STATE.lastSpokenAt > CONFIG.NAV_SPEAK_MIN_INTERVAL_MS)){
-    const nextIdx = Math.min(STATE.lastSpokenStepIndex + 1, STATE.routeData.steps.length - 1);
-    const step = STATE.routeData.steps[nextIdx];
-    if(step && nextIdx !== STATE.lastSpokenStepIndex && step.maneuver){
-      const instruction = describeManeuver(step.maneuver, step.name);
-      speak(instruction);
-      STATE.lastSpokenStepIndex = nextIdx;
-      STATE.lastSpokenAt = now;
-    }
+  setText("routeDistance", formatDistance(pos.remainingM / 1000));
+  setText("routeEta", formatDuration(r.durationS * pos.remainingM / r.totalM));
+  setDebug({ dbgRouteDist: (pos.remainingM / 1000).toFixed(2) + " km" });
+
+  if(pos.remainingM <= CONFIG.ARRIVAL_M){
+    speak("You have arrived at " + r.dest.name + ".");
+    toast("You have arrived.", "success");
+    stopNavigation();
+    return;
+  }
+
+  const step = r.steps[r.nextStep];
+  if(!step || !step.maneuver) return;
+  const sLng = step.maneuver.location[0], sLat = step.maneuver.location[1];
+  const d = haversineKm(lat, lng, sLat, sLng) * 1000;
+
+  const box = $("routeInstruction");
+  box.hidden = false;
+  box.textContent = describeStep(step) + ", " + formatDistance(d / 1000);
+
+  if(d <= CONFIG.STEP_TRIGGER_M){
+    speak(describeStep(step));
+    r.nextStep++;
+  } else if(d <= 250 && r.announcedFor !== r.nextStep){
+    r.announcedFor = r.nextStep;
+    speak("In " + spokenDistance(d) + ", " + describeStep(step).toLowerCase());
   }
 }
 
-function describeManeuver(maneuver, roadName){
-  const type = maneuver.type || "continue";
-  const modifier = maneuver.modifier || "";
-  const road = roadName ? (" onto " + roadName) : "";
-  if(type === "depart") return "Head out" + road + ".";
-  if(type === "arrive") return "You are arriving at your destination.";
-  if(type === "turn") return "Turn " + modifier + road + ".";
-  if(type === "roundabout") return "Enter the roundabout" + road + ".";
-  return "Continue" + road + ".";
+function repeatDirections(){
+  const r = STATE.routeData;
+  if(!r) return;
+  const step = r.steps[r.nextStep];
+  speak((step ? describeStep(step) + ". " : "") + $("routeDistance").textContent + " remaining.");
 }
 
 /* =========================================================
-   VOICE — SPEECH SYNTHESIS
+   VOICE
 ========================================================= */
 function speak(text){
   if(!("speechSynthesis" in window)) return;
   speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.rate = 1;
-  utter.pitch = 1;
-  speechSynthesis.speak(utter);
+  speechSynthesis.speak(new SpeechSynthesisUtterance(text));
 }
 
-/* =========================================================
-   VOICE — SPEECH RECOGNITION
-========================================================= */
 function initSpeechRecognition(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR) return null;
@@ -1265,114 +1503,73 @@ function initSpeechRecognition(){
   rec.continuous = false;
   rec.interimResults = false;
   rec.lang = "en-US";
-  rec.onresult = (e) => {
-    const text = e.results[0][0].transcript;
-    document.getElementById("chatInput").value = text;
-    sendChatMessage(text);
-  };
-  rec.onend = () => {
-    STATE.listening = false;
-    document.getElementById("btnMic").classList.remove("listening");
-  };
+  rec.onresult = (e) => sendChat(e.results[0][0].transcript);
+  rec.onend = () => { STATE.listening = false; $("btnMic").classList.remove("listening"); };
   rec.onerror = () => {
     STATE.listening = false;
-    document.getElementById("btnMic").classList.remove("listening");
-    toast("Voice recognition could not understand you.", "warn");
+    $("btnMic").classList.remove("listening");
+    toast("Couldn't catch that. Please try again.", "warn");
   };
   return rec;
 }
-STATE.recognition = initSpeechRecognition();
-
-document.getElementById("btnMic").addEventListener("click", () => {
-  if(!STATE.recognition){
-    toast("Voice recognition is not supported in this browser.", "warn");
-    return;
-  }
-  if(STATE.listening){
-    STATE.recognition.stop();
-    return;
-  }
-  try{
-    STATE.recognition.start();
-    STATE.listening = true;
-    document.getElementById("btnMic").classList.add("listening");
-  }catch(e){
-    toast("Could not start voice recognition.", "error");
-  }
-});
-
-document.getElementById("voiceFab").addEventListener("click", () => {
-  if(STATE.navigating && STATE.routeData){
-    speak("Heading to " + STATE.routeData.destName + ". " + (document.getElementById("routeDistance").textContent) + " remaining.");
-  } else {
-    toast("Start navigation to hear voice guidance.", "info");
-  }
-});
 
 /* =========================================================
-   AI CHAT
+   ASSISTANT
+   Simple questions are answered right here from real data.
+   Everything else goes to /map_ai.
 ========================================================= */
-function appendChatMessage(text, role){
-  const box = document.getElementById("chatBox");
+function addMessage(text, role){
+  const box = $("chatBox");
   const div = document.createElement("div");
   div.className = "msg " + role;
   div.textContent = text;
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
+  return div;
 }
 
-function localAiFallback(message){
+function nearestReply(type){
+  const s = STATE.search[type];
+  if(s.status === "ok" && s.results.length){
+    const r = s.results[0];
+    return "The nearest " + type + " is " + r.name + ", " + formatDistance(r.distance_km) + " away. Tap Directions on it to get a route.";
+  }
+  if(s.status === "loading") return "Still searching, one moment.";
+  runSearch(type);
+  return "Searching for " + LABELS[type] + " near you now.";
+}
+
+function localAnswer(message){
   const m = message.toLowerCase();
-  if(m.includes("nearest hospital") || (m.includes("hospital") && m.includes("near"))){
-    if(STATE.hospitalResults.length){
-      const h = STATE.hospitalResults[0];
-      return h.name + " is the nearest hospital, " + h.distance_km.toFixed(2) + " km away.";
-    }
-    return "Tap \"Hospitals\" to search for nearby hospitals first.";
+  if(/(nearest|closest|nearby|near me).*(hospital|clinic)|(hospital|clinic).*(nearest|closest|near)/.test(m)) return nearestReply("hospital");
+  if(/(nearest|closest|nearby|near me).*(pharmacy|medical shop|chemist)|(pharmacy|medical shop|chemist).*(nearest|closest|near)/.test(m)) return nearestReply("pharmacy");
+  if(/\beta\b|how long|how far|distance/.test(m)){
+    const r = STATE.routeData;
+    if(!r) return "Choose a destination first, then I can tell you the time and distance.";
+    return "About " + $("routeEta").textContent + " to " + r.dest.name + ", " + $("routeDistance").textContent + " away.";
   }
-  if(m.includes("pharmacy")){
-    if(STATE.pharmacyResults.length){
-      const p = STATE.pharmacyResults[0];
-      return p.name + " is the nearest pharmacy, " + p.distance_km.toFixed(2) + " km away.";
-    }
-    return "Tap \"Pharmacies\" to search for nearby pharmacies first.";
+  if(/where am i|my location|current location/.test(m)){
+    return STATE.userLat === null ? "Still finding your location." : "You're near " + $("addrLine").textContent + ".";
   }
-  if(m.includes("how long") || m.includes("eta") || m.includes("time")){
-    if(STATE.routeData){
-      return "Estimated time to " + STATE.routeData.destName + " is about " + Math.round(STATE.routeData.durationS/60) + " minutes.";
-    }
-    return "Start navigation to a destination to get an ETA.";
-  }
-  if(m.includes("current location") || m.includes("where am i")){
-    if(STATE.userLat !== null){
-      return "You're near latitude " + STATE.userLat.toFixed(4) + ", longitude " + STATE.userLng.toFixed(4) + ".";
-    }
-    return "Still acquiring your GPS location.";
-  }
-  if(m.includes("destination")){
-    return STATE.routeData ? ("Your destination is " + STATE.routeData.destName + ".") : "No destination set yet.";
-  }
-  if(m.includes("repeat")){
-    if(STATE.routeData){
-      speak("Heading to " + STATE.routeData.destName + ".");
-      return "Repeating directions.";
-    }
-    return "There's no active navigation to repeat.";
-  }
-  return "I can help you find nearby hospitals or pharmacies, plan a route, or give you an ETA. Try asking \"nearest hospital\" or \"how long to my destination\".";
+  return null;
 }
 
-async function sendChatMessage(text){
-  const message = (text !== undefined ? text : document.getElementById("chatInput").value).trim();
+async function sendChat(text){
+  const message = (text !== undefined ? text : $("chatInput").value).trim();
   if(!message) return;
-  document.getElementById("chatInput").value = "";
-  appendChatMessage(message, "user");
+  $("chatInput").value = "";
+  addMessage(message, "user");
 
+  const local = localAnswer(message);
+  if(local){ addMessage(local, "ai"); return; }
+
+  const bubble = addMessage("Thinking…", "ai typing");
+  const r = STATE.routeData;
   const payload = {
     message: message,
-    destination: STATE.routeData ? STATE.routeData.destName : "",
-    distance: STATE.routeData ? (STATE.routeData.distanceM/1000).toFixed(2) + " km" : "",
-    duration: STATE.routeData ? Math.round(STATE.routeData.durationS/60) + " min" : "",
+    destination: r ? r.dest.name : "",
+    distance: r ? $("routeDistance").textContent : "",
+    duration: r ? $("routeEta").textContent : "",
     latitude: STATE.userLat,
     longitude: STATE.userLng,
     speed: STATE.lastSpeedKmh,
@@ -1385,74 +1582,94 @@ async function sendChatMessage(text){
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     }, CONFIG.AI_TIMEOUT_MS);
-
-    if(!resp.ok) throw new Error("AI endpoint error");
+    if(!resp.ok) throw new Error("assistant error");
     const data = await resp.json();
-    const reply = data.reply || localAiFallback(message);
-    appendChatMessage(reply, "ai");
+    bubble.textContent = data.reply || "I couldn't work that out. Try asking for the nearest hospital or pharmacy.";
   }catch(err){
-    appendChatMessage(localAiFallback(message), "ai");
+    bubble.textContent = "The assistant is offline right now. I can still find the nearest hospital or pharmacy. Just ask.";
   }
+  bubble.classList.remove("typing");
+  $("chatBox").scrollTop = $("chatBox").scrollHeight;
 }
 
-document.getElementById("btnSend").addEventListener("click", () => sendChatMessage());
-document.getElementById("chatInput").addEventListener("keydown", (e) => {
-  if(e.key === "Enter") sendChatMessage();
-});
-
 /* =========================================================
-   CONTROL BUTTONS
+   EVENTS
 ========================================================= */
-document.getElementById("btnFindHospitals").addEventListener("click", () => runSearch("hospital"));
-document.getElementById("btnFindPharmacies").addEventListener("click", () => runSearch("pharmacy"));
-document.getElementById("ctrlHospitals").addEventListener("click", () => runSearch("hospital"));
-document.getElementById("ctrlPharmacies").addEventListener("click", () => runSearch("pharmacy"));
+function wireEvents(){
+  $("btnFindHospitals").addEventListener("click", () => runSearch("hospital"));
+  $("btnFindPharmacies").addEventListener("click", () => runSearch("pharmacy"));
+  $("btnClear").addEventListener("click", clearAllResults);
 
-function recenterOnUser(){
-  if(STATE.userLat === null){
-    toast("Waiting for GPS location.", "warn");
-    return;
-  }
-  STATE.map.setView([STATE.userLat, STATE.userLng], 16, { animate:true });
+  $("btnRecenter").addEventListener("click", recenterOnUser);
+  $("ctrlLocate").addEventListener("click", recenterOnUser);
+  $("btnManual").addEventListener("click", () => {
+    if(STATE.manualLocation) useGps();
+    else if(STATE.picking) cancelPick();
+    else startPickLocation();
+  });
+  $("btnCancelPick").addEventListener("click", cancelPick);
+
+  $("btnStartNav").addEventListener("click", beginNavigation);
+  $("btnCloseRoute").addEventListener("click", clearRoute);
+  $("btnStopNav").addEventListener("click", stopNavigation);
+  $("btnRepeatNav").addEventListener("click", repeatDirections);
+
+  $("btnSend").addEventListener("click", () => sendChat());
+  $("chatInput").addEventListener("keydown", (e) => { if(e.key === "Enter") sendChat(); });
+
+  $("btnMic").addEventListener("click", () => {
+    if(!STATE.recognition){
+      toast("Voice input isn't supported in this browser.", "warn");
+      return;
+    }
+    if(STATE.listening){ STATE.recognition.stop(); return; }
+    try{
+      STATE.recognition.start();
+      STATE.listening = true;
+      $("btnMic").classList.add("listening");
+    }catch(e){
+      toast("Couldn't start voice input.", "error");
+    }
+  });
+
+  // One click handler for everything rendered dynamically
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-action]");
+    if(!el) return;
+    const action = el.dataset.action;
+    if(action === "call") return;   // let the tel: link work
+    if(action === "tab"){ STATE.activeTab = el.dataset.type; renderResults(); return; }
+    if(action === "retry"){ runSearch(el.dataset.type); return; }
+    if(action === "ask"){ sendChat(el.dataset.q); return; }
+    const item = findResult(el.dataset.id);
+    if(!item) return;
+    if(action === "navigate") startRouteTo(item);
+    else if(action === "focus") focusResult(item);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const card = e.target.classList && e.target.classList.contains("result") ? e.target : null;
+    if(card && (e.key === "Enter" || e.key === " ")){
+      e.preventDefault();
+      const item = findResult(card.dataset.id);
+      if(item) focusResult(item);
+    }
+  });
+
+  window.addEventListener("offline", () => toast("You're offline. Map services may not work.", "warn"));
+  window.addEventListener("online", () => toast("Back online.", "success"));
 }
-document.getElementById("btnMyLocation").addEventListener("click", recenterOnUser);
-document.getElementById("ctrlMyLocation").addEventListener("click", recenterOnUser);
-
-document.getElementById("btnClearResults").addEventListener("click", () => {
-  clearMarkersOfType("hospital");
-  clearMarkersOfType("pharmacy");
-  STATE.hospitalResults = [];
-  STATE.pharmacyResults = [];
-  document.getElementById("hospitalCard").style.display = "none";
-  document.getElementById("pharmacyCard").style.display = "none";
-  document.getElementById("hospitalList").innerHTML = "";
-  document.getElementById("pharmacyList").innerHTML = "";
-});
-
-document.getElementById("btnStartNav").addEventListener("click", beginNavigation);
-document.getElementById("btnStopNav").addEventListener("click", stopNavigation);
-document.getElementById("btnRepeatNav").addEventListener("click", () => {
-  if(STATE.routeData) speak("Heading to " + STATE.routeData.destName + ". " + document.getElementById("routeDistance").textContent + " remaining.");
-});
-document.getElementById("ctrlStop").addEventListener("click", stopNavigation);
-document.getElementById("ctrlRepeat").addEventListener("click", () => {
-  if(STATE.routeData) speak("Heading to " + STATE.routeData.destName + ". " + document.getElementById("routeDistance").textContent + " remaining.");
-});
 
 /* =========================================================
-   DEBUG PANEL TOGGLE
+   START
 ========================================================= */
-document.getElementById("debugToggle").addEventListener("click", () => {
-  STATE.debugOpen = !STATE.debugOpen;
-  document.getElementById("debugPanel").classList.toggle("open", STATE.debugOpen);
-});
-
-/* =========================================================
-   GLOBAL ERROR HANDLING
-========================================================= */
-window.addEventListener("error", () => {});
-window.addEventListener("offline", () => toast("You're offline. Map services may be unavailable.", "warn"));
-window.addEventListener("online", () => toast("Back online.", "success"));
+initMap();
+initSheet();
+STATE.recognition = initSpeechRecognition();
+wireEvents();
+tickClock();
+setInterval(tickClock, 30000);
+startGps();
 
 })();
 </script>
