@@ -544,7 +544,7 @@ const CONFIG = {
   AI_ENDPOINT: "/map_ai",
   OSRM_BASE: "https://router.project-osrm.org/route/v1/driving/",
   NOMINATIM_REVERSE: "https://nominatim.openstreetmap.org/reverse",
-  TILE_URL: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+  TILE_URL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",   // free, no API key
   SEARCH_TIMEOUT_MS: 50000,
   ROUTE_TIMEOUT_MS: 15000,
   AI_TIMEOUT_MS: 25000,
@@ -667,10 +667,9 @@ function initMap(){
 
   L.tileLayer(CONFIG.TILE_URL, {
     maxZoom: 19,
-    subdomains: "abcd",
     keepBuffer: 4,
     updateWhenIdle: false,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(STATE.map);
 
   L.control.zoom({ position: "bottomright" }).addTo(STATE.map);
