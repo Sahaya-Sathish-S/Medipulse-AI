@@ -67,7 +67,7 @@ h1,h2,p{margin:0}
 .app{display:flex;height:100vh;height:100dvh;width:100%;overflow:hidden;overflow:clip}
 
 .panel{
-  width:var(--sidebar-w);flex:none;
+  width:50%;max-width:600px;min-width:300px;flex:none;
   display:flex;flex-direction:column;
   background:var(--bg);border-right:1px solid var(--line);
   position:relative;z-index:20;
@@ -347,36 +347,56 @@ h1,h2,p{margin:0}
 @keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
 
 /* =========================================================
-   MOBILE: map fills the screen, panel becomes a bottom sheet
+   NARROW LANDSCAPE: keep the same 50/50 split, just tighten spacing
 ========================================================= */
 @media (max-width:860px){
-  .app{display:block;position:relative}
-  .map-area{position:absolute;inset:0}
-
-  .panel{
-    position:absolute;left:0;right:0;bottom:0;width:auto;
-    height:88vh;height:88dvh;
-    border-right:0;border-top:1px solid var(--line-strong);border-radius:20px 20px 0 0;
-    box-shadow:0 -12px 40px rgba(0,0,0,.45);
-    transition:transform .38s var(--ease);will-change:transform;
-  }
-  .panel[data-state="peek"]{transform:translateY(calc(100% - var(--peek,150px)))}
-  .panel[data-state="half"]{transform:translateY(calc(100% - 50vh))}
-  .panel[data-state="full"]{transform:none}
-
-  .sheet-handle{display:block}
-  .panel-top{padding:0 16px calc(12px + env(safe-area-inset-bottom));touch-action:none;border-radius:20px 20px 0 0}
-  .panel-body{padding-bottom:env(safe-area-inset-bottom)}
-
-  .route-card{top:12px;bottom:auto;left:12px;right:68px;width:auto;transform:translateY(-14px)}
-  .route-card.active{transform:none}
-  .pick-banner{top:12px}
-  .leaflet-control-zoom{display:none}
+  .panel{min-width:260px}
+  .route-card{width:min(400px,calc(100% - 24px))}
 }
 @media (max-width:420px){
   .stats{grid-template-columns:1fr 1fr 1fr;gap:6px}
   .route-stats{gap:16px}
 }
+
+/* =========================================================
+   ROTATE-DEVICE OVERLAY: this app is designed for landscape only.
+   Shown whenever the viewport is in portrait orientation.
+========================================================= */
+.rotate-overlay{
+  display:none;
+  position:fixed;inset:0;z-index:99999;
+  flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  background:var(--bg);color:var(--ink);text-align:center;padding:32px;
+}
+@media (orientation:portrait){
+  .rotate-overlay{display:flex}
+}
+.rotate-icon{position:relative;width:110px;height:110px;display:grid;place-items:center}
+.rotate-icon .phone{
+  width:52px;height:92px;border-radius:11px;
+  border:3px solid var(--brand);background:var(--surface-2);
+  position:relative;
+  animation:rotatePhone 2.2s ease-in-out infinite;
+}
+.rotate-icon .phone::after{
+  content:"";position:absolute;bottom:7px;left:50%;transform:translateX(-50%);
+  width:16px;height:3px;border-radius:2px;background:var(--brand);
+}
+.rotate-icon .rotate-arrow{
+  position:absolute;top:-4px;right:-2px;font-size:24px;color:var(--brand);
+  animation:spinArrow 2.2s ease-in-out infinite;
+}
+@keyframes rotatePhone{
+  0%,15%{transform:rotate(0deg)}
+  55%,85%{transform:rotate(-90deg)}
+  100%{transform:rotate(-90deg)}
+}
+@keyframes spinArrow{
+  0%,15%{transform:rotate(0deg)}
+  55%,100%{transform:rotate(-100deg)}
+}
+.rotate-overlay h2{font-size:20px;font-weight:700}
+.rotate-overlay p{color:var(--muted);max-width:280px;font-size:14px}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
@@ -385,6 +405,15 @@ h1,h2,p{margin:0}
 <body>
 
 <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<div class="rotate-overlay" aria-hidden="true">
+  <div class="rotate-icon">
+    <div class="phone"></div>
+    <i class="fa-solid fa-arrow-rotate-right rotate-arrow"></i>
+  </div>
+  <h2>Rotate your device</h2>
+  <p>MediPulse is designed for landscape mode. Please turn your phone sideways to continue.</p>
+</div>
 
 <div class="app">
 
@@ -657,7 +686,7 @@ function fetchWithTimeout(url, options, timeoutMs){
     .finally(() => clearTimeout(timer));
 }
 
-function isMobile(){ return window.matchMedia("(max-width: 860px)").matches; }
+function isMobile(){ return false; } // side-by-side layout is now permanent; portrait is handled by the rotate overlay
 
 /* =========================================================
    MAP
