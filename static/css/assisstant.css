@@ -1,0 +1,22 @@
+/* Language button */
+.mp-lang{position:fixed;top:14px;right:14px;z-index:99998;font-family:Arial,sans-serif}
+.mp-lang-btn{background:rgba(10,15,40,.75);color:#fff;border:1px solid #00d9ff;border-radius:22px;padding:8px 14px;cursor:pointer;backdrop-filter:blur(8px)}
+.mp-lang-menu{display:none;margin-top:6px;background:rgba(10,15,40,.92);border:1px solid rgba(0,217,255,.5);border-radius:12px;overflow:hidden}
+.mp-lang.open .mp-lang-menu{display:block}
+.mp-lang-menu button{display:block;width:100%;padding:10px 18px;background:none;border:0;color:#fff;text-align:left;cursor:pointer}
+.mp-lang-menu button:hover{background:rgba(0,217,255,.2)}
+/* Hide Google's own banner */
+.goog-te-banner-frame,.skiptranslate>iframe{display:none!important}
+body{top:0!important}
+
+/* Voice orb */
+.mp-orb{position:fixed;bottom:22px;right:22px;z-index:99999;width:64px;height:64px;border-radius:50%;border:0;cursor:pointer;
+ background:radial-gradient(circle at 30% 30%,#00e6ff,#7b2cff 60%,#ff00ff);box-shadow:0 0 22px #00d9ff;color:#fff;font-size:26px}
+.mp-orb.listening{animation:mpPulse 1.2s infinite}
+.mp-orb.thinking{animation:mpSpin 1s linear infinite}
+.mp-orb.speaking{box-shadow:0 0 34px #00ffaa}
+@keyframes mpPulse{0%{box-shadow:0 0 0 0 rgba(0,230,255,.7)}100%{box-shadow:0 0 0 30px rgba(0,230,255,0)}}
+@keyframes mpSpin{to{transform:rotate(360deg)}}
+.mp-caption{position:fixed;bottom:98px;right:22px;max-width:320px;z-index:99999;padding:10px 14px;border-radius:14px;
+ background:rgba(10,15,40,.88);border:1px solid rgba(0,217,255,.5);color:#fff;font:14px Arial,sans-serif;display:none}
+.mp-caption.show{display:block}
