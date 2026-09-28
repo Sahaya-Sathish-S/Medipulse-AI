@@ -253,6 +253,67 @@ scheduler.start()
 # UNIVERSAL AI FUNCTION
 # =========================================================
 
+# ---- Paste into app.py (e.g., just above the "MAIN CHATBOT" section) ----
+
+VOICE_ROUTES = {
+    "chat": "/chatbot", "blood_search": "/emergency", "donate_blood": "/register",
+    "hospital_map": "/free-map", "medicine": "/medicine-search",
+    "emergency_medicine": "/emergency-medicine", "ambulance": None,
+    "reminder": "/setup", "prescription": "/prescription-scanner",
+    "eye_scan": "/scanner", "complaint": "/complaint", "home": "/home",
+}
+
+_BLOOD_WORDS = {"positive": "+", "plus": "+", "negative": "-", "minus": "-"}
+
+def _fallback_blood_group(text):
+    t = text.lower()
+    m = re.search(r"\b(ab|a|b|o)\s*(\+|-|positive|negative|plus|minus)", t)
+    if not m:
+        return None
+    sign = m.group(2)
+    return m.group(1).upper() + (_BLOOD_WORDS.get(sign, sign))
+
+@app.route("/api/voice_intent", methods=["POST"])
+def voice_intent():
+    data = request.get_json() or {}
+    text = (data.get("text") or "").strip()
+    lang = data.get("lang", "en")
+    lang_name = {"en": "English", "ta": "Tamil", "hi": "Hindi",
+                 "te": "Telugu", "ml": "Malayalam", "kn": "Kannada"}.get(lang, "English")
+
+    system = f"""You are MediPulse's voice assistant. Decide what the user wants.
+Reply ONLY with JSON: {{"intent": one of {list(VOICE_ROUTES)} or "none",
+"blood_group": "A+|A-|B+|B-|O+|O-|AB+|AB-" or null,
+"message": "text to send to the health chatbot, else null",
+"reply": "one short spoken sentence in {lang_name}"}}
+Rules: symptoms (fever, pain, cough) -> intent "chat", message = what the user said.
+Needing/searching blood -> "blood_search" with blood_group. Wanting to donate -> "donate_blood".
+Hospitals/pharmacies nearby -> "hospital_map". Ambulance -> "ambulance"."""
+    try:
+        raw = ask_ai([{"role": "system", "content": system},
+                      {"role": "user", "content": text}], temperature=0.2, max_tokens=250)
+        result = json.loads(clean_ai_json(raw)) if isinstance(raw, str) else {}
+    except Exception as e:
+        print("VOICE INTENT ERROR:", e)
+        result = {}
+
+    intent = result.get("intent") or "none"
+    if intent not in VOICE_ROUTES:
+        intent = "none"
+    blood = result.get("blood_group") or _fallback_blood_group(text)
+    if blood and intent in ("none", "chat") and re.search(r"blood|రక్త|இரத்த|रक्त", text.lower()):
+        intent = "blood_search"
+
+    return jsonify({
+        "intent": intent,
+        "blood_group": blood,
+        "message": result.get("message") or (text if intent == "chat" else None),
+        "reply": result.get("reply") or "Okay.",
+        "route": VOICE_ROUTES.get(intent),
+        "call": "tel:108" if intent == "ambulance" else None,
+    })
+
+
 def ask_ai(messages, temperature=0.4, max_tokens=1000):
 
     if not OPENROUTER_API_KEY:
