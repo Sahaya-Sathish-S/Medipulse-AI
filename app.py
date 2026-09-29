@@ -292,7 +292,7 @@ Hospitals/pharmacies nearby -> "hospital_map". Ambulance -> "ambulance"."""
     try:
         raw = ask_ai([{"role": "system", "content": system},
                       {"role": "user", "content": text}], temperature=0.2, max_tokens=250)
-        result = json.loads(clean_ai_json(raw)) if isinstance(raw, str) else {}
+        result = clean_ai_json(raw) if isinstance(raw, str) else {}
     except Exception as e:
         print("VOICE INTENT ERROR:", e)
         result = {}
