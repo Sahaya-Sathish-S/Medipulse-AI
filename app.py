@@ -3423,7 +3423,13 @@ def view(): return render_template("view.html")
 def profile_analyzer_dashboard():
     return render_template("analyzer.html")
 
+@app.route("/paitent")
+def profile_analyzer_dashboard():
+    return render_template("analyzer.html")
 
+@app.route("/hospitalfeature")
+def profile_analyzer_dashboard():
+    return render_template("analyzer.html")
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     # 0.0.0.0 (not 127.0.0.1) so Render/Railway's proxy can actually reach
