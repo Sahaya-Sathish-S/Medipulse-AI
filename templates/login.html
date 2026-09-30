@@ -1,170 +1,429 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediPulse AI | Login</title>
 
-<title>MediPulse Login</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-body{
-
-    height:100vh;
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    font-family:'Poppins',sans-serif;
-
+body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 25px;
+    font-family: 'Poppins', sans-serif;
+    color: white;
     background:
-    linear-gradient(rgba(0,0,0,0.7),
-    rgba(0,0,0,0.7)),
-    url('/static/images/background.png');
-
-    background-size:cover;
-    background-position:center;
-
-    color:white;
+        linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.72)),
+        url('/static/images/background.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
 
-.container{
-
-    width:400px;
-
-    padding:40px;
-
-    border-radius:25px;
-
-    background:rgba(255,255,255,0.08);
-
-    backdrop-filter:blur(20px);
-
-    border:1px solid rgba(255,255,255,0.1);
-
-    text-align:center;
+.container {
+    width: 100%;
+    max-width: 490px;
+    padding: 35px;
+    border-radius: 25px;
+    background: rgba(255,255,255,.09);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    border: 1px solid rgba(255,255,255,.18);
+    box-shadow: 0 15px 55px rgba(0,0,0,.35);
+    text-align: center;
 }
 
-.logo{
-
-    font-size:35px;
-
-    font-family:'Orbitron',sans-serif;
-
-    color:#00D9FF;
-
-    margin-bottom:30px;
+.logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #00D9FF;
+    text-shadow: 0 0 20px rgba(0,217,255,.45);
 }
 
-.google-btn{
-
-    width:100%;
-
-    padding:18px;
-
-    border:none;
-
-    border-radius:18px;
-
-    background:white;
-
-    color:black;
-
-    font-size:16px;
-
-    font-weight:600;
-
-    cursor:pointer;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    gap:10px;
-
-    transition:0.3s;
+.logo span {
+    color: white;
 }
 
-.google-btn:hover{
-
-    transform:translateY(-3px);
-
-    box-shadow:0 0 20px #00D9FF;
+.tagline {
+    margin-top: 8px;
+    margin-bottom: 27px;
+    color: rgba(255,255,255,.7);
+    font-size: 12px;
+    letter-spacing: 1.3px;
 }
 
+.heading {
+    font-size: 23px;
+    font-weight: 600;
+    margin-bottom: 7px;
+}
+
+.subtitle {
+    color: rgba(255,255,255,.68);
+    font-size: 12px;
+    margin-bottom: 24px;
+}
+
+/* Role selection */
+
+.roles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 22px;
+}
+
+.role-card {
+    position: relative;
+    padding: 22px 12px 18px;
+    min-width: 0;
+    cursor: pointer;
+    border-radius: 17px;
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.055);
+    transition: .25s ease;
+    color: white;
+    text-align: center;
+}
+
+.role-card:hover {
+    background: rgba(0,217,255,.09);
+    border-color: rgba(0,217,255,.6);
+    transform: translateY(-3px);
+}
+
+.role-card.selected {
+    background: rgba(0,217,255,.13);
+    border: 1.5px solid #00D9FF;
+    box-shadow: 0 0 20px rgba(0,217,255,.16);
+}
+
+.role-icon {
+    width: 53px;
+    height: 53px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    border-radius: 15px;
+    background: rgba(0,217,255,.12);
+    font-size: 27px;
+}
+
+.role-title {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.role-desc {
+    font-size: 10px;
+    color: rgba(255,255,255,.62);
+    margin-top: 5px;
+    line-height: 1.6;
+}
+
+.check {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 19px;
+    height: 19px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,.4);
+    border-radius: 50%;
+    font-size: 11px;
+    color: transparent;
+}
+
+.role-card.selected .check {
+    background: #00D9FF;
+    color: #06151c;
+    border-color: #00D9FF;
+}
+
+/* Google button */
+
+.google-btn {
+    width: 100%;
+    min-height: 52px;
+    border: none;
+    border-radius: 13px;
+    background: #fff;
+    color: #202124;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: .25s ease;
+}
+
+.google-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 0 23px rgba(0,217,255,.35);
+}
+
+.google-btn:disabled {
+    cursor: wait;
+    opacity: .65;
+}
+
+.google-btn img {
+    width: 22px;
+    height: 22px;
+}
+
+.status {
+    display: none;
+    margin-top: 15px;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.08);
+}
+
+.status.show {
+    display: block;
+}
+
+.status.error {
+    color: #ffb4b4;
+    border: 1px solid rgba(255,90,90,.3);
+}
+
+.status.info {
+    color: #8beaff;
+    border: 1px solid rgba(0,217,255,.25);
+}
+
+.divider {
+    height: 1px;
+    background: rgba(255,255,255,.13);
+    margin: 24px 0 15px;
+}
+
+.footer {
+    font-size: 10px;
+    line-height: 1.7;
+    color: rgba(255,255,255,.52);
+}
+
+.footer strong {
+    color: #00D9FF;
+    font-weight: 500;
+}
+
+@media(max-width: 420px) {
+    .container {
+        padding: 25px 19px;
+    }
+
+    .logo {
+        font-size: 27px;
+    }
+
+    .roles {
+        gap: 9px;
+    }
+
+    .role-card {
+        padding: 20px 8px 15px;
+    }
+}
 </style>
-
 </head>
 
 <body>
 
 <div class="container">
 
-    <div class="logo">
-        MediPulse
+    <div class="logo">MediPulse<span> AI</span></div>
+    <div class="tagline">SMARTER HEALTHCARE. CONNECTED CARE.</div>
+
+    <h1 class="heading">Welcome Back</h1>
+    <p class="subtitle">
+        Select your account type to continue
+    </p>
+
+    <div class="roles">
+
+        <button type="button"
+                class="role-card selected"
+                id="patientRole"
+                aria-pressed="true"
+                onclick="selectRole('patient')">
+
+            <span class="check">✓</span>
+
+            <div class="role-icon">🧑‍⚕️</div>
+            <div class="role-title">Patient</div>
+            <div class="role-desc">
+                Healthcare assistance, medicines and health information
+            </div>
+        </button>
+
+        <button type="button"
+                class="role-card"
+                id="hospitalRole"
+                aria-pressed="false"
+                onclick="selectRole('hospital')">
+
+            <span class="check">✓</span>
+
+            <div class="role-icon">🏥</div>
+            <div class="role-title">Hospital</div>
+            <div class="role-desc">
+                Healthcare organization access
+            </div>
+        </button>
+
     </div>
 
-    <button class="google-btn"
-    onclick="googleLogin()">
+    <button class="google-btn" id="googleBtn"
+            type="button" onclick="googleLogin()">
 
         <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
-        width="25">
+             alt="Google">
 
-        Continue with Google
-
+        <span id="googleText">Continue as Patient with Google</span>
     </button>
+
+    <div class="status" id="status" role="status"
+         aria-live="polite"></div>
+
+    <div class="divider"></div>
+
+    <div class="footer">
+        By continuing, you agree to use MediPulse AI
+        responsibly.<br>
+        <strong>Healthcare assistance, made accessible.</strong>
+    </div>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+const supabaseUrl =
+    "https://covmgrilycetqtpwolfl.supabase.co";
 
-const supabaseUrl = "https://covmgrilycetqtpwolfl.supabase.co"
-
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvdm1ncmlseWNldHF0cHdvbGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjE4OTcsImV4cCI6MjA5NDczNzg5N30.nu-_HD1m-7FlOfwWo0zzBvCdRBPb_vQWyvYwhkNHnQc"
+const supabaseKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
 
 const supabaseClient = supabase.createClient(
     supabaseUrl,
     supabaseKey
-)
+);
 
-async function googleLogin(){
+// Selected role
+let selectedRole = "patient";
 
-    const { data, error } =
-    await supabaseClient.auth.signInWithOAuth({
+// Update role selection
+function selectRole(role) {
+    selectedRole = role;
 
-        provider: 'google',
+    const patient = document.getElementById("patientRole");
+    const hospital = document.getElementById("hospitalRole");
+    const text = document.getElementById("googleText");
 
-        options: {
-            redirectTo: 'https://medipulse-ai-i9ox.onrender.com/profile'
-        }
+    patient.classList.toggle("selected", role === "patient");
+    hospital.classList.toggle("selected", role === "hospital");
 
-    })
+    patient.setAttribute(
+        "aria-pressed",
+        String(role === "patient")
+    );
 
-    if(error){
-        console.log(error)
-    }
+    hospital.setAttribute(
+        "aria-pressed",
+        String(role === "hospital")
+    );
 
+    text.textContent = role === "patient"
+        ? "Continue as Patient with Google"
+        : "Continue as Hospital with Google";
+
+    document.getElementById("status").className = "status";
 }
 
+// Display status
+function showStatus(message, type = "info") {
+    const status = document.getElementById("status");
+    status.textContent = message;
+    status.className = "status show " + type;
+}
+
+// Google authentication
+async function googleLogin() {
+    const btn = document.getElementById("googleBtn");
+
+    if (btn.disabled) return;
+
+    btn.disabled = true;
+
+    showStatus("Connecting to Google...", "info");
+
+    try {
+        // Store the selected role before redirecting.
+        // localStorage survives the OAuth redirect
+        // on the same website origin.
+        localStorage.setItem("medipulse_login_role", selectedRole);
+
+        // Keep the original successful login route.
+        const redirectUrl =
+            window.location.origin + "/profile";
+
+        const { data, error } =
+            await supabaseClient.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                    redirectTo: redirectUrl
+                }
+            });
+
+        if (error) {
+            throw error;
+        }
+
+        // Supabase handles the OAuth redirect.
+        // Do not manually navigate here.
+
+    } catch (error) {
+        console.error("Google login error:", error);
+
+        showStatus(
+            error.message || "Unable to start Google login.",
+            "error"
+        );
+
+        btn.disabled = false;
+    }
+}
 </script>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/assistant.css') }}">
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/assistant.css') }}">
 <script src="{{ url_for('static', filename='js/language.js') }}"></script>
 <script src="{{ url_for('static', filename='js/voice-assistant.js') }}"></script>
+
 </body>
 </html>
