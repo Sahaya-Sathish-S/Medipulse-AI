@@ -9,3 +9,4 @@ resend
 Pillow
 gTTS
 imageio-ffmpeg
+fal-client
