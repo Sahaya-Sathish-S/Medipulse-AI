@@ -1688,23 +1688,23 @@ nav{
 
                 <select id="duration">
 
-                    <option value="18">
+                    <option value="60">
 
-                        18 Seconds
-
-                    </option>
-
-
-                    <option value="15">
-
-                        15 Seconds
+                        1 Minute
 
                     </option>
 
 
-                    <option value="20">
+                    <option value="80">
 
-                        20 Seconds
+                        1 Minute 20 Seconds
+
+                    </option>
+
+
+                    <option value="100">
+
+                        1 Minute 40 Seconds
 
                     </option>
 
@@ -1719,7 +1719,7 @@ nav{
 
         <!-- =================================================
              GENERATE BUTTON
-        ================================================== -->
+    ================================================== -->
 
         <button
             id="generateBtn"
@@ -1738,7 +1738,7 @@ nav{
 
         <!-- =================================================
              ERROR BOX
-        ================================================== -->
+    ================================================== -->
 
         <div
             id="errorBox"
@@ -1758,7 +1758,7 @@ nav{
 
         <!-- =================================================
              GENERATION SCREEN
-        ================================================== -->
+    ================================================== -->
 
         <div
             id="generation"
@@ -1802,7 +1802,7 @@ nav{
 
         <!-- =================================================
              RESULT
-        ================================================== -->
+    ================================================== -->
 
         <div
             id="result"
@@ -1831,7 +1831,6 @@ nav{
                         READY
 
                     </span>
-
 
                 </div>
 
@@ -2740,8 +2739,12 @@ document
 
 
 </script>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/assistant.css') }}">
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/assistant.css') }}">
+
 <script src="{{ url_for('static', filename='js/language.js') }}"></script>
+
 <script src="{{ url_for('static', filename='js/voice-assistant.js') }}"></script>
 
 </body>
