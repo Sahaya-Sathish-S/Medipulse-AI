@@ -1,2202 +1,800 @@
-import base64
-import io
-import json
+# =========================
+# PART 1 — IMPORTS + CONFIG
+# =========================
+
 import os
-import socket
 import re
-import subprocess
-import tempfile
+import json
+import time
+import uuid
 import shutil
+import base64
+import threading
+import subprocess
 from pathlib import Path
-
-from PIL import Image, ImageFilter, ImageDraw, ImageFont
-from gtts import gTTS
-import imageio_ffmpeg
-from datetime import datetime, timedelta
-
-from flask import Flask, render_template, request, jsonify
-from flask_cors import CORS
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
-import urllib3.util.connection as urllib3_cn
-
-from pypdf import PdfReader
-
-import smtplib
-
-
-from apscheduler.schedulers.background import BackgroundScheduler
-
 from dotenv import load_dotenv
-
-# =========================================================
-# FORCE IPv4 FOR ALL OUTBOUND REQUESTS
-# =========================================================
-# Some hosts (Render/Railway free tiers, etc.) advertise IPv6 support in
-# DNS resolution but don't actually have a working IPv6 route out of the
-# container. Python/urllib3 tries IPv6 first by default, which then fails
-# instantly with "Network is unreachable" (errno 101) before ever trying
-# the IPv4 address that would have worked. Forcing IPv4-only here fixes
-# that for every outbound request this app makes (Overpass, OpenRouter,
-# Resend, etc.) - not just the Overpass proxy below.
-
-
-def _allowed_gai_family():
-    return socket.AF_INET
-
-
-urllib3_cn.allowed_gai_family = _allowed_gai_family
-
-
-# =========================================================
-# LOAD ENV
-# =========================================================
+from flask import Flask, render_template, request, jsonify, redirect
 
 load_dotenv()
 
+BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 
-# =========================================================
-# FLASK APP
-# =========================================================
+app = Flask(
+    __name__,
+    template_folder=str(BASE_DIR / "templates")
+)
 
-app = Flask(__name__)
+# =========================
+# API KEYS
+# =========================
 
-CORS(app)
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+FREE_AI_API_KEY = os.getenv("FREE_AI_API_KEY", "")
 
+# =========================
+# OPENROUTER
+# =========================
 
-# =========================================================
-# NEARBY SEARCH (Overpass / OpenStreetMap - free, no signup)
-# =========================================================
-# Back to free OSM/Overpass, since a signup-required provider isn't what
-# was wanted. The real bug here (not a data gap): when the query was
-# broadened to nwr + 8 tag filters + 30km radius with only a 9s server-side
-# timeout, Overpass was very likely running out of time mid-query. When
-# that happens, Overpass returns HTTP 200 with a "remark" field (e.g.
-# "runtime error: Query timed out") and no/partial "elements" - which the
-# old code silently treated as "genuinely found nothing," when it had
-# actually failed to finish. Fixed here by:
-#   1. Checking for "remark" and treating it as a real failure, not a
-#      valid empty result.
-#   2. A cheap, fast first pass (fewer tags, "node" only, short timeout)
-#      that mirrors what worked originally.
-#   3. A heavier "nwr" pass only as a fallback if the cheap pass is truly
-#      empty (not timed out), to still catch way/relation-tagged places
-#      without paying that cost on every single search.
-
-OVERPASS_ENDPOINTS = [
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
-    "https://overpass.osm.ch/api/interpreter",
-]
-
-OVERPASS_HEADERS = {
-    "User-Agent": "MediPulseAI/1.0 (nearby medical facility search; contact: sahayasathish60@gmail.com)"
-}
-
-
-def run_overpass_query(query, timeout_seconds):
-    """Try each mirror in turn. Returns (elements, errors).
-    elements is None if every mirror failed or timed out server-side -
-    that's the signal to try the next fallback step, not 'zero results'."""
-    errors = []
-    for endpoint in OVERPASS_ENDPOINTS:
-        try:
-            resp = requests.post(endpoint, data={"data": query}, headers=OVERPASS_HEADERS, timeout=timeout_seconds)
-            resp.raise_for_status()
-            result = resp.json()
-            if result.get("remark"):
-                # Overpass ran but hit an internal error/timeout - NOT a
-                # valid "nothing found" result. Try the next mirror.
-                errors.append(f"{endpoint} -> Overpass remark: {result['remark']}")
-                continue
-            return result.get("elements", []), errors
-        except Exception as e:
-            errors.append(f"{endpoint} -> {type(e).__name__}: {e}")
-    return None, errors
-
-
-@app.route("/nearby_search", methods=["GET"])
-def nearby_search():
-    try:
-        place_type = request.args.get("type")
-        raw_lat = request.args.get("lat")
-        raw_lng = request.args.get("lng")
-
-        if not raw_lat or not raw_lng:
-            return jsonify({"error": "lat and lng query params are required"}), 400
-
-        try:
-            lat = float(raw_lat)
-            lng = float(raw_lng)
-        except ValueError:
-            return jsonify({"error": f"lat/lng must be numeric"}), 400
-
-        if place_type not in ("hospital", "pharmacy"):
-            return jsonify({"error": "type must be 'hospital' or 'pharmacy'"}), 400
-
-        # High-performance single-pass regex query
-        def build_optimized_query(r):
-            if place_type == "pharmacy":
-                return f"""
-                [out:json][timeout:20];
-                (
-                  node["amenity"~"pharmacy|chemist"](around:{r},{lat},{lng});
-                  way["amenity"~"pharmacy|chemist"](around:{r},{lat},{lng});
-                  node["healthcare"="pharmacy"](around:{r},{lat},{lng});
-                );
-                out center;
-                """
-            else:
-                return f"""
-                [out:json][timeout:20];
-                (
-                  node["amenity"~"hospital|clinic|doctors"](around:{r},{lat},{lng});
-                  way["amenity"~"hospital|clinic|doctors"](around:{r},{lat},{lng});
-                  node["healthcare"~"hospital|clinic|centre|doctor"](around:{r},{lat},{lng});
-                  way["healthcare"~"hospital|clinic|centre|doctor"](around:{r},{lat},{lng});
-                );
-                out center;
-                """
-
-        headers = {
-            "User-Agent": "MediPulseAI/1.0 (contact: sahayasathish60@gmail.com)"
-        }
-
-        radii_to_try = [15000, 35000]
-        PER_MIRROR_TIMEOUT = 12
-
-        # 1. Try Overpass API Mirrors
-        for r in radii_to_try:
-            query = build_optimized_query(r)
-            for endpoint in OVERPASS_ENDPOINTS:
-                try:
-                    resp = requests.post(endpoint, data={"data": query}, headers=headers, timeout=PER_MIRROR_TIMEOUT)
-                    if resp.status_code == 200:
-                        result = resp.json()
-                        elements = result.get("elements", [])
-                        if elements:
-                            result["_radius_used_meters"] = r
-                            return jsonify(result)
-                except Exception as e:
-                    continue
-
-        # 2. Fallback to OpenStreetMap Nominatim API if Overpass returns 0 results
-        nominatim_query = "hospital" if place_type == "hospital" else "pharmacy"
-        nom_url = f"https://nominatim.openstreetmap.org/search?format=json&q={nominatim_query}&viewbox={lng-0.35},{lat+0.35},{lng+0.35},{lat-0.35}&bounded=1&limit=25"
-        
-        nom_resp = requests.get(nom_url, headers=headers, timeout=10)
-        if nom_resp.status_code == 200:
-            nom_data = nom_resp.json()
-            elements = []
-            for item in nom_data:
-                elements.append({
-                    "id": item.get("place_id"),
-                    "lat": float(item.get("lat")),
-                    "lon": float(item.get("lon")),
-                    "tags": {"name": item.get("display_name", "").split(",")[0]}
-                })
-            if elements:
-                return jsonify({"elements": elements, "_radius_used_meters": 35000, "_source": "nominatim_fallback"})
-
-        return jsonify({
-            "elements": [],
-            "_radius_used_meters": 35000,
-            "_note": "No facilities found within search radius."
-        })
-
-    except Exception as e:
-        return jsonify({"error": f"nearby_search crashed: {str(e)}"}), 500
-
-
-# =========================================================
-# API CONFIG
-# =========================================================
-
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-
-# =========================================================
-# SAFE WORKING MODELS
-# =========================================================
-
 MODELS = [
-
     "openai/gpt-4o-mini",
-
     "meta-llama/llama-3.1-8b-instruct",
-
     "qwen/qwen-2.5-7b-instruct",
-
     "microsoft/phi-3-mini-128k-instruct"
-
 ]
 
+# Optional: OPENROUTER_MODELS="model1,model2" in .env overrides the list
+_env_models = os.getenv("OPENROUTER_MODELS", "").strip()
+if _env_models:
+    MODELS = [m.strip() for m in _env_models.split(",") if m.strip()]
 
-# =========================================================
-# EMAIL CONFIG
-# =========================================================
+# =========================
+# FREE.AI
+# =========================
 
-GMAIL_USER = "sahayasathish60@gmail.com"
-GMAIL_APP_PASSWORD = "kqqg dldi gyce jcdi"
+FREE_AI_BASE_URL = "https://api.free.ai"
 
-# =========================================================
-# BACKGROUND SCHEDULER
-# =========================================================
+FREE_AI_IMAGE_URL = "https://api.free.ai/v1/image/generate/"
 
-scheduler = BackgroundScheduler(daemon=True)
+FREE_AI_TTS_URL = "https://api.free.ai/v1/tts/"
 
-scheduler.start()
+# =========================
+# OUTPUT DIRECTORY
+# =========================
 
+MEDICAL_VIDEO_OUTPUT_DIR = BASE_DIR / "static" / "medical_videos"
 
-# =========================================================
-# UNIVERSAL AI FUNCTION
-# =========================================================
-
-# ---- Paste into app.py (e.g., just above the "MAIN CHATBOT" section) ----
-
-VOICE_ROUTES = {
-    "chat": "/chatbot", "blood_search": "/emergency", "donate_blood": "/register",
-    "hospital_map": "/free-map", "medicine": "/medicine-search",
-    "emergency_medicine": "/emergency-medicine", "ambulance": None,
-    "reminder": "/setup", "prescription": "/prescription-scanner",
-    "eye_scan": "/scanner", "complaint": "/complaint", "home": "/home",
-}
-
-_BLOOD_WORDS = {"positive": "+", "plus": "+", "negative": "-", "minus": "-"}
-
-def _fallback_blood_group(text):
-    t = text.lower()
-    m = re.search(r"\b(ab|a|b|o)\s*(\+|-|positive|negative|plus|minus)", t)
-    if not m:
-        return None
-    sign = m.group(2)
-    return m.group(1).upper() + (_BLOOD_WORDS.get(sign, sign))
-
-@app.route("/api/voice_intent", methods=["POST"])
-def voice_intent():
-    data = request.get_json() or {}
-    text = (data.get("text") or "").strip()
-    lang = data.get("lang", "en")
-    lang_name = {"en": "English", "ta": "Tamil", "hi": "Hindi",
-                 "te": "Telugu", "ml": "Malayalam", "kn": "Kannada"}.get(lang, "English")
-
-    system = f"""You are MediPulse's voice assistant. Decide what the user wants.
-Reply ONLY with JSON: {{"intent": one of {list(VOICE_ROUTES)} or "none",
-"blood_group": "A+|A-|B+|B-|O+|O-|AB+|AB-" or null,
-"message": "text to send to the health chatbot, else null",
-"reply": "one short spoken sentence in {lang_name}"}}
-Rules: symptoms (fever, pain, cough) -> intent "chat", message = what the user said.
-Needing/searching blood -> "blood_search" with blood_group. Wanting to donate -> "donate_blood".
-Hospitals/pharmacies nearby -> "hospital_map". Ambulance -> "ambulance"."""
-    try:
-        raw = ask_ai([{"role": "system", "content": system},
-                      {"role": "user", "content": text}], temperature=0.2, max_tokens=250)
-        result = clean_ai_json(raw) if isinstance(raw, str) else {}
-    except Exception as e:
-        print("VOICE INTENT ERROR:", e)
-        result = {}
-
-    intent = result.get("intent") or "none"
-    if intent not in VOICE_ROUTES:
-        intent = "none"
-    blood = result.get("blood_group") or _fallback_blood_group(text)
-    if blood and intent in ("none", "chat") and re.search(r"blood|రక్త|இரத்த|रक्त", text.lower()):
-        intent = "blood_search"
-
-    return jsonify({
-        "intent": intent,
-        "blood_group": blood,
-        "message": result.get("message") or (text if intent == "chat" else None),
-        "reply": result.get("reply") or "Okay.",
-        "route": VOICE_ROUTES.get(intent),
-        "call": "tel:108" if intent == "ambulance" else None,
-    })
-
-
-def ask_ai(messages, temperature=0.4, max_tokens=1000):
-
-    if not OPENROUTER_API_KEY:
-
-        return "❌ OPENROUTER_API_KEY missing in .env"
-
-    headers = {
-
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-
-        "Content-Type": "application/json",
-
-        "HTTP-Referer": "http://localhost:5000",
-
-        "X-Title": "MediPulse AI"
-
-    }
-
-    for model in MODELS:
-
-        try:
-
-            print(f"\n===== TRYING MODEL: {model} =====")
-
-            payload = {
-
-                "model": model,
-
-                "messages": messages,
-
-                "temperature": temperature,
-
-                "max_tokens": max_tokens
-
-            }
-
-            response = requests.post(
-
-                OPENROUTER_URL,
-
-                headers=headers,
-
-                json=payload,
-
-                timeout=60
-
-            )
-
-            print("STATUS:", response.status_code)
-
-            if response.status_code == 200:
-
-                result = response.json()
-
-                reply = result["choices"][0]["message"]["content"]
-
-                print("SUCCESS:", model)
-
-                return reply
-
-            else:
-
-                print("FAILED MODEL:", model)
-
-                print(response.text)
-
-        except Exception as e:
-
-            print("MODEL ERROR:", str(e))
-
-    return (
-        "⚠️ AI service unavailable temporarily. "
-        "Please try again later."
-    )
-
-
-# =========================================================
-# EMAIL FUNCTION
-# =========================================================
-
-# =========================================================
-# EMAIL CONFIG (UPDATED FOR RENDER COMPATIBILITY VIA HTTP)
-# =========================================================
-
-RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-RESEND_URL = "https://api.resend.com/emails"
-# Note: On Resend's free tier without a custom domain,
-# your "From" email must be onboarding@resend.dev
-EMAIL_FROM_ADDRESS = "onboarding@resend.dev"
-
-
-# =========================================================
-# FAKE MEDICINE DETECTOR
-# =========================================================
-
-FAKE_MEDICINE_SYSTEM_PROMPT = """
-You are MediPulse Fake Medicine Detector AI, a pharmaceutical packaging
-authenticity screening assistant. You are NOT a lab test and you know it —
-your job is a careful visual screen, biased toward caution.
-
-Analyze the uploaded image of a medicine strip, blister pack, bottle, or box.
-
-STEP 1 — Extract, if visible:
-- Medicine / brand name
-- Manufacturer name
-- Batch number
-- Manufacturing date
-- Expiry date
-- Manufacturing license / registration number
-
-STEP 2 — Check for common counterfeit packaging red flags:
-- Blurry, smudged, pixelated, or low-resolution printing
-- Spelling errors or inconsistent fonts/sizes in the drug or manufacturer name
-- Missing batch number, mfg date, or expiry date
-- Expiry date already passed (compare to today if a date is legible)
-- Missing or implausible manufacturing license / registration number
-- Poor-quality foil, seal, embossing, or packaging material
-- Packaging design, color scheme, or logo that looks inconsistent or crudely
-  reproduced
-
-STEP 3 — Decide a verdict:
-- "genuine"   -> no red flags, legible required details, consistent printing
-- "suspicious"-> some missing/unclear details or minor inconsistencies
-- "fake"      -> clear red flags (expired, missing critical details, obvious
-                 print/spelling defects, implausible packaging)
-- "unclear"   -> image too blurry/dark/cropped to make any real judgment
-
-CRITICAL SAFETY RULE: when evidence is ambiguous, choose "suspicious" rather
-than "genuine". A missed fake is far worse than an extra warning shown to a
-genuine medicine. Never output "genuine" unless the packaging is clearly
-legible AND shows no red flags.
-
-Respond with STRICT JSON ONLY — no markdown, no code fences, no text outside
-the JSON object — in exactly this shape:
-
-{
-  "verdict": "genuine" | "suspicious" | "fake" | "unclear",
-  "confidence": <integer 0-100, your confidence in the verdict itself>,
-  "medicine_name": "<string or empty>",
-  "manufacturer": "<string or empty>",
-  "batch_no": "<string or empty>",
-  "mfg_date": "<string or empty>",
-  "exp_date": "<string or empty>",
-  "red_flags": ["<short phrase>", ...],
-  "positive_signs": ["<short phrase>", ...],
-  "summary": "<2-3 sentence plain-language explanation of the verdict>",
-  "disclaimer": "<one sentence reminding the user this is a preliminary AI
-                  screening, not a lab or pharmacist verification, and to
-                  confirm suspicious/fake results before use>"
-}
-
-Only output the JSON object. Nothing else.
-"""
-
-
-@app.route("/api/detect_fake_medicine", methods=["POST"])
-def detect_fake_medicine():
-
-    try:
-
-        data = request.get_json()
-
-        file_content = data.get("file_content", "")
-        file_type = data.get("file_type", "image/jpeg")
-
-        if not file_content:
-            return jsonify({
-                "status": "error",
-                "message": "Please upload a photo of the medicine packaging."
-            })
-
-        base64_clean = (
-            file_content.split(",")[1]
-            if "," in file_content
-            else file_content
-        )
-
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost:5000",
-            "X-Title": "MediPulse AI"
-        }
-
-        payload = {
-            "model": "openai/gpt-4o-mini",
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": FAKE_MEDICINE_SYSTEM_PROMPT},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{file_type};base64,{base64_clean}"
-                            }
-                        }
-                    ]
-                }
-            ],
-            "temperature": 0.2,
-            "max_tokens": 800
-        }
-
-        response = requests.post(
-            OPENROUTER_URL,
-            headers=headers,
-            json=payload,
-            timeout=60
-        )
-
-        print("FAKE MEDICINE STATUS:", response.status_code)
-
-        if response.status_code != 200:
-            print(response.text)
-            return jsonify({
-                "status": "error",
-                "message": f"Detection AI Error: {response.status_code}"
-            })
-
-        result = response.json()
-        raw_reply = result["choices"][0]["message"]["content"]
-
-        # strip accidental code fences, just in case
-        cleaned = raw_reply.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.strip("`")
-            if cleaned.lower().startswith("json"):
-                cleaned = cleaned[4:]
-            cleaned = cleaned.strip()
-
-        try:
-            parsed = json.loads(cleaned)
-        except Exception:
-            # graceful fallback so the UI never breaks on a malformed reply —
-            # always err toward "suspicious", never silently pass a medicine
-            parsed = {
-                "verdict": "suspicious",
-                "confidence": 40,
-                "medicine_name": "",
-                "manufacturer": "",
-                "batch_no": "",
-                "mfg_date": "",
-                "exp_date": "",
-                "red_flags": ["Could not fully parse the packaging analysis."],
-                "positive_signs": [],
-                "summary": "The image could not be fully analyzed. Please retake the photo in good lighting with the label fully visible, and verify this medicine manually before use.",
-                "disclaimer": "This is an AI preliminary screening only, not a lab or pharmacist verification."
-            }
-
-        parsed["status"] = "success"
-
-        return jsonify(parsed)
-
-    except Exception as e:
-
-        print("FAKE MEDICINE DETECTOR ERROR:", str(e))
-
-        return jsonify({
-            "status": "error",
-            "message": f"Detection processing error: {str(e)}"
-        })
-
-
-# =========================================================
-# EMAIL FUNCTION (BYPASSES SMTP BLOCKS ON CLOUD HOSTS)
-# =========================================================
-
-def send_email(to_email, subject, body):
-    if not RESEND_API_KEY:
-        print("EMAIL ERROR: RESEND_API_KEY missing in .env")
-        return False
-
-    try:
-        headers = {
-            "Authorization": f"Bearer {RESEND_API_KEY}",
-            "Content-Type": "application/json"
-        }
-
-        payload = {
-            "from": EMAIL_FROM_ADDRESS,
-            "to": [to_email],
-            "subject": subject,
-            "text": body  # Sends clean plain text matching your setup
-        }
-
-        print(f"\n===== SENDING EMAIL VIA HTTP TO: {to_email} =====")
-        response = requests.post(
-            RESEND_URL,
-            headers=headers,
-            json=payload,
-            timeout=15
-        )
-
-        print("EMAIL STATUS:", response.status_code)
-
-        if response.status_code in [200, 201]:
-            print("SUCCESS: Email delivered over HTTP successfully.")
-            return True
-        else:
-            print("FAILED EMAIL REQUEST:", response.text)
-            return False
-
-    except Exception as e:
-        print("EMAIL CRITICAL ERROR:", str(e))
-        return False
-
-
-# =========================================================
-# REMINDER FUNCTIONS
-# =========================================================
-
-def send_initial_reminder(data):
-
-    subject = f"⚠️ Medicine Reminder: {data['medicine_name']}"
-
-    body = f"""
-Hello {data['username']},
-
-Time to take your medicine.
-
-Medicine: {data['medicine_name']}
-Dosage: {data['dosage']}
-
-Please mark it as taken.
-"""
-
-    send_email(data["user_email"], subject, body)
-
-    escalation_time = datetime.now() + timedelta(minutes=30)
-
-    escalation_job_id = f"escalate_{data['medicine_id']}"
-
-    if scheduler.get_job(escalation_job_id):
-
-        scheduler.remove_job(escalation_job_id)
-
-    scheduler.add_job(
-
-        id=escalation_job_id,
-
-        func=send_family_escalation,
-
-        trigger="date",
-
-        run_date=escalation_time,
-
-        args=[data]
-
-    )
-
-
-def send_family_escalation(data):
-
-    subject = "🚨 Missed Medication Alert"
-
-    body = f"""
-{data['username']} has not taken:
-
-{data['medicine_name']}
-
-Please check immediately.
-"""
-
-    send_email(data["family_email"], subject, body)
-
-
-# =========================================================
-# SCHEDULE REMINDER
-# =========================================================
-
-@app.route("/api/schedule_reminder", methods=["POST"])
-def schedule_reminder():
-
-    try:
-
-        data = request.get_json()
-
-        medicine_id = data.get("medicine_id")
-
-        medicine_time = data.get("medicine_time")
-
-        hour, minute = map(int, medicine_time.split(":"))
-
-        job_id = f"reminder_{medicine_id}"
-
-        if scheduler.get_job(job_id):
-
-            scheduler.remove_job(job_id)
-
-        scheduler.add_job(
-
-            id=job_id,
-
-            func=send_initial_reminder,
-
-            trigger="cron",
-
-            hour=hour,
-
-            minute=minute,
-
-            args=[data]
-
-        )
-
-        return jsonify({
-
-            "status": "success",
-
-            "message": "Reminder scheduled"
-
-        })
-
-    except Exception as e:
-
-        return jsonify({
-
-            "status": "error",
-
-            "message": str(e)
-
-        })
-
-@app.route("/api/medipulse_profile_deep_analyzer", methods=["POST"])
-def medipulse_profile_deep_analyzer():
-    try:
-        data = request.get_json()
-        # The JS frontend passes the object inside the 'profile' key
-        profile = data.get("profile", {})
-
-        if not profile:
-            return jsonify({
-                "status": "error",
-                "reply": "⚠️ No profile dataset found to process. Please fill out your profile."
-            })
-
-        # Structured diagnostic prompt with strict structural rules
-        prompt = f"""
-You are the master clinical analyst for MediPulse AI, an advanced medical ecosystem.
-Analyze the following patient profile metrics thoroughly and output an insightful, deeply supportive, clinical response that is EXACTLY around 400 words. Do not exceed or fall short significantly.
-
-=== PATIENT COMPREHENSIVE DOSSIER ===
-- Full Name: {profile.get('full_name', 'N/A')}
-- Age / Gender: {profile.get('age', 'N/A')} years old | {profile.get('gender', 'N/A')}
-- Blood Type: {profile.get('blood_group', 'N/A')}
-- Current Profession: {profile.get('occupation', 'N/A')}
-- Academic/Studies: {profile.get('studies', 'N/A')}
-- Family Core Backdrop: Marital Status: {profile.get('marital_status', 'N/A')} | Family Occupation: {profile.get('family_occupation', 'N/A')}
-- Reported Chronic/Acute Health Problems: {profile.get('health_problem', 'No acute problems specified.')}
-
-=== EVALUATION OUTPUT PROTOCOL STRUCTURE ===
-1. CLINICAL ASSESSMENT SUMMARY: Cross-examine age, occupation strain, and reported health complaints.
-2. TAILORED ROOT-CAUSE STRATEGIES & LIFE PROTOCOLS: Actionable holistic, nutritional, ergonomic, or therapeutic guidance.
-3. PREVENTATIVE CARE RISK PROFILE: Custom warnings mapped directly to their lifestyle metrics.
-
-Maintain an empathetic, authoritative, and brilliantly sharp persona. Ensure the final text reads naturally as an integrated evaluation without code block schemas.
-"""
-
-        messages = [
-            {
-                "role": "system",
-                "content": "You are a Chief Clinical Analyst and Medical UI Informatics Officer for MediPulse AI system."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-
-        # Call your existing fallback model sequencer
-        ai_reply = ask_ai(messages, temperature=0.5, max_tokens=1200)
-
-        return jsonify({
-            "status": "success",
-            "reply": ai_reply
-        })
-
-    except Exception as e:  # Fixed syntax here from 'catch' to 'except'
-        print("PROFILE ANALYSIS CRITICAL EXCEPTION ERROR:", str(e))
-        return jsonify({
-            "status": "error",
-            "reply": f"An infrastructure anomaly occurred during diagnostic processing: {str(e)}"
-        })
-
-
-# =========================================================
-# MEDICATION TAKEN
-# =========================================================
-
-@app.route("/api/medication_taken", methods=["POST"])
-def medication_taken():
-
-    try:
-
-        data = request.get_json()
-
-        medicine_id = data.get("medicine_id")
-
-        escalation_job_id = f"escalate_{medicine_id}"
-
-        if scheduler.get_job(escalation_job_id):
-
-            scheduler.remove_job(escalation_job_id)
-
-        return jsonify({
-
-            "status": "success"
-
-        })
-
-    except Exception as e:
-
-        return jsonify({
-
-            "status": "error",
-
-            "message": str(e)
-
-        })
-
-
-# =========================================================
-# EMERGENCY EMAIL
-# =========================================================
-
-@app.route("/api/send_emergency_email", methods=["POST"])
-def send_emergency_email():
-
-    try:
-
-        data = request.get_json()
-
-        subject = "🚨 Emergency Blood Requirement"
-
-        body = f"""
-Dear {data.get('donor_name')},
-
-Emergency blood needed.
-
-Blood Group: {data.get('blood_group')}
-
-Please help if possible.
-
-- MediPulse
-"""
-
-        send_email(
-
-            data.get("to_email"),
-
-            subject,
-
-            body
-
-        )
-
-        return jsonify({
-
-            "status": "success"
-
-        })
-
-    except Exception as e:
-
-        return jsonify({
-
-            "status": "error",
-
-            "message": str(e)
-
-        })
-
-
-# =========================================================
-# PDF TEXT EXTRACTOR
-# =========================================================
-
-def extract_text_from_pdf(base64_data):
-
-    try:
-
-        if "," in base64_data:
-
-            base64_data = base64_data.split(",")[1]
-
-        pdf_bytes = base64.b64decode(base64_data)
-
-        pdf_file = io.BytesIO(pdf_bytes)
-
-        reader = PdfReader(pdf_file)
-
-        extracted_text = ""
-
-        for page in reader.pages:
-
-            text = page.extract_text()
-
-            if text:
-
-                extracted_text += text + "\n"
-
-        return extracted_text
-
-    except Exception as e:
-
-        return f"PDF Extraction Error: {str(e)}"
-
-
-# =========================================================
-# MAIN CHATBOT
-# =========================================================
-
-@app.route("/chat", methods=["POST"])
-def chat():
-
-    try:
-
-        data = request.get_json()
-
-        user_message = data.get("message", "")
-
-        history = data.get("history", [])
-
-        messages = [
-
-            {
-
-                "role": "system",
-
-                "content": """
-You are MediPulse AI.
-
-You are:
-- Professional
-- Friendly
-- Helpful
-- Short and clear
-
-Languages:
-- English
-- Tamil
-- Hindi
-
-You are made by Sahaya Sathish S he is an aspiring first year computer Science Engineering student studying in DMI Engineering College. He also has other inspiring projects like CodeForge AI(A student coding teacher), EcoSort AI(A Smart dustbin powered with AI), Busy AI(A business promoting agent with social media marketting). He is from Vadakkankulam, Tirunelveli, Tamil Nadu. Here you can assist with health related queries, navigate to the nearby hospital and the pharmacy shop, emergency medicine finder related to the problems or symptoms provided by the user, you can call the ambulance faster, you can remaind the user for taking medicine with email message sending,you can store and call the blood donators while emergency occurred and AI eye scanner for identifying the problem in the eye and you can save the complaints from the user regarding hospital management and solve with the help of human and analyze your profile also.
-"""
-
-            }
-
-        ]
-
-        for msg in history:
-
-            role = msg.get("role", "user")
-
-            content = msg.get("content", "")
-
-            messages.append({
-
-                "role": role,
-
-                "content": content
-
-            })
-
-        messages.append({
-
-            "role": "user",
-
-            "content": user_message
-
-        })
-
-        ai_reply = ask_ai(messages)
-
-        return jsonify({
-
-            "reply": ai_reply
-
-        })
-
-    except Exception as e:
-
-        print("CHAT ERROR:", str(e))
-
-        return jsonify({
-
-            "reply": "⚠️ Chatbot unavailable."
-
-        })
-
-
-# =========================================================
-# MEDICINE AI — GUIDED SYMPTOM CHECK (3-5 QUESTIONS -> CONFIRM -> FINAL)
-# =========================================================
-
-def count_questions_asked(history):
-    """Counts how many 'question' stage turns the AI has already asked."""
-    count = 0
-    for msg in history:
-        if msg.get("role") == "assistant":
-            try:
-                parsed = json.loads(msg.get("content", ""))
-                if parsed.get("stage") == "question":
-                    count += 1
-            except Exception:
-                pass
-    return count
-
-
-def build_medicine_ai_system_prompt(question_count):
-
-    return f"""
-You are MediPulse Emergency Medicine Finder AI, a careful pharmacy/triage assistant.
-
-Your job in this conversation:
-1. The user describes a health problem or symptom.
-2. Ask clarifying questions ONE AT A TIME to clearly understand the problem
-   (duration, severity, other symptoms, age, allergies, existing conditions, etc).
-   Ask a MINIMUM of 3 and a MAXIMUM of 5 questions total before moving on.
-3. Once you have asked enough questions (at least 3, no more than 5) and understand
-   the problem clearly, STOP asking questions. Instead, summarize the FULL problem
-   in your own words and ask the user to confirm it is correct.
-4. Once the user confirms, compile everything discussed into a final answer with
-   suggested OTC medicine name(s), dosage, general advice, and safety warnings.
-   Always include a disclaimer to see a doctor for anything serious or if symptoms
-   persist or worsen.
-
-You have already asked {question_count} clarifying question(s) so far in this conversation.
-
-CRITICAL: Respond with STRICT JSON ONLY. No markdown, no code fences, no text outside
-the JSON object. Use exactly one of these shapes:
-
-Clarifying question:
-{{"stage":"question","message":"<your single question>"}}
-
-Confirmation step:
-{{"stage":"confirm","message":"<summary of the problem you understood, ending by asking the user to confirm>"}}
-
-Final answer (ONLY after the user has confirmed):
-{{"stage":"final","message":"<short empathetic intro line>","medicines":[{{"name":"<medicine name>","dosage":"<dosage>","instructions":"<how/when to take>"}}],"advice":"<general advice>","warning":"<safety warning / when to seek emergency care>"}}
-
-Rules:
-- Never ask more than 5 questions total.
-- Never skip the confirm stage before giving the final answer.
-- If at any point the symptoms suggest a medical emergency (e.g. chest pain,
-  difficulty breathing, severe bleeding, loss of consciousness, stroke signs),
-  skip straight to stage "final" and urgently advise calling emergency services /
-  going to the ER, with the warning field emphasizing urgency instead of OTC medicine.
-- Keep each question short and directly useful for narrowing down the right medicine.
-- Only output the JSON object. Nothing else.
-"""
-
-
-@app.route("/medicine_ai", methods=["POST"])
-def medicine_ai():
-
-    try:
-
-        data = request.get_json()
-
-        user_message = data.get("message", "")
-        history = data.get("history", [])
-
-        question_count = count_questions_asked(history)
-
-        messages = [
-            {
-                "role": "system",
-                "content": build_medicine_ai_system_prompt(question_count)
-            }
-        ]
-
-        # carry forward prior turns (assistant turns are stored as JSON strings)
-        for msg in history:
-            messages.append({
-                "role": msg.get("role", "user"),
-                "content": msg.get("content", "")
-            })
-
-        messages.append({
-            "role": "user",
-            "content": user_message
-        })
-
-        raw_reply = ask_ai(messages, temperature=0.3, max_tokens=700)
-
-        # clean up in case the model wraps JSON in code fences
-        cleaned = raw_reply.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.strip("`")
-            if cleaned.lower().startswith("json"):
-                cleaned = cleaned[4:]
-            cleaned = cleaned.strip()
-
-        try:
-            parsed = json.loads(cleaned)
-        except Exception:
-            # graceful fallback so the chat doesn't break if the model
-            # returns something that isn't valid JSON
-            parsed = {
-                "stage": "question",
-                "message": raw_reply.strip() or "Could you tell me a bit more about your symptoms?"
-            }
-
-        return jsonify(parsed)
-
-    except Exception as e:
-
-        print("MEDICINE AI ERROR:", str(e))
-
-        return jsonify({
-            "stage": "question",
-            "message": "Sorry, something went wrong. Could you describe your symptom again?"
-        })
-
-
-# =========================================================
-# PRESCRIPTION AI
-# =========================================================
-
-@app.route("/prescription_ai", methods=["POST"])
-def prescription_ai():
-
-    try:
-
-        data = request.get_json()
-
-        file_content = data.get("file_content", "")
-        file_type = data.get("file_type", "")
-
-        if not file_content:
-
-            return jsonify({
-
-                "reply": "Please upload a prescription."
-
-            })
-
-        headers = {
-
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-
-            "Content-Type": "application/json",
-
-            "HTTP-Referer": "http://localhost:5000",
-
-            "X-Title": "MediPulse AI"
-
-        }
-
-        # =====================================================
-        # PDF SUPPORT
-        # =====================================================
-
-        if file_type == "application/pdf":
-
-            extracted_text = extract_text_from_pdf(file_content)
-
-            prompt = f"""
-Analyze this medical prescription.
-
-Extract:
-- Medicine names
-- Dosage
-- Timing
-- Instructions
-
-TEXT:
-{extracted_text}
-
-Keep response clean and short.
-"""
-
-            payload = {
-
-                "model": "openai/gpt-3.5-turbo",
-
-                "messages": [
-
-                    {
-                        "role": "system",
-
-                        "content": "You are a prescription analysis AI."
-                    },
-
-                    {
-                        "role": "user",
-
-                        "content": prompt
-                    }
-
-                ],
-
-                "max_tokens": 700
-
-            }
-
-        # =====================================================
-        # IMAGE SUPPORT
-        # =====================================================
-
-        elif "image" in file_type:
-
-            base64_clean = (
-                file_content.split(",")[1]
-                if "," in file_content
-                else file_content
-            )
-
-            prompt = """
-Analyze this prescription image carefully.
-
-Extract:
-- Medicine names
-- Dosage
-- Timing
-- Instructions
-
-If handwriting is unclear,
-mention it politely.
-
-Keep response professional.
-"""
-
-            payload = {
-
-                "model": "openai/gpt-4o-mini",
-
-                "messages": [
-
-                    {
-
-                        "role": "user",
-
-                        "content": [
-
-                            {
-                                "type": "text",
-                                "text": prompt
-                            },
-
-                            {
-                                "type": "image_url",
-
-                                "image_url": {
-
-                                    "url": f"data:{file_type};base64,{base64_clean}"
-
-                                }
-                            }
-
-                        ]
-
-                    }
-
-                ],
-
-                "max_tokens": 700
-
-            }
-
-        else:
-
-            return jsonify({
-
-                "reply": "Unsupported file format."
-
-            })
-
-        # =====================================================
-        # SEND REQUEST
-        # =====================================================
-
-        response = requests.post(
-
-            OPENROUTER_URL,
-
-            headers=headers,
-
-            json=payload,
-
-            timeout=60
-
-        )
-
-        print("PRESCRIPTION STATUS:", response.status_code)
-        print(response.text)
-
-        if response.status_code != 200:
-
-            return jsonify({
-
-                "reply": f"Prescription AI Error: {response.status_code}"
-
-            })
-
-        result = response.json()
-
-        ai_reply = result["choices"][0]["message"]["content"]
-
-        return jsonify({
-
-            "reply": ai_reply
-
-        })
-
-    except Exception as e:
-
-        print("PRESCRIPTION ERROR:", str(e))
-
-        return jsonify({
-
-            "reply": f"Prescription processing error: {str(e)}"
-
-        })
-
-# =========================================================
-# ANALYTICS AI
-# =========================================================
-
-@app.route("/analyze_ai", methods=["POST"])
-def analyze_ai():
-
-    try:
-
-        data = request.get_json()
-
-        purchases = data.get("purchases", [])
-
-        total = 0
-
-        for item in purchases:
-
-            total += float(item.get("total_price", 0))
-
-        prompt = f"""
-Total pharmacy sales: ₹{total}
-
-Give:
-- Business insights
-- Stock ideas
-- Marketing ideas
-"""
-
-        messages = [
-
-            {
-
-                "role": "system",
-
-                "content": "You are a business analyst."
-
-            },
-
-            {
-
-                "role": "user",
-
-                "content": prompt
-
-            }
-
-        ]
-
-        reply = ask_ai(messages)
-
-        return jsonify({
-
-            "reply": reply
-
-        })
-
-    except Exception as e:
-
-        return jsonify({
-
-            "reply": str(e)
-
-        })
-
-
-# =========================================================
-# MAP AI
-# =========================================================
-
-@app.route("/map_ai", methods=["POST"])
-def map_ai():
-
-    try:
-
-        data = request.get_json()
-
-        prompt = f"""
-Destination: {data.get('destination')}
-
-Distance: {data.get('distance')}
-
-Duration: {data.get('duration')}
-
-Message:
-{data.get('message')}
-
-Give navigation help.
-"""
-
-        messages = [
-
-            {
-
-                "role": "system",
-
-                "content": "You are a navigation AI."
-
-            },
-
-            {
-
-                "role": "user",
-
-                "content": prompt
-
-            }
-
-        ]
-
-        reply = ask_ai(messages)
-
-        return jsonify({
-
-            "reply": reply
-
-        })
-
-    except Exception as e:
-
-        return jsonify({
-
-            "reply": str(e)
-
-        })
-
-
-# =========================================================
-# IMAGE ANALYSIS AI
-# =========================================================
-
-@app.route("/image_ai", methods=["POST"])
-def image_ai():
-
-    try:
-
-        data = request.get_json()
-
-        image_text = data.get("image_text", "")
-
-        prompt = f"""
-Analyze this medical image description:
-
-{image_text}
-
-Give short medical explanation.
-"""
-
-        messages = [
-
-            {
-
-                "role": "system",
-
-                "content": "You are a medical image assistant."
-
-            },
-
-            {
-
-                "role": "user",
-
-                "content": prompt
-
-            }
-
-        ]
-
-        reply = ask_ai(messages)
-
-        return jsonify({
-
-            "reply": reply
-
-        })
-
-    except Exception as e:
-
-        return jsonify({
-
-            "reply": str(e)
-
-        })
-
-
-# =========================================================
-# TITLE GENERATOR
-# =========================================================
-
-@app.route("/generate_title", methods=["POST"])
-def generate_title():
-
-    try:
-
-        user_message = request.json.get("message", "")
-
-        messages = [
-
-            {
-
-                "role": "system",
-
-                "content": "Generate short title only."
-
-            },
-
-            {
-
-                "role": "user",
-
-                "content": user_message
-
-            }
-
-        ]
-
-        reply = ask_ai(
-
-            messages,
-
-            temperature=0.2,
-
-            max_tokens=20
-
-        )
-
-        return jsonify({
-
-            "title": reply.strip()
-
-        })
-
-    except:
-
-        return jsonify({
-
-            "title": "New Chat"
-
-        })
-
-# =========================================================
-# AI EYE SCAN ANALYSIS
-# =========================================================
-
-@app.route("/analyze_eye_scan", methods=["POST"])
-def analyze_eye_scan():
-
-    try:
-
-        data = request.get_json()
-
-        file_content = data.get("file_content", "")
-        file_type = data.get("file_type", "image/jpeg")
-
-        if not file_content:
-            return jsonify({
-                "reply": "Please upload an eye image."
-            })
-
-        # Remove base64 prefix
-        base64_clean = (
-            file_content.split(",")[1]
-            if "," in file_content
-            else file_content
-        )
-
-        headers = {
-
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-
-            "Content-Type": "application/json",
-
-            "HTTP-Referer": "http://localhost:5000",
-
-            "X-Title": "MediPulse AI"
-
-        }
-
-        prompt = """
-You are a professional ophthalmology AI assistant.
-
-Analyze this eye image carefully.
-
-Check:
-- Redness
-- Cataract signs
-- Yellowing
-- Swelling
-- Pupil abnormalities
-
-Give:
-1. Observations
-2. Possible indicators
-3. Advice
-4. Safety warning
-
-Keep response short and professional.
-You should not tell that you can't analyze this eye and all you should analyze the eye carefully and if any problem available then tell it in a positive way that it can be cured by this easily if problem available then don't hide tell it to the user immediately at last give a disclaimer that ai can make mistakes meet a optical doctor for an effective eye solution.
-"""
-
-        payload = {
-
-            "model": "openai/gpt-4o-mini",
-
-            "messages": [
-
-                {
-                    "role": "user",
-
-                    "content": [
-
-                        {
-                            "type": "text",
-                            "text": prompt
-                        },
-
-                        {
-                            "type": "image_url",
-
-                            "image_url": {
-                                "url": f"data:{file_type};base64,{base64_clean}"
-                            }
-                        }
-
-                    ]
-                }
-
-            ],
-
-            "max_tokens": 700
-
-        }
-
-        response = requests.post(
-
-            OPENROUTER_URL,
-
-            headers=headers,
-
-            json=payload,
-
-            timeout=60
-
-        )
-
-        print("VISION STATUS:", response.status_code)
-        print(response.text)
-
-        if response.status_code != 200:
-
-            return jsonify({
-
-                "reply": f"Vision AI Error: {response.status_code}"
-
-            })
-
-        result = response.json()
-
-        ai_reply = result["choices"][0]["message"]["content"]
-
-        return jsonify({
-
-            "reply": ai_reply
-
-        })
-
-    except Exception as e:
-
-        print("VISION ERROR:", str(e))
-
-        return jsonify({
-
-            "reply": f"Diagnostic processing error: {str(e)}"
-
-        })
-
-# =========================================================
-# COMPLAINT ANALYZER AI
-# =========================================================
-
-def analyze_complaint(complaint_data):
-
-    prompt = f"""
-Analyze this hospital complaint.
-
-Problem:
-{complaint_data}
-
-Give response ONLY in JSON.
-
-{{
-  "category":"Billing/Doctor/Nurse/Staff/Cleanliness/Emergency/Medicine/Other",
-  "priority":"Low/Medium/High/Critical",
-  "solution":"Short admin suggestion"
-}}
-
-No explanation.
-"""
-
-    messages = [
-
-        {
-            "role":"system",
-            "content":"You are a hospital complaint analyzer."
-        },
-
-        {
-            "role":"user",
-            "content":prompt
-        }
-
-    ]
-
-    return ask_ai(messages)
-
-# =========================================================
-# COMPLAINT CHAT AI
-# =========================================================
-@app.route("/complaint_ai", methods=["POST"])
-def complaint_ai():
-
-    print("COMPLAINT AI HIT")
-
-    try:
-
-        data = request.get_json()
-
-        print(data)
-
-        history = data.get("history", [])
-
-        messages = [
-            {
-                "role":"system",
-                "content":"""You are MediPulse Complaint Assistant.
-
-        Your job:
-
-        Collect complaint details one by one.
-
-        Ask:
-
-        1. Hospital Name
-        2. Problem
-        3. Date
-        4. Department
-        5. People involved
-        6. Evidence available
-        7. Additional details
-
-        Ask ONLY one question at a time.
-
-        Reply in English no any other language should be used
-
-        Keep trustful and supportive."""
-            }
-        ]
-
-        messages.extend(history)
-
-        reply = ask_ai(messages)
-
-        print("AI REPLY:", reply)
-
-        return jsonify({
-            "reply": reply
-        })
-
-    except Exception as e:
-
-        print("ERROR:", str(e))
-
-        return jsonify({
-            "reply": str(e)
-        })
-@app.route("/analyze_complaint_ai", methods=["POST"])
-def analyze_complaint_ai():
-
-    try:
-
-        data = request.get_json()
-
-        complaint_text = data.get("complaint", "")
-
-        result = analyze_complaint(
-            complaint_text
-        )
-
-        return jsonify({
-            "reply": result
-        })
-
-    except Exception as e:
-
-        return jsonify({
-            "reply": str(e)
-        })
-
-# =========================================================
-# AI MEDICAL VIDEO STUDIO — REAL AI VIDEO GENERATION
-# =========================================================
-# IMPORTANT:
-# Only this medical-video section was changed.
-# All other MediPulse routes and features remain unchanged.
-#
-# The old implementation created a slideshow from Wikimedia images.
-# This version uses LTX-2.3 Fast through fal.ai to generate real moving
-# medical video, then adds the existing gTTS narration so the final result
-# still has spoken educational audio.
-#
-# Required environment variable:
-#     FAL_KEY=your_fal_api_key
-#
-# Required package in requirements.txt:
-#     fal-client
-# =========================================================
-
-import fal_client
-
-
-VIDEO_OUTPUT_DIR = Path(
-    app.static_folder
-) / "generated_videos"
-
-VIDEO_OUTPUT_DIR.mkdir(
+MEDICAL_VIDEO_OUTPUT_DIR.mkdir(
     parents=True,
     exist_ok=True
 )
 
+# =========================
+# VIDEO SETTINGS
+# =========================
 
-# ---------------------------------------------------------
-# CLEAN AI JSON
-# ---------------------------------------------------------
+# 960x540 keeps rendering fast on Render's free CPU.
+# Set VIDEO_WIDTH=1280 and VIDEO_HEIGHT=720 in .env for HD (slower).
+VIDEO_W = int(os.getenv("VIDEO_WIDTH", "960"))
+VIDEO_H = int(os.getenv("VIDEO_HEIGHT", "540"))
+VIDEO_FPS = 25
+
+# =========================
+# LANGUAGE CODES
+# =========================
+
+MEDICAL_VIDEO_LANG_CODES = {
+    "english": "en",
+    "tamil": "ta",
+    "hindi": "hi",
+    "malayalam": "ml",
+    "telugu": "te",
+    "kannada": "kn"
+}
+
+MEDICAL_VIDEO_LANG_NAMES = {
+    "english": "English",
+    "tamil": "Tamil",
+    "hindi": "Hindi",
+    "malayalam": "Malayalam",
+    "telugu": "Telugu",
+    "kannada": "Kannada"
+}
+
+# =========================
+# BACKGROUND JOBS
+# =========================
+# Video generation takes 1-4 minutes. A normal web request would be
+# killed by Render (about 30 seconds), so the work runs in a background
+# thread and the browser polls /api/medical_video_status/<job_id>.
+#
+# NOTE: jobs are kept in memory, so run gunicorn with ONE worker:
+#   gunicorn app:app --workers 1 --threads 4 --timeout 120
+
+JOBS = {}
+JOBS_LOCK = threading.Lock()
+JOB_MAX_AGE_SECONDS = 60 * 60
+
+
+def job_update(job_id, **fields):
+
+    with JOBS_LOCK:
+
+        job = JOBS.get(job_id)
+
+        if job is not None:
+            job.update(fields)
+            job["updated"] = time.time()
+
+
+def cleanup_old_jobs():
+
+    cutoff = time.time() - JOB_MAX_AGE_SECONDS
+
+    with JOBS_LOCK:
+
+        old = [
+            key for key, value in JOBS.items()
+            if value.get("created", 0) < cutoff
+        ]
+
+        for key in old:
+            JOBS.pop(key, None)
+
+
+# =========================
+# PART 2 — AI HELPERS
+# =========================
 
 def clean_ai_json(text):
-    """Extract JSON from an AI response even if markdown fences appear."""
+    """
+    Cleans AI response and extracts JSON.
+    """
 
-    text = (text or "").strip()
+    if not text:
+        return None
 
+    text = text.strip()
+
+    # Remove markdown code blocks
     text = re.sub(
-        r"```json",
+        r"^```(?:json)?",
         "",
         text,
         flags=re.IGNORECASE
     )
 
     text = re.sub(
-        r"```",
+        r"```$",
         "",
         text
     )
 
+    text = text.strip()
+
+    # Direct JSON
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    # Find JSON object
     start = text.find("{")
     end = text.rfind("}")
 
-    if start == -1 or end == -1:
-        raise ValueError(
-            "AI did not return valid JSON."
+    if start != -1 and end != -1:
+        possible_json = text[start:end + 1]
+
+        try:
+            return json.loads(possible_json)
+        except Exception:
+            pass
+
+    return None
+
+
+def ask_ai_json(prompt):
+    """
+    Sends prompt to OpenRouter and returns JSON.
+    """
+
+    if not OPENROUTER_API_KEY:
+        raise Exception(
+            "OPENROUTER_API_KEY missing in .env"
         )
 
-    return json.loads(
-        text[start:end + 1]
-    )
+    headers = {
+        "Authorization":
+            f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type":
+            "application/json"
+    }
 
+    last_error = ""
 
-# ---------------------------------------------------------
-# CREATE MEDICAL VIDEO CONTENT + LTX PROMPT
-# ---------------------------------------------------------
+    for model in MODELS:
 
-def generate_medical_video_content(
-    topic,
-    language="English"
-):
+        try:
 
-    prompt = f"""
-You are MediPulse AI's professional medical video director.
-
-Create content for a short, realistic medical awareness video about:
-
-{topic}
-
-Language: {language}
-
-The final video will be generated by a photorealistic AI video model.
-Create a concise narration suitable for approximately 15-20 seconds.
-
-Return ONLY valid JSON in exactly this format:
-
-{{
-    "title": "Short medical video title",
-    "narration": "A concise spoken medical awareness narration",
-    "video_prompt": "A detailed photorealistic cinematic prompt for an AI video model"
-}}
-
-RULES FOR THE NARRATION:
-- Simple and easy for the public to understand.
-- Medically responsible.
-- No diagnosis.
-- No personalized treatment.
-- No prescription instructions.
-- Do not make unsupported medical claims.
-- Keep it short enough for 15-20 seconds.
-
-RULES FOR video_prompt:
-- Describe realistic moving medical footage, not slides.
-- Use real-looking doctors, patients, hospital environments and/or
-  scientifically accurate anatomy where appropriate.
-- Include natural human movement and realistic camera movement.
-- Use professional medical documentary cinematography.
-- Use realistic lighting, skin texture, materials and depth of field.
-- Describe the subject clearly so the video model understands the medical topic.
-- Do NOT request text, captions, logos or watermarks inside the generated video.
-- Do NOT create cartoon, illustration, slideshow or presentation visuals.
-- Avoid impossible anatomy, deformed bodies, extra fingers or unrealistic organs.
-"""
-
-    response = ask_ai(
-        [
-            {
-                "role": "system",
-                "content":
-                    "You are a safe medical education AI and professional documentary video director."
-            },
-            {
-                "role": "user",
-                "content": prompt
+            payload = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content":
+                            "Return ONLY valid JSON. "
+                            "Do not use markdown."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "temperature": 0.4
             }
-        ],
-        temperature=0.25,
-        max_tokens=900
+
+            response = requests.post(
+                OPENROUTER_URL,
+                headers=headers,
+                json=payload,
+                timeout=120
+            )
+
+            if response.status_code != 200:
+                last_error = (
+                    f"{model}: "
+                    f"{response.status_code} "
+                    f"{response.text[:500]}"
+                )
+                continue
+
+            data = response.json()
+
+            content = (
+                data
+                .get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+            )
+
+            result = clean_ai_json(content)
+
+            if result:
+                return result
+
+            last_error = (
+                f"{model}: AI did not return valid JSON"
+            )
+
+        except Exception as e:
+            last_error = str(e)
+
+    raise Exception(
+        f"AI JSON generation failed: {last_error}"
     )
 
-    content = clean_ai_json(response)
 
-    if not isinstance(content, dict):
-        raise ValueError(
-            "AI returned an invalid medical video response."
-        )
+def get_free_ai_headers():
 
-    title = str(
-        content.get(
-            "title",
-            "Medical Awareness"
-        )
-    ).strip()
-
-    narration = str(
-        content.get(
-            "narration",
-            ""
-        )
-    ).strip()
-
-    video_prompt = str(
-        content.get(
-            "video_prompt",
-            ""
-        )
-    ).strip()
-
-    if not narration:
-        raise ValueError(
-            "AI did not generate narration."
-        )
-
-    if not video_prompt:
-        raise ValueError(
-            "AI did not generate a video prompt."
+    if not FREE_AI_API_KEY:
+        raise Exception(
+            "FREE_AI_API_KEY missing in .env"
         )
 
     return {
-        "title": title or "Medical Awareness",
-        "narration": narration,
-        "video_prompt": video_prompt
+        "Authorization":
+            f"Bearer {FREE_AI_API_KEY}",
+        "Content-Type":
+            "application/json"
     }
 
 
-# ---------------------------------------------------------
-# LTX-2.3 FAST — REAL VIDEO GENERATION
-# ---------------------------------------------------------
+def download_file(url, output_path):
 
-def generate_ltx_medical_video(
-    video_prompt,
-    duration=18
-):
+    response = requests.get(
+        url,
+        timeout=120
+    )
 
-    if not os.getenv("FAL_KEY"):
-        raise RuntimeError(
-            "FAL_KEY is missing. Add FAL_KEY to the Render environment variables."
+    if response.status_code != 200:
+        raise Exception(
+            f"Download failed: "
+            f"{response.status_code}"
         )
+
+    with open(output_path, "wb") as f:
+        f.write(response.content)
+
+    return output_path
+
+
+def extract_media_url(data, list_key):
+    """
+    Finds the file URL in a Free.ai JSON response.
+    list_key is "images" for pictures and "audio" for voice.
+    """
+
+    if not isinstance(data, dict):
+        return None
+
+    url = (
+        data.get("output_url")
+        or data.get("image_url")
+        or data.get("audio_url")
+        or data.get("url")
+    )
+
+    if url:
+        return url
+
+    block = data.get(list_key)
+
+    if isinstance(block, list) and block:
+        block = block[0]
+
+    if isinstance(block, str):
+        return block
+
+    if isinstance(block, dict):
+        return (
+            block.get("url")
+            or block.get("image_url")
+            or block.get("audio_url")
+            or block.get("output_url")
+        )
+
+    return None
+
+
+# =========================
+# PART 3 — SCENE SCRIPT
+# =========================
+
+def scene_count_for_duration(duration):
 
     try:
         duration = int(duration)
     except Exception:
-        duration = 18
+        duration = 60
 
-    if duration not in (15, 18, 20):
-        duration = 18
+    # about 12 seconds per scene -> 60s = 5, 80s = 7, 100s = 8
+    return max(4, min(8, round(duration / 12)))
 
-    # LTX-2.3 Fast supports 6-20 seconds. For >10 seconds the API requires
-    # 25 FPS and 1080p, so we use those settings for all MediPulse choices.
-    if duration == 15:
-        # 15 is not an accepted duration value in the current LTX-2.3 Fast
-        # API. Generate 16 seconds, then trim the final file to 15 seconds.
-        ltx_duration = 16
-    else:
-        ltx_duration = duration
+
+def generate_medical_video_content(
+    topic,
+    language="english",
+    duration=60
+):
+    """
+    Asks the AI for a scene-by-scene script.
+    Every scene has its own narration and its own visual.
+    """
+
+    language = (language or "english").lower()
+
+    language_name = MEDICAL_VIDEO_LANG_NAMES.get(
+        language,
+        "English"
+    )
+
+    scene_total = scene_count_for_duration(duration)
+
+    seconds_per_scene = max(
+        8,
+        round(int(duration or 60) / scene_total)
+    )
+
+    words_per_scene = int(seconds_per_scene * 2.2)
 
     prompt = f"""
-{video_prompt}
+You are writing a script for an educational medical video
+that is presented by an AI doctor.
 
-VISUAL QUALITY:
-Photorealistic medical documentary footage.
-High-end professional healthcare commercial quality.
-Natural skin texture and realistic human motion.
-Physically plausible lighting and materials.
-Accurate medical environments and equipment.
-Cinematic but scientifically responsible.
+Topic: "{topic}"
 
-CAMERA:
-Smooth professional camera movement.
-Natural dolly, tracking, slow push-in or controlled handheld movement.
-Realistic depth of field.
-Natural lens perspective.
-No impossible camera motion.
+Narration language: {language_name}
 
-MOTION:
-The scene must contain continuous natural movement.
-Doctors, patients, equipment, anatomy or environmental elements should move
-naturally where appropriate.
-Avoid frozen frames and slideshow-like presentation.
+Create EXACTLY {scene_total} scenes.
+Each scene lasts about {seconds_per_scene} seconds.
 
-DO NOT SHOW:
-Cartoon graphics.
-Presentation slides.
-Static photographs.
-Futuristic holograms.
-Glowing fantasy organs.
-Deformed anatomy.
-Extra limbs or fingers.
-Malformed faces.
-Text overlays.
-Captions.
-Watermarks.
-Logos.
+Scene rules:
 
-Create a polished real-world medical film suitable for MediPulse AI.
+- Scene 1: the doctor introduces the topic.
+  visual_type must be "doctor".
+- Scene {scene_total}: the doctor gives final advice and says
+  to consult a real doctor. visual_type must be "doctor".
+- All middle scenes: explain ONE key point each (for example
+  one symptom, cause or prevention tip).
+  visual_type must be "visual".
+
+Return ONLY valid JSON in exactly this structure:
+
+{{
+    "title": "video title in English",
+    "scenes": [
+        {{
+            "heading_en": "max 5 words, English",
+            "narration": "what the doctor says, in {language_name}, about {words_per_scene} words",
+            "visual_type": "doctor or visual",
+            "image_prompt": "English description of ONE clear image that matches this scene"
+        }}
+    ]
+}}
+
+Image prompt rules:
+
+- Describe a realistic, clean, educational medical illustration or photo.
+- Show the idea directly (example: for excessive thirst show a
+  person drinking a large glass of water; for glucose testing
+  show a glucometer on a table).
+- No text, no letters, no numbers, no watermark in the image.
+- Nothing graphic, bloody or disturbing.
+- For "doctor" scenes the image_prompt may be an empty string.
+
+Narration rules:
+
+- Educational purpose only.
+- Simple, friendly language, as a doctor talking to a patient.
+- Do NOT diagnose and do NOT give dangerous medical advice.
+- Plain spoken text only: no emojis, no bullet points,
+  no stage directions.
 """
 
-    print(
-        "========================================"
+    content = ask_ai_json(prompt)
+
+    return normalize_scenes(
+        content,
+        topic,
+        scene_total
     )
 
-    print(
-        "LTX-2.3 FAST MEDICAL VIDEO GENERATION"
-    )
 
-    print(
-        "LTX duration:",
-        ltx_duration
-    )
+def normalize_scenes(content, topic, scene_total):
+    """
+    Makes sure the AI result is a clean list of scenes,
+    even if the AI used the old script format.
+    """
 
-    print(
-        "========================================"
-    )
+    if not isinstance(content, dict):
+        raise Exception("AI script was not a JSON object.")
 
-    result = fal_client.subscribe(
-        "fal-ai/ltx-2.3/text-to-video/fast",
-        arguments={
-            "prompt": prompt,
-            "duration": ltx_duration,
-            "resolution": "1080p",
-            "aspect_ratio": "16:9",
-            "fps": 25,
-            # We create the spoken narration with the existing gTTS system
-            # below, so the LTX output itself is silent.
-            "generate_audio": False
-        }
-    )
+    title = str(
+        content.get("title") or topic
+    ).strip()
 
-    if not result:
-        raise RuntimeError(
-            "LTX returned an empty response."
+    raw_scenes = content.get("scenes")
+
+    scenes = []
+
+    if isinstance(raw_scenes, list):
+
+        for item in raw_scenes:
+
+            if not isinstance(item, dict):
+                continue
+
+            narration = str(
+                item.get("narration") or ""
+            ).strip()
+
+            if not narration:
+                continue
+
+            scenes.append({
+                "heading_en": str(
+                    item.get("heading_en")
+                    or item.get("heading")
+                    or ""
+                ).strip(),
+                "narration": narration,
+                "visual_type": str(
+                    item.get("visual_type") or "visual"
+                ).strip().lower(),
+                "image_prompt": str(
+                    item.get("image_prompt") or ""
+                ).strip()
+            })
+
+    # Old format fallback: introduction / sections / conclusion
+    if not scenes:
+
+        intro = str(content.get("introduction") or "").strip()
+
+        if intro:
+            scenes.append({
+                "heading_en": "Introduction",
+                "narration": intro,
+                "visual_type": "doctor",
+                "image_prompt": ""
+            })
+
+        for section in content.get("sections") or []:
+
+            if not isinstance(section, dict):
+                continue
+
+            text = str(
+                section.get("explanation") or ""
+            ).strip()
+
+            if not text:
+                continue
+
+            heading = str(
+                section.get("heading") or ""
+            ).strip()
+
+            scenes.append({
+                "heading_en": heading,
+                "narration": text,
+                "visual_type": "visual",
+                "image_prompt":
+                    f"{topic}, {heading}, medical education"
+            })
+
+        outro = str(content.get("conclusion") or "").strip()
+
+        if outro:
+            scenes.append({
+                "heading_en": "Final Advice",
+                "narration": outro,
+                "visual_type": "doctor",
+                "image_prompt": ""
+            })
+
+    if not scenes:
+        raise Exception(
+            "AI did not return any scenes. Please try again."
         )
 
-    video_data = result.get("video")
+    scenes = scenes[:10]
 
-    if not video_data:
-        raise RuntimeError(
-            "LTX did not return a video file."
+    # first and last scene are always the doctor
+    scenes[0]["visual_type"] = "doctor"
+
+    if len(scenes) > 1:
+        scenes[-1]["visual_type"] = "doctor"
+
+    for index, scene in enumerate(scenes):
+
+        if scene["visual_type"] != "doctor":
+            scene["visual_type"] = "visual"
+
+        if not scene["heading_en"]:
+            scene["heading_en"] = (
+                "Introduction" if index == 0
+                else f"Key Point {index}"
+            )
+
+        if (
+            scene["visual_type"] == "visual"
+            and not scene["image_prompt"]
+        ):
+            scene["image_prompt"] = (
+                f"{topic}, {scene['heading_en']}, "
+                "medical education illustration"
+            )
+
+    return {
+        "title": title,
+        "scenes": scenes,
+        "narration": " ".join(
+            s["narration"] for s in scenes
         )
-
-    video_url = video_data.get("url")
-
-    if not video_url:
-        raise RuntimeError(
-            "LTX response did not contain a video URL."
-        )
-
-    print(
-        "LTX VIDEO URL:",
-        video_url
-    )
-
-    return video_url
-
-
-# ---------------------------------------------------------
-# DOWNLOAD GENERATED LTX VIDEO
-# ---------------------------------------------------------
-
-def download_generated_video(
-    video_url,
-    output_path
-):
-
-    headers = {
-        "User-Agent":
-            "MediPulseAI/1.0 (medical AI video generator)"
     }
 
-    response = requests.get(
-        video_url,
-        headers=headers,
-        stream=True,
-        timeout=120
+
+def generate_medical_presenter(content):
+
+    title = content.get(
+        "title",
+        "Medical Education"
     )
 
-    response.raise_for_status()
+    prompt = f"""
+Professional AI medical doctor presenter.
 
-    with open(
-        output_path,
-        "wb"
-    ) as file:
+A realistic Indian medical doctor in a modern
+hospital environment.
 
-        for chunk in response.iter_content(
-            chunk_size=1024 * 1024
-        ):
+The doctor should be:
 
-            if chunk:
-                file.write(chunk)
+- Professional
+- Friendly
+- Clean white medical coat
+- Natural face
+- Looking directly at camera
+- Upper body portrait
+- Studio lighting
+- Medical education presentation style
+- No text
+- No watermark
+- No extra people
 
-    if not output_path.exists():
-        raise RuntimeError(
-            "Generated LTX video could not be downloaded."
-        )
+Video topic:
 
-    if output_path.stat().st_size < 10000:
-        raise RuntimeError(
-            "Downloaded LTX video is unexpectedly small."
-        )
+{title}
+"""
+
+    return free_ai_generate_image(
+        prompt,
+        768,
+        1024,
+        "doctor"
+    )
 
 
-# ---------------------------------------------------------
-# CREATE EXISTING MEDIPULSE NARRATION
-# ---------------------------------------------------------
-
-def create_medical_narration(
-    narration,
-    audio_path
+def free_ai_generate_image(
+    prompt,
+    width,
+    height,
+    prefix,
+    save_dir=None
 ):
+    """
+    Creates one picture with Free.ai and saves it as PNG.
+    Returns the file path.
+    """
+
+    headers = get_free_ai_headers()
+
+    save_dir = Path(save_dir or MEDICAL_VIDEO_OUTPUT_DIR)
+
+    # first try with the size, then without it
+    # (in case Free.ai rejects the size)
+    attempts = [
+        {
+            "model": "sdxl",
+            "prompt": prompt,
+            "width": width,
+            "height": height
+        },
+        {
+            "model": "sdxl",
+            "prompt": prompt
+        }
+    ]
+
+    last_error = ""
+
+    for payload in attempts:
+
+        try:
+
+            response = requests.post(
+                FREE_AI_IMAGE_URL,
+                headers=headers,
+                json=payload,
+                timeout=180
+            )
+
+            if response.status_code != 200:
+                last_error = (
+                    "Free.ai image generation failed: "
+                    f"{response.status_code} "
+                    f"{response.text[:500]}"
+                )
+                continue
+
+            data = response.json()
+
+            image_url = extract_media_url(data, "images")
+
+            if not image_url:
+                last_error = (
+                    "Free.ai did not return an image URL. "
+                    f"Response: {str(data)[:500]}"
+                )
+                continue
+
+            image_path = save_dir / (
+                f"{prefix}_{uuid.uuid4().hex}.png"
+            )
+
+            download_file(image_url, image_path)
+
+            return str(image_path)
+
+        except Exception as e:
+            last_error = str(e)
+
+    raise Exception(last_error or "Image generation failed.")
+
+
+# =========================
+# PART 4 — VOICE + IMAGES
+# =========================
+
+def generate_medical_voice(
+    narration,
+    language="english",
+    save_dir=None
+):
+
+    language = (
+        language or "english"
+    ).lower()
+
+    save_dir = Path(save_dir or MEDICAL_VIDEO_OUTPUT_DIR)
+
+    # ---------------------------------
+    # ENGLISH → FREE.AI KOKORO
+    # (falls back to gTTS if Free.ai fails)
+    # ---------------------------------
+
+    if language == "english":
+
+        try:
+
+            payload = {
+                "model": "kokoro",
+                "voice": "af_heart",
+                "text": narration
+            }
+
+            response = requests.post(
+                FREE_AI_TTS_URL,
+                headers=get_free_ai_headers(),
+                json=payload,
+                timeout=180
+            )
+
+            if response.status_code != 200:
+                raise Exception(
+                    "Free.ai TTS failed: "
+                    f"{response.status_code} "
+                    f"{response.text[:500]}"
+                )
+
+            audio_url = extract_media_url(
+                response.json(),
+                "audio"
+            )
+
+            if not audio_url:
+                raise Exception(
+                    "Free.ai did not return audio URL."
+                )
+
+            audio_path = save_dir / (
+                f"voice_{uuid.uuid4().hex}.mp3"
+            )
+
+            download_file(audio_url, audio_path)
+
+            return str(audio_path)
+
+        except Exception as e:
+            print(
+                "Free.ai voice failed, using gTTS:",
+                str(e)[:300]
+            )
+
+    # ---------------------------------
+    # OTHER LANGUAGES → gTTS
+    # ---------------------------------
 
     try:
 
+        from gtts import gTTS
+
+        lang_code = (
+            MEDICAL_VIDEO_LANG_CODES
+            .get(language, "en")
+        )
+
+        audio_path = save_dir / (
+            f"voice_{uuid.uuid4().hex}.mp3"
+        )
+
         tts = gTTS(
             text=narration,
-            lang="en",
+            lang=lang_code,
             slow=False
         )
 
@@ -2204,123 +802,903 @@ def create_medical_narration(
             str(audio_path)
         )
 
+        return str(audio_path)
+
     except Exception as e:
 
-        raise RuntimeError(
-            "Could not create medical narration: "
-            + str(e)
-        )
-
-    if not audio_path.exists():
-        raise RuntimeError(
-            "Medical narration audio was not created."
+        raise Exception(
+            f"Voice generation failed: {e}"
         )
 
 
-# ---------------------------------------------------------
-# COMBINE REAL AI VIDEO + NARRATION
-# ---------------------------------------------------------
+# ---------------------------------
+# PILLOW HELPERS (overlays + fallback)
+# ---------------------------------
 
-def add_medical_narration(
-    silent_video,
-    audio_path,
-    output_path,
-    duration
-):
+FONT_CANDIDATES = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+    "/Library/Fonts/Arial Bold.ttf",
+    "C:/Windows/Fonts/arialbd.ttf",
+    "arialbd.ttf",
+    "DejaVuSans-Bold.ttf"
+]
 
-    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
 
-    command = [
-        ffmpeg,
-        "-y",
-        "-i",
-        str(silent_video),
-        "-i",
-        str(audio_path),
-        "-map",
-        "0:v:0",
-        "-map",
-        "1:a:0",
-        "-c:v",
-        "copy",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "128k",
-        "-ar",
-        "44100",
-        "-ac",
-        "2",
-        "-af",
-        "apad",
-        "-t",
-        str(duration),
-        "-movflags",
-        "+faststart",
-        str(output_path)
-    ]
+def load_font(size):
+
+    from PIL import ImageFont
+
+    for candidate in FONT_CANDIDATES:
+        try:
+            return ImageFont.truetype(candidate, size)
+        except Exception:
+            continue
+
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:
+        return ImageFont.load_default()
+
+
+def fit_text(draw, text, max_width, start_size, min_size=16):
+    """
+    Returns a font small enough for the text to fit in max_width,
+    and the text (shortened with ... if still too long).
+    """
+
+    size = start_size
+
+    while size >= min_size:
+
+        font = load_font(size)
+
+        if draw.textlength(text, font=font) <= max_width:
+            return font, text
+
+        size -= 2
+
+    font = load_font(min_size)
+
+    while (
+        len(text) > 4
+        and draw.textlength(text + "...", font=font) > max_width
+    ):
+        text = text[:-1]
+
+    return font, text.rstrip() + "..."
+
+
+def make_pip_png(doctor_path, output_path):
+    """
+    Round doctor face with a white ring (picture-in-picture).
+    """
+
+    from PIL import Image, ImageDraw
+
+    size = int(VIDEO_H * 0.37)
+    ring = 5
+
+    doctor = Image.open(doctor_path).convert("RGB")
+
+    w, h = doctor.size
+
+    # face is in the upper-middle part of the portrait
+    crop_size = int(min(w, h * 0.62, w * 0.62))
+    left = (w - crop_size) // 2
+    top = int(h * 0.02)
+
+    face = doctor.crop(
+        (left, top, left + crop_size, top + crop_size)
+    ).resize((size - ring * 2, size - ring * 2), Image.LANCZOS)
+
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+
+    draw = ImageDraw.Draw(canvas)
+
+    draw.ellipse(
+        (0, 0, size - 1, size - 1),
+        fill=(255, 255, 255, 255)
+    )
+
+    mask = Image.new("L", face.size, 0)
+
+    ImageDraw.Draw(mask).ellipse(
+        (0, 0, face.size[0] - 1, face.size[1] - 1),
+        fill=255
+    )
+
+    canvas.paste(face, (ring, ring), mask)
+
+    canvas.save(output_path)
+
+    return size
+
+
+def make_stage_png(doctor_path, output_path):
+    """
+    Full-frame doctor scene: blurred background + doctor in the centre.
+    """
+
+    from PIL import Image, ImageFilter, ImageEnhance
+
+    doctor = Image.open(doctor_path).convert("RGB")
+
+    w, h = doctor.size
+
+    # blurred, darker background that fills the frame
+    scale = max(VIDEO_W / w, VIDEO_H / h)
+
+    bg = doctor.resize(
+        (int(w * scale) + 1, int(h * scale) + 1),
+        Image.LANCZOS
+    )
+
+    left = (bg.size[0] - VIDEO_W) // 2
+    top = (bg.size[1] - VIDEO_H) // 2
+
+    bg = bg.crop((left, top, left + VIDEO_W, top + VIDEO_H))
+
+    bg = bg.filter(ImageFilter.GaussianBlur(22))
+
+    bg = ImageEnhance.Brightness(bg).enhance(0.55)
+
+    # doctor fitted to the frame height
+    fit = VIDEO_H / h
+
+    fg = doctor.resize(
+        (int(w * fit), VIDEO_H),
+        Image.LANCZOS
+    )
+
+    bg.paste(fg, ((VIDEO_W - fg.size[0]) // 2, 0))
+
+    bg.save(output_path)
+
+
+def make_caption_png(heading, scene_number, scene_total, output_path):
+    """
+    Transparent overlay: lower-third heading + top brand tag.
+    """
+
+    from PIL import Image, ImageDraw
+
+    overlay = Image.new(
+        "RGBA",
+        (VIDEO_W, VIDEO_H),
+        (0, 0, 0, 0)
+    )
+
+    draw = ImageDraw.Draw(overlay)
+
+    margin = int(VIDEO_W * 0.03)
+
+    # ---- brand tag (top left) ----
+    tag_font = load_font(max(14, int(VIDEO_H * 0.032)))
+
+    tag_text = "MediPulse AI  |  Educational video"
+
+    tag_w = int(draw.textlength(tag_text, font=tag_font)) + 28
+    tag_h = int(VIDEO_H * 0.068)
+
+    draw.rounded_rectangle(
+        (margin, margin, margin + tag_w, margin + tag_h),
+        radius=tag_h // 2,
+        fill=(8, 20, 40, 190)
+    )
+
+    draw.text(
+        (margin + 14, margin + tag_h // 2),
+        tag_text,
+        font=tag_font,
+        fill=(255, 255, 255, 255),
+        anchor="lm"
+    )
+
+    # ---- lower third ----
+    pip_space = int(VIDEO_H * 0.37) + margin * 2
+
+    box_x0 = margin
+    box_x1 = VIDEO_W - pip_space
+    box_h = int(VIDEO_H * 0.17)
+    box_y1 = VIDEO_H - margin
+    box_y0 = box_y1 - box_h
+
+    draw.rounded_rectangle(
+        (box_x0, box_y0, box_x1, box_y1),
+        radius=14,
+        fill=(8, 20, 40, 205)
+    )
+
+    draw.rounded_rectangle(
+        (box_x0, box_y0, box_x0 + 8, box_y1),
+        radius=4,
+        fill=(34, 211, 238, 255)
+    )
+
+    text_x = box_x0 + 26
+
+    max_text_w = (box_x1 - text_x) - 16
+
+    head_font, head_text = fit_text(
+        draw,
+        heading,
+        max_text_w,
+        int(VIDEO_H * 0.062),
+        min_size=16
+    )
+
+    draw.text(
+        (text_x, box_y0 + int(box_h * 0.40)),
+        head_text,
+        font=head_font,
+        fill=(255, 255, 255, 255),
+        anchor="lm"
+    )
+
+    small_font = load_font(max(12, int(VIDEO_H * 0.03)))
+
+    draw.text(
+        (text_x, box_y0 + int(box_h * 0.76)),
+        f"Scene {scene_number} of {scene_total}",
+        font=small_font,
+        fill=(125, 211, 252, 255),
+        anchor="lm"
+    )
+
+    overlay.save(output_path)
+
+
+def make_fallback_card(heading, output_path):
+    """
+    Used when AI image generation fails, so the video never breaks.
+    """
+
+    from PIL import Image, ImageDraw
+
+    card = Image.new("RGB", (VIDEO_W, VIDEO_H))
+
+    draw = ImageDraw.Draw(card)
+
+    # vertical gradient
+    top = (13, 71, 161)
+    bottom = (2, 136, 209)
+
+    for y in range(VIDEO_H):
+
+        ratio = y / max(1, VIDEO_H - 1)
+
+        color = tuple(
+            int(top[i] + (bottom[i] - top[i]) * ratio)
+            for i in range(3)
+        )
+
+        draw.line((0, y, VIDEO_W, y), fill=color)
+
+    # medical cross
+    cx = VIDEO_W // 2
+    cy = int(VIDEO_H * 0.42)
+    arm = int(VIDEO_H * 0.20)
+    thick = int(VIDEO_H * 0.07)
+
+    draw.rounded_rectangle(
+        (cx - thick, cy - arm, cx + thick, cy + arm),
+        radius=thick // 2,
+        fill=(255, 255, 255)
+    )
+
+    draw.rounded_rectangle(
+        (cx - arm, cy - thick, cx + arm, cy + thick),
+        radius=thick // 2,
+        fill=(255, 255, 255)
+    )
+
+    card.save(output_path)
+
+
+def generate_scene_image(scene, index, work_dir):
+    """
+    Relevant medical visual for one scene.
+    Falls back to a clean card if Free.ai fails.
+    """
+
+    style = (
+        ", realistic educational medical illustration, "
+        "clean bright lighting, no text, no letters, "
+        "no numbers, no watermark, no logo, "
+        "nothing graphic or disturbing"
+    )
+
+    prompt = scene["image_prompt"] + style
+
+    last_error = ""
+
+    for attempt in range(2):
+
+        try:
+
+            return free_ai_generate_image(
+                prompt,
+                1024,
+                576,
+                f"scene{index + 1}",
+                save_dir=work_dir
+            )
+
+        except Exception as e:
+
+            last_error = str(e)
+
+            time.sleep(1.5)
+
+    print(
+        f"Scene {index + 1}: image failed, using fallback card. "
+        f"{last_error[:300]}"
+    )
+
+    fallback_path = Path(work_dir) / f"scene{index + 1}_fallback.png"
+
+    make_fallback_card(scene["heading_en"], fallback_path)
+
+    return str(fallback_path)
+
+
+# =========================
+# PART 5 — VIDEO RENDERING
+# =========================
+
+def get_ffmpeg():
 
     try:
 
-        result = subprocess.run(
-            command,
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=120
+        import imageio_ffmpeg
+
+    except ImportError:
+
+        raise Exception(
+            "imageio-ffmpeg is missing. "
+            "Run: pip install imageio-ffmpeg"
         )
 
-    except subprocess.TimeoutExpired:
+    return imageio_ffmpeg.get_ffmpeg_exe()
 
-        raise RuntimeError(
-            "FFmpeg timed out while adding medical narration."
+
+def get_media_duration(ffmpeg_exe, path):
+    """
+    Reads the duration (seconds) of an audio file.
+    """
+
+    result = subprocess.run(
+        [ffmpeg_exe, "-hide_banner", "-i", str(path)],
+        capture_output=True,
+        text=True
+    )
+
+    match = re.search(
+        r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)",
+        result.stderr
+    )
+
+    if not match:
+        raise Exception(
+            "Could not read audio length: "
+            + result.stderr[-500:]
         )
 
-    if result.returncode != 0:
+    hours, minutes, seconds = match.groups()
 
-        error_message = (
-            result.stderr[-5000:]
-            if result.stderr
-            else
-            "Unknown FFmpeg error."
+    return (
+        int(hours) * 3600
+        + int(minutes) * 60
+        + float(seconds)
+    )
+
+
+def render_scene_clip(
+    ffmpeg_exe,
+    scene,
+    scene_index,
+    scene_total,
+    image_path,
+    audio_path,
+    doctor_path,
+    pip_path,
+    pip_size,
+    work_dir
+):
+    """
+    One scene = relevant visual (slow pan) + doctor picture-in-picture
+    + heading caption + animated voice bar + this scene's voice.
+    """
+
+    work_dir = Path(work_dir)
+
+    audio_seconds = get_media_duration(ffmpeg_exe, audio_path)
+
+    clip_seconds = audio_seconds + 0.5
+
+    is_doctor_scene = scene["visual_type"] == "doctor"
+
+    # ---- overlays ----
+    caption_path = work_dir / f"caption_{scene_index + 1}.png"
+
+    make_caption_png(
+        scene["heading_en"],
+        scene_index + 1,
+        scene_total,
+        caption_path
+    )
+
+    if is_doctor_scene:
+
+        stage_path = work_dir / f"stage_{scene_index + 1}.png"
+
+        make_stage_png(doctor_path, stage_path)
+
+        background_path = stage_path
+
+    else:
+
+        background_path = image_path
+
+    clip_path = work_dir / f"clip_{scene_index + 1:02d}.mp4"
+
+    margin = int(VIDEO_W * 0.03)
+
+    wave_w = pip_size
+    wave_h = int(VIDEO_H * 0.08)
+
+    pip_x = VIDEO_W - pip_size - margin
+    wave_x = pip_x
+    wave_y = VIDEO_H - margin - wave_h
+    pip_y = wave_y - 10 - pip_size
+
+    # ---- background filter ----
+    if is_doctor_scene:
+
+        bg_filter = (
+            f"[0:v]scale={VIDEO_W}:{VIDEO_H},setsar=1,"
+            f"fps={VIDEO_FPS}[bg];"
         )
 
-        print(
-            "FFMPEG NARRATION ERROR:"
+    else:
+
+        big_w = int(VIDEO_W * 1.12) // 2 * 2
+        big_h = int(VIDEO_H * 1.12) // 2 * 2
+
+        bg_filter = (
+            f"[0:v]scale={big_w}:{big_h}"
+            f":force_original_aspect_ratio=increase,"
+            f"crop={VIDEO_W}:{VIDEO_H}"
+            f":x='(iw-{VIDEO_W})*t/{clip_seconds:.2f}'"
+            f":y='(ih-{VIDEO_H})/2',"
+            f"setsar=1,fps={VIDEO_FPS}[bg];"
         )
 
-        print(
-            error_message
+    # ---- overlays filter ----
+    filter_parts = [
+        bg_filter,
+        "[bg][2:v]overlay=0:0[v1];"
+    ]
+
+    if is_doctor_scene:
+
+        filter_parts.append("[v1]null[v2];")
+
+    else:
+
+        filter_parts.append(
+            f"[v1][1:v]overlay={pip_x}:{pip_y}[v2];"
         )
 
-        raise RuntimeError(
-            "FFmpeg failed while adding narration:\n"
-            + error_message
+    filter_parts.extend([
+        "[3:a]apad=pad_dur=0.5,asplit=2[a1][a2];",
+        f"[a2]showwaves=s={wave_w}x{wave_h}:mode=cline"
+        f":colors=0x22d3ee:rate={VIDEO_FPS},"
+        "format=rgba,colorkey=0x000000:0.2:0.0[w];",
+        f"[v2][w]overlay={wave_x}:{wave_y},format=yuv420p[v]"
+    ])
+
+    filter_complex = "".join(filter_parts)
+
+    command = [
+        ffmpeg_exe, "-y",
+
+        "-loop", "1", "-framerate", str(VIDEO_FPS),
+        "-i", str(background_path),
+
+        "-loop", "1", "-framerate", str(VIDEO_FPS),
+        "-i", str(pip_path),
+
+        "-loop", "1", "-framerate", str(VIDEO_FPS),
+        "-i", str(caption_path),
+
+        "-i", str(audio_path),
+
+        "-filter_complex", filter_complex,
+
+        "-map", "[v]",
+        "-map", "[a1]",
+
+        "-t", f"{clip_seconds:.2f}",
+
+        "-c:v", "libx264",
+        "-preset", "veryfast",
+        "-crf", "24",
+        "-pix_fmt", "yuv420p",
+        "-r", str(VIDEO_FPS),
+
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-ar", "44100",
+        "-ac", "2",
+
+        str(clip_path)
+    ]
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        timeout=600
+    )
+
+    if result.returncode != 0 or not clip_path.exists():
+
+        raise Exception(
+            f"FFmpeg failed on scene {scene_index + 1}:\n"
+            + result.stderr[-2000:]
         )
 
-    if not output_path.exists():
-        raise RuntimeError(
-            "Final medical video was not created."
+    return clip_path
+
+
+def join_clips(ffmpeg_exe, clip_paths, output_path, work_dir):
+
+    list_path = Path(work_dir) / "clips.txt"
+
+    with open(list_path, "w", encoding="utf-8") as f:
+
+        for clip in clip_paths:
+
+            safe = str(Path(clip).resolve()).replace("\\", "/")
+
+            f.write(f"file '{safe}'\n")
+
+    command = [
+        ffmpeg_exe, "-y",
+        "-f", "concat",
+        "-safe", "0",
+        "-i", str(list_path),
+        "-c", "copy",
+        "-movflags", "+faststart",
+        str(output_path)
+    ]
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        timeout=600
+    )
+
+    if result.returncode != 0 or not Path(output_path).exists():
+
+        raise Exception(
+            "FFmpeg could not join the scenes:\n"
+            + result.stderr[-2000:]
         )
 
-    if output_path.stat().st_size < 10000:
-        raise RuntimeError(
-            "Final medical video is unexpectedly small."
+    return str(output_path)
+
+
+def build_medical_video(
+    job_id,
+    topic,
+    language,
+    duration
+):
+    """
+    Full pipeline:
+
+    topic -> scene script -> doctor -> (visual + voice per scene)
+          -> one clip per scene -> final MP4
+    """
+
+    work_dir = MEDICAL_VIDEO_OUTPUT_DIR / f"job_{job_id}"
+
+    work_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+
+        ffmpeg_exe = get_ffmpeg()
+
+        # -----------------------------
+        # STEP 1 — SCENE SCRIPT
+        # -----------------------------
+
+        job_update(
+            job_id,
+            progress=5,
+            message="Writing scene-by-scene script..."
+        )
+
+        content = generate_medical_video_content(
+            topic,
+            language,
+            duration
+        )
+
+        scenes = content["scenes"]
+
+        scene_total = len(scenes)
+
+        print(f"STEP 1: {scene_total} scenes created.")
+
+        # -----------------------------
+        # STEP 2 — AI DOCTOR
+        # -----------------------------
+
+        job_update(
+            job_id,
+            progress=12,
+            message="Creating the AI doctor..."
+        )
+
+        doctor_path = generate_medical_presenter(content)
+
+        pip_path = work_dir / "doctor_pip.png"
+
+        pip_size = make_pip_png(doctor_path, pip_path)
+
+        print(f"STEP 2: AI doctor created: {doctor_path}")
+
+        # -----------------------------
+        # STEP 3 — VISUAL + VOICE PER SCENE
+        # -----------------------------
+
+        job_update(
+            job_id,
+            progress=18,
+            message="Generating medical visuals and voice..."
+        )
+
+        finished = {"count": 0}
+
+        finished_lock = threading.Lock()
+
+        def make_scene_assets(index):
+
+            scene = scenes[index]
+
+            if scene["visual_type"] == "visual":
+
+                image_path = generate_scene_image(
+                    scene,
+                    index,
+                    work_dir
+                )
+
+            else:
+
+                image_path = None
+
+            audio_path = generate_medical_voice(
+                scene["narration"],
+                language,
+                save_dir=work_dir
+            )
+
+            with finished_lock:
+
+                finished["count"] += 1
+
+                done = finished["count"]
+
+            job_update(
+                job_id,
+                progress=18 + int(42 * done / scene_total),
+                message=(
+                    f"Scene {done} of {scene_total} "
+                    "visuals and voice ready..."
+                )
+            )
+
+            return image_path, audio_path
+
+        with ThreadPoolExecutor(max_workers=3) as pool:
+
+            assets = list(
+                pool.map(make_scene_assets, range(scene_total))
+            )
+
+        print("STEP 3: scene visuals + voices created.")
+
+        # -----------------------------
+        # STEP 4 — RENDER EACH SCENE
+        # -----------------------------
+
+        clips = []
+
+        for index, scene in enumerate(scenes):
+
+            job_update(
+                job_id,
+                progress=62 + int(30 * index / scene_total),
+                message=(
+                    f"Rendering scene {index + 1} "
+                    f"of {scene_total}..."
+                )
+            )
+
+            image_path, audio_path = assets[index]
+
+            clips.append(
+                render_scene_clip(
+                    ffmpeg_exe,
+                    scene,
+                    index,
+                    scene_total,
+                    image_path,
+                    audio_path,
+                    doctor_path,
+                    pip_path,
+                    pip_size,
+                    work_dir
+                )
+            )
+
+        # -----------------------------
+        # STEP 5 — JOIN ALL SCENES
+        # -----------------------------
+
+        job_update(
+            job_id,
+            progress=94,
+            message="Combining scenes into the final video..."
+        )
+
+        video_filename = (
+            f"medical_video_{uuid.uuid4().hex}.mp4"
+        )
+
+        video_path = MEDICAL_VIDEO_OUTPUT_DIR / video_filename
+
+        join_clips(
+            ffmpeg_exe,
+            clips,
+            video_path,
+            work_dir
+        )
+
+        print(f"STEP 5: final video created: {video_path}")
+
+        # first narration kept as a preview of the voice
+        first_audio_name = Path(assets[0][1]).name
+
+        preview_audio = (
+            MEDICAL_VIDEO_OUTPUT_DIR / first_audio_name
+        )
+
+        try:
+            shutil.copy(assets[0][1], preview_audio)
+            audio_url = (
+                "/static/medical_videos/" + first_audio_name
+            )
+        except Exception:
+            audio_url = ""
+
+        total_seconds = sum(
+            get_media_duration(ffmpeg_exe, a[1]) + 0.5
+            for a in assets
+        )
+
+        return {
+
+            "success": True,
+
+            "message":
+                "Medical video generated successfully.",
+
+            "title":
+                content.get("title", topic),
+
+            "script":
+                content,
+
+            "scene_count":
+                scene_total,
+
+            "duration_seconds":
+                round(total_seconds),
+
+            "video_url":
+                "/static/medical_videos/" + video_filename,
+
+            "presenter_url":
+                "/static/medical_videos/"
+                + Path(doctor_path).name,
+
+            "audio_url":
+                audio_url,
+
+            "lip_sync":
+                False,
+
+            "model":
+                "OpenRouter script + Free.ai SDXL scenes + "
+                "Free.ai/gTTS voice + FFmpeg"
+        }
+
+    finally:
+
+        # remove temporary scene files, keep only the final outputs
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+
+def run_video_job(job_id, topic, language, duration):
+
+    try:
+
+        result = build_medical_video(
+            job_id,
+            topic,
+            language,
+            duration
+        )
+
+        job_update(
+            job_id,
+            status="done",
+            progress=100,
+            message="Your medical video is ready!",
+            result=result
+        )
+
+    except Exception as e:
+
+        print("\nMEDICAL VIDEO GENERATION ERROR")
+        print(str(e))
+
+        job_update(
+            job_id,
+            status="error",
+            error=str(e)
         )
 
 
-# =========================================================
-# VIDEO GENERATION API
-# =========================================================
+# =========================
+# PART 6 — ROUTES
+# =========================
+
+@app.route("/")
+def home():
+
+    return redirect(
+        "/medical-video"
+    )
+
+
+@app.route("/medical-video")
+def medical_video_page():
+
+    return render_template(
+        "medical_video.html"
+    )
+
 
 @app.route(
     "/api/generate_medical_video",
     methods=["POST"]
 )
-def generate_medical_video():
+def api_generate_medical_video():
 
-    work_dir = None
+    """
+    Starts a background job and returns its job_id immediately.
+    The page then polls /api/medical_video_status/<job_id>.
+    """
 
     try:
 
@@ -2329,333 +1707,143 @@ def generate_medical_video():
         ) or {}
 
         topic = (
-            data.get("topic") or ""
+            data.get("topic")
+            or data.get("content")
+            or ""
         ).strip()
 
         language = (
             data.get("language")
-            or "English"
-        )
+            or "english"
+        ).strip().lower()
 
         try:
-            duration = int(
-                data.get(
-                    "duration",
-                    18
-                )
-            )
+            duration = int(data.get("duration") or 60)
         except Exception:
-            duration = 18
+            duration = 60
 
         if not topic:
-            return jsonify({
-                "success": False,
-                "error": "Please enter a medical topic."
-            }), 400
 
-        if duration not in (15, 18, 20):
-            duration = 18
-
-        if not os.getenv("FAL_KEY"):
             return jsonify({
                 "success": False,
                 "error":
-                    "FAL_KEY is missing on the server. Add your fal.ai API key to Render environment variables."
+                    "Please enter a medical topic."
+            }), 400
+
+        if not OPENROUTER_API_KEY:
+
+            return jsonify({
+                "success": False,
+                "error":
+                    "OPENROUTER_API_KEY missing "
+                    "in .env"
             }), 500
 
-        print(
-            "\n========================================"
+        if not FREE_AI_API_KEY:
+
+            return jsonify({
+                "success": False,
+                "error":
+                    "FREE_AI_API_KEY missing "
+                    "in .env"
+            }), 500
+
+        cleanup_old_jobs()
+
+        job_id = uuid.uuid4().hex
+
+        with JOBS_LOCK:
+
+            JOBS[job_id] = {
+                "status": "running",
+                "progress": 2,
+                "message": "Starting...",
+                "created": time.time(),
+                "updated": time.time()
+            }
+
+        thread = threading.Thread(
+            target=run_video_job,
+            args=(job_id, topic, language, duration),
+            daemon=True
         )
 
-        print(
-            "MEDIPULSE AI REAL MEDICAL VIDEO"
-        )
-
-        print(
-            "TOPIC:",
-            topic
-        )
-
-        print(
-            "LANGUAGE:",
-            language
-        )
-
-        print(
-            "DURATION:",
-            duration
-        )
-
-        print(
-            "========================================"
-        )
-
-        # -------------------------------------------------
-        # STEP 1 — AI MEDICAL CONTENT
-        # -------------------------------------------------
-
-        print(
-            "STEP 1: Creating medical narration and cinematic prompt..."
-        )
-
-        content = generate_medical_video_content(
-            topic,
-            language
-        )
-
-        title = content["title"]
-        narration = content["narration"]
-        video_prompt = content["video_prompt"]
-
-        # -------------------------------------------------
-        # STEP 2 — TEMP WORKSPACE
-        # -------------------------------------------------
-
-        work_dir = Path(
-            tempfile.mkdtemp(
-                prefix="medipulse_ltx_video_"
-            )
-        )
-
-        silent_video = (
-            work_dir /
-            "ltx_video.mp4"
-        )
-
-        audio_path = (
-            work_dir /
-            "narration.mp3"
-        )
-
-        final_video = (
-            work_dir /
-            "final_medical_video.mp4"
-        )
-
-        # -------------------------------------------------
-        # STEP 3 — REAL AI VIDEO
-        # -------------------------------------------------
-
-        print(
-            "STEP 2: Generating photorealistic AI video with LTX-2.3..."
-        )
-
-        ltx_url = generate_ltx_medical_video(
-            video_prompt,
-            duration
-        )
-
-        download_generated_video(
-            ltx_url,
-            silent_video
-        )
-
-        # -------------------------------------------------
-        # STEP 4 — EXISTING MEDIPULSE VOICE
-        # -------------------------------------------------
-
-        print(
-            "STEP 3: Creating medical narration..."
-        )
-
-        create_medical_narration(
-            narration,
-            audio_path
-        )
-
-        # -------------------------------------------------
-        # STEP 5 — MERGE VIDEO + NARRATION
-        # -------------------------------------------------
-
-        print(
-            "STEP 4: Combining AI video with narration..."
-        )
-
-        add_medical_narration(
-            silent_video,
-            audio_path,
-            final_video,
-            duration
-        )
-
-        # -------------------------------------------------
-        # STEP 6 — COPY TO STATIC OUTPUT
-        # -------------------------------------------------
-
-        filename = (
-            f"medical_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.mp4"
-        )
-
-        output_path = (
-            VIDEO_OUTPUT_DIR /
-            filename
-        )
-
-        shutil.copyfile(
-            final_video,
-            output_path
-        )
-
-        if not output_path.exists():
-            raise RuntimeError(
-                "Final medical video could not be saved."
-            )
-
-        video_url = (
-            "/static/generated_videos/"
-            + filename
-        )
-
-        print(
-            "========================================"
-        )
-
-        print(
-            "MEDICAL AI VIDEO CREATED SUCCESSFULLY"
-        )
-
-        print(
-            "VIDEO:",
-            video_url
-        )
-
-        print(
-            "========================================"
-        )
+        thread.start()
 
         return jsonify({
             "success": True,
-            "title": title,
-            "video_url": video_url,
-            "duration": duration,
-            "model": "LTX-2.3 Fast",
-            "narration": narration
-        })
+            "job_id": job_id,
+            "status": "running"
+        }), 202
 
     except Exception as e:
 
-        print(
-            "========================================"
-        )
-
-        print(
-            "MEDICAL VIDEO GENERATION ERROR"
-        )
-
-        print(
-            str(e)
-        )
-
-        print(
-            "========================================"
-        )
+        print("\nMEDICAL VIDEO START ERROR")
+        print(str(e))
 
         return jsonify({
             "success": False,
-            "error":
-                "AI medical video generation failed: "
-                + str(e)
+            "error": str(e)
         }), 500
 
-    finally:
 
-        # Temporary LTX files are removed after the final video is copied
-        # into static/generated_videos. The generated video itself remains
-        # available to the existing MediPulse frontend.
-        if work_dir:
-            try:
-                shutil.rmtree(
-                    work_dir,
-                    ignore_errors=True
-                )
-            except Exception:
-                pass
+@app.route("/api/medical_video_status/<job_id>")
+def api_medical_video_status(job_id):
+
+    with JOBS_LOCK:
+
+        job = JOBS.get(job_id)
+
+        job = dict(job) if job else None
+
+    if not job:
+
+        return jsonify({
+            "status": "error",
+            "error":
+                "This video job was not found. The server may "
+                "have restarted. Please generate the video again."
+        }), 404
+
+    return jsonify({
+        "status": job.get("status"),
+        "progress": job.get("progress", 0),
+        "message": job.get("message", ""),
+        "error": job.get("error"),
+        "result": job.get("result")
+    })
 
 
-# =========================================================
-# PAGE ROUTES
-# =========================================================
-
-@app.route("/medical-video")
-def medical_video():
-    return render_template("medical_video.html")
-
-@app.route("/")
-def loading(): return render_template("loading.html")
-
-@app.route("/complaint")
-def complaint():
-    return render_template("complaint.html")
-
-@app.route("/complaints_admin")
-def complaints_admin():
-    return render_template("view.html")
-
-@app.route("/home")
-def home(): return render_template("home.html")
-
-@app.route("/medicine-search")
-def medicine_search(): return render_template("ai_medicine.html")
-
-@app.route("/checker")
-def checker(): return render_template("checker.html")
-
-@app.route("/setup")
-def setup(): return render_template("setup.html")
-
-@app.route("/hospital")
-def hospital(): return render_template("hospital.html")
-
-@app.route("/donation")
-def donation(): return render_template("donation.html")
-
-@app.route("/register")
-def register(): return render_template("register.html")
-
-@app.route("/emergency")
-def emergency(): return render_template("Emergency.html")
-
-@app.route("/emergency-medicine")
-def emergency_medicine(): return render_template("emergency_medicine_ai.html")
-
-@app.route("/scanner")
-def scanner(): return render_template("scanner.html")
-
-@app.route("/free-map")
-def free_map(): return render_template("medical_map.html")
-
-@app.route("/chatbot")
-def chatbot(): return render_template("chatbot.html")
-
-@app.route("/login")
-def login(): return render_template("login.html")
-
-@app.route("/signup")
-def signup(): return render_template("signup.html")
-
-@app.route("/profile")
-def profile(): return render_template("profile.html")
-
-@app.route("/medical_analytics")
-def medical_analytics(): return render_template("analytics.html")
-
-@app.route("/prescription-scanner")
-def prescription_scanner(): return render_template("prescription.html")
-
-@app.route("/fake-medicine")
-def fake_medicine(): return render_template("fake_medicine.html")
-
-@app.route("/view")
-def view(): return render_template("view.html")
-
-@app.route("/profile_analyzer_dashboard")
-def profile_analyzer_dashboard():
-    return render_template("analyzer.html")
+# =========================
+# RUN SERVER
+# =========================
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    # 0.0.0.0 (not 127.0.0.1) so Render/Railway's proxy can actually reach
-    # this process, and the platform-assigned PORT rather than a hardcoded
-    # 5000. debug=False for production - the Werkzeug debugger is a remote
-    # code execution risk if left reachable on a public URL.
-    app.run(host="0.0.0.0", port=port, debug=False)
+
+    print(
+        "\n================================"
+    )
+
+    print(
+        "MediPulse AI Medical Video Studio"
+    )
+
+    print(
+        "================================"
+    )
+
+    print(
+        "Open:"
+    )
+
+    print(
+        "http://127.0.0.1:5000/medical-video"
+    )
+
+    # use_reloader=False so background jobs are not killed on file save
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True,
+        use_reloader=False
+    )
