@@ -283,6 +283,33 @@ JOBS = {}
 JOBS_LOCK = threading.Lock()
 JOB_MAX_AGE_SECONDS = 60 * 60
 
+
+def job_update(job_id, **updates):
+    """Safely update a background medical-video job."""
+    now = time.time()
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if job is None:
+            return False
+        job.update(updates)
+        job["updated"] = now
+        return True
+
+
+def cleanup_old_jobs():
+    """Remove stale completed/failed video jobs from memory."""
+    cutoff = time.time() - JOB_MAX_AGE_SECONDS
+    with JOBS_LOCK:
+        stale = [
+            job_id
+            for job_id, job in JOBS.items()
+            if job.get("updated", job.get("created", 0)) < cutoff
+            and job.get("status") in {"done", "error"}
+        ]
+        for job_id in stale:
+            JOBS.pop(job_id, None)
+    return len(stale)
+
 # =========================================================
 # EMAIL CONFIG
 # =========================================================
