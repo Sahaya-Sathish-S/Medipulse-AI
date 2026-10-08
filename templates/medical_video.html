@@ -1548,10 +1548,10 @@ nav{
 
         <p>
 
-            Turn any medical topic into a short,
-            visually engaging educational video
-            using AI-generated content, medical
-            imagery and voice narration.
+            Enter a medical topic and MediPulse AI will create a
+            realistic talking medical presenter, write the script,
+            generate a natural AI voice and add relevant medical visuals scene by scene
+            automatically. No photo upload is required.
 
         </p>
 
@@ -1663,11 +1663,12 @@ nav{
 
                 <select id="language">
 
-                    <option value="English">
-
-                        English
-
-                    </option>
+                    <option value="English">English</option>
+                    <option value="Tamil">Tamil</option>
+                    <option value="Hindi">Hindi</option>
+                    <option value="Telugu">Telugu</option>
+                    <option value="Malayalam">Malayalam</option>
+                    <option value="Kannada">Kannada</option>
 
                 </select>
 
@@ -2002,6 +2003,95 @@ function hideError(){
    GENERATE VIDEO
 ========================================================= */
 
+
+/* =========================================================
+   BACKGROUND JOB HELPER
+   Starts the job, then polls the server until the video is
+   ready. Returns a normal Response so the code below it
+   works exactly as before.
+========================================================= */
+async function fetchVideoJob(url, options){
+
+    const startRes = await fetch(url, options);
+    const startText = await startRes.text();
+
+    let start;
+
+    try{
+        start = JSON.parse(startText);
+    }
+    catch(e){
+        return new Response(startText, {status: startRes.status || 500});
+    }
+
+    if(!startRes.ok || !start.job_id){
+        return new Response(startText, {status: startRes.status || 500});
+    }
+
+    const statusUrl = "/api/medical_video_status/" + start.job_id;
+
+    let failures = 0;
+
+    while(true){
+
+        await new Promise(r => setTimeout(r, 3000));
+
+        let res, txt, d;
+
+        try{
+            res = await fetch(statusUrl, {
+                signal: options.signal,
+                headers: {"Accept":"application/json"}
+            });
+            txt = await res.text();
+            d = JSON.parse(txt);
+        }
+        catch(e){
+            if(e.name === "AbortError"){ throw e; }
+            failures++;
+            if(failures > 20){
+                return new Response(
+                    JSON.stringify({success:false,
+                        error:"Lost connection to the server. Please try again."}),
+                    {status:500}
+                );
+            }
+            continue;
+        }
+
+        failures = 0;
+
+        if(res.status === 404){
+            return new Response(
+                JSON.stringify({success:false, error:d.error}),
+                {status:500}
+            );
+        }
+
+        if(d.status === "done"){
+            return new Response(JSON.stringify(d.result), {status:200});
+        }
+
+        if(d.status === "error"){
+            return new Response(
+                JSON.stringify({success:false, error:d.error}),
+                {status:500}
+            );
+        }
+
+        const bar = document.getElementById("progressBar");
+        const label = document.getElementById("generationText");
+
+        if(bar && typeof d.progress === "number"){
+            bar.style.width = Math.min(d.progress, 95) + "%";
+        }
+
+        if(label && d.message){
+            label.innerText = d.message;
+        }
+    }
+}
+
 async function generateVideo(){
 
 
@@ -2129,19 +2219,19 @@ async function generateVideo(){
 
         "Understanding your medical topic...",
 
-        "Creating educational content...",
+        "Writing scene-by-scene script...",
 
-        "Breaking content into scenes...",
+        "Creating the AI doctor...",
 
-        "Finding suitable medical images...",
+        "Generating medical visuals for each scene...",
 
-        "Preparing English narration...",
+        "Recording the doctor voice...",
 
-        "Creating landscape video...",
+        "Rendering each scene...",
 
-        "Adding transitions and subtitles...",
+        "Combining scenes into the final video...",
 
-        "Finalizing your medical video..."
+        "Finalizing your video..."
 
     ];
 
@@ -2202,7 +2292,8 @@ async function generateVideo(){
 
 
     /*
-     * Allow the browser to wait up to 180 seconds.
+     * Allow the browser to wait up to 10 minutes because the
+     * talking-avatar render can take longer than a normal API call.
      *
      * NOTE:
      * This does NOT increase Render's server timeout.
@@ -2214,7 +2305,7 @@ async function generateVideo(){
 
             controller.abort();
 
-        }, 180000);
+        }, 600000);
 
 
 
@@ -2226,7 +2317,7 @@ async function generateVideo(){
 
 
         const response =
-            await fetch(
+            await fetchVideoJob(
                 "/api/generate_medical_video",
                 {
 
@@ -2587,8 +2678,8 @@ async function generateVideo(){
 
             message =
                 "The video generation is taking too long. " +
-                "The browser stopped waiting after 180 seconds. " +
-                "Please check your Render logs. " +
+                "The browser stopped waiting after 10 minutes. " +
+                "Please check your server logs. " +
                 "If the backend is still processing, the video generation architecture " +
                 "may need to be changed to a background job.";
 
